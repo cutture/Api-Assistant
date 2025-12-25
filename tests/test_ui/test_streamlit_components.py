@@ -70,7 +70,7 @@ class TestAgentIconMapping:
     def test_doc_analyzer_icon(self):
         """Test doc analyzer gets correct icon."""
         icon = get_agent_icon("doc_analyzer")
-        assert icon == "📋"
+        assert icon == "📝"
 
     def test_unknown_agent_icon(self):
         """Test unknown agent gets default icon."""
@@ -99,10 +99,14 @@ class TestSourcesRendering:
         # Render for message index 0
         with patch('streamlit.expander'), \
              patch('streamlit.markdown'), \
-             patch('streamlit.columns'), \
+             patch('streamlit.columns') as mock_columns, \
              patch('streamlit.metric'), \
              patch('streamlit.text_area') as mock_text_area, \
              patch('streamlit.divider'):
+
+            # Mock columns to return 2 column objects
+            col1, col2 = MagicMock(), MagicMock()
+            mock_columns.return_value = [col1, col2]
 
             render_sources_section(sources, message_index=0)
 
@@ -120,10 +124,14 @@ class TestSourcesRendering:
         # Render for message index 1 (different message)
         with patch('streamlit.expander'), \
              patch('streamlit.markdown'), \
-             patch('streamlit.columns'), \
+             patch('streamlit.columns') as mock_columns, \
              patch('streamlit.metric'), \
              patch('streamlit.text_area') as mock_text_area, \
              patch('streamlit.divider'):
+
+            # Mock columns to return 2 column objects
+            col1, col2 = MagicMock(), MagicMock()
+            mock_columns.return_value = [col1, col2]
 
             render_sources_section(sources, message_index=1)
 
@@ -335,10 +343,14 @@ class TestWidgetKeyUniqueness:
         for msg_idx in range(3):
             with patch('streamlit.expander'), \
                  patch('streamlit.markdown'), \
-                 patch('streamlit.columns'), \
+                 patch('streamlit.columns') as mock_columns, \
                  patch('streamlit.metric'), \
                  patch('streamlit.text_area') as mock_text_area, \
                  patch('streamlit.divider'):
+
+                # Mock columns to return 2 column objects
+                col1, col2 = MagicMock(), MagicMock()
+                mock_columns.return_value = [col1, col2]
 
                 render_sources_section(sources, message_index=msg_idx)
 
