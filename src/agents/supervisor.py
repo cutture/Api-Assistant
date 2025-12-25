@@ -141,10 +141,13 @@ class SupervisorAgent:
         logger.info("executing_query_analyzer", query=state.get("query", "")[:50])
         try:
             result = self.query_analyzer(state)
+
+            # Safely extract intent analysis for logging
+            intent_analysis = result.get("intent_analysis") or {}
             logger.info(
                 "query_analyzer_complete",
-                intent=result.get("intent_analysis", {}).get("primary_intent"),
-                confidence=result.get("intent_analysis", {}).get("confidence"),
+                intent=intent_analysis.get("primary_intent"),
+                confidence=intent_analysis.get("confidence"),
             )
             return result
         except Exception as e:

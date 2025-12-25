@@ -34,7 +34,7 @@ class Settings(BaseSettings):
 
     # ----- Groq (Cloud LLM) -----
     groq_api_key: Optional[str] = Field(default=None)
-    groq_reasoning_model: str = Field(default="deepseek-r1-distill-llama-70b")  # For QueryAnalyzer, DocAnalyzer
+    groq_reasoning_model: str = Field(default="llama-3.3-70b-versatile")  # For QueryAnalyzer, DocAnalyzer
     groq_code_model: str = Field(default="llama-3.3-70b-versatile")  # For CodeGenerator
     groq_general_model: str = Field(default="llama-3.3-70b-versatile")  # For RAGAgent
 

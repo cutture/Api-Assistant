@@ -136,9 +136,16 @@ OLLAMA_MODEL=deepseek-coder:6.7b
 ## Available Groq Models
 
 Popular models you can use:
-- `deepseek-r1-distill-llama-70b` - Best for reasoning & planning
-- `llama-3.3-70b-versatile` - Best for code & general tasks
+- `llama-3.3-70b-versatile` - **Recommended** - Best for all tasks (reasoning, code, general)
+- `llama-3.1-70b-versatile` - Alternative 70B model
 - `llama-3.1-8b-instant` - Faster, smaller model
 - `mixtral-8x7b-32768` - Good for long context
+- `gemma2-9b-it` - Efficient smaller model
 
-See full list: https://console.groq.com/docs/models
+**Note**: Some models like `deepseek-r1-distill-llama-70b` have been decommissioned. Always check the latest available models at: https://console.groq.com/docs/models
+
+## Important Notes
+
+- After changing `.env`, **restart the Streamlit application** for changes to take effect
+- If you see errors about model not found, check that the model name is correct and currently available on Groq
+- The default configuration uses `llama-3.3-70b-versatile` for all agent types, which works well for all tasks
