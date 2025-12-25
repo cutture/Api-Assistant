@@ -19,7 +19,9 @@ from src.config import settings
 from src.core.embeddings import EmbeddingService
 from src.core.vector_store import VectorStore
 from src.core.llm_client import LLMClient
+from src.core.monitoring import initialize_monitoring
 from src.parsers.openapi_parser import OpenAPIParser
+from src.agents import create_supervisor
 from src.ui.sidebar import render_sidebar
 from src.ui.chat import render_chat, init_chat_state, clear_chat_history
 
@@ -48,6 +50,21 @@ def get_llm_client() -> LLMClient:
 def get_openapi_parser() -> OpenAPIParser:
     """Get cached OpenAPI parser."""
     return OpenAPIParser()
+
+
+@st.cache_resource
+def get_supervisor():
+    """Get cached Supervisor agent."""
+    # Initialize monitoring if not already done
+    initialize_monitoring()
+
+    llm_client = get_llm_client()
+    vector_store_service = get_vector_store()
+
+    # Get the actual vector store instance from the service
+    vector_store = vector_store_service.vector_store
+
+    return create_supervisor(llm_client=llm_client, vector_store=vector_store)
 
 
 # ----- File Processing -----
@@ -129,70 +146,67 @@ def clear_data() -> None:
     st.success("🗑️ All data cleared!")
 
 
-# ----- RAG Pipeline -----
+# -----  Agent Pipeline -----
+
+def generate_response_with_agents(user_query: str) -> dict:
+    """
+    Generate a response using the Supervisor agent orchestration.
+
+    Args:
+        user_query: The user's question.
+
+    Returns:
+        Dict with response, sources, code_snippets, and agent metadata
+    """
+    try:
+        supervisor = get_supervisor()
+
+        # Process query through supervisor
+        result = supervisor.process(user_query)
+
+        # Extract response and metadata
+        response_data = {
+            "response": result.get("response", "No response generated."),
+            "sources": result.get("retrieved_documents", []),
+            "code_snippets": result.get("code_snippets", []),
+            "intent": result.get("intent_analysis", {}),
+            "processing_path": result.get("processing_path", []),
+            "error": result.get("error"),
+        }
+
+        return response_data
+
+    except Exception as e:
+        return {
+            "response": f"❌ Error processing query: {str(e)}\n\nPlease make sure Ollama is running with the model loaded.",
+            "sources": [],
+            "code_snippets": [],
+            "error": {"message": str(e)},
+            "processing_path": [],
+        }
+
 
 def generate_response(user_query: str) -> Generator[str, None, None]:
     """
-    Generate a response to the user query using RAG.
-    
+    Generate a response to the user query using the agent system.
+
+    This is a compatibility wrapper that yields text chunks for the chat UI.
+
     Args:
         user_query: The user's question.
-        
+
     Yields:
         Response chunks for streaming.
     """
-    vector_store = get_vector_store()
-    llm_client = get_llm_client()
-    
-    # Get current settings from session state
-    sidebar_settings = st.session_state.get("sidebar_settings", {})
-    n_results = sidebar_settings.get("n_results", 5)
-    temperature = sidebar_settings.get("temperature", 0.7)
-    max_tokens = sidebar_settings.get("max_tokens", 2048)
-    
-    # Search for relevant context
-    search_results = vector_store.search(user_query, n_results=n_results)
-    
-    # Build context from search results
-    if search_results:
-        context_parts = []
-        for i, result in enumerate(search_results, 1):
-            context_parts.append(f"--- Document {i} (relevance: {result['score']:.0%}) ---\n{result['content']}")
-        
-        context = "\n\n".join(context_parts)
-    else:
-        context = "No relevant API documentation found in the knowledge base."
-    
-    # Build prompt
-    system_prompt = """You are an expert API Integration Assistant. Your role is to help developers understand and integrate APIs.
+    # Process with agents
+    result = generate_response_with_agents(user_query)
 
-Based on the provided API documentation context, answer the user's question accurately and helpfully.
+    # Store result in session state for rendering
+    st.session_state.last_agent_result = result
 
-Guidelines:
-- Be concise but thorough
-- Include code examples when relevant (use Python by default)
-- Reference specific endpoints, parameters, and response schemas from the context
-- If the context doesn't contain enough information, say so clearly
-- Format code blocks properly with appropriate language tags
-
-API Documentation Context:
-{context}
-""".format(context=context)
-
-    user_prompt = f"Question: {user_query}"
-    
-    # Stream response from LLM
-    try:
-        for chunk in llm_client.generate_stream(
-            prompt=user_prompt,
-            system_prompt=system_prompt,
-            temperature=temperature,
-            max_tokens=max_tokens,
-        ):
-            yield chunk
-            
-    except Exception as e:
-        yield f"\n\n❌ Error generating response: {str(e)}\n\nPlease make sure Ollama is running with the model loaded."
+    # Yield the response text
+    response = result.get("response", "")
+    yield response
 
 
 # ----- Main Application -----
