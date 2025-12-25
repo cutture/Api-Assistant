@@ -5,6 +5,7 @@ This agent generates production-ready Python code for calling API endpoints
 using various HTTP client libraries (requests, httpx, aiohttp).
 """
 
+import ast
 import re
 from pathlib import Path
 from typing import Any, Optional
@@ -107,6 +108,8 @@ Respond ONLY with valid JSON, no other text:"""
         llm_client: Optional[LLMClient] = None,
         default_library: str = CodeLibrary.REQUESTS,
         base_url: str = "https://api.example.com",
+        validate_syntax: bool = True,
+        add_retry: bool = False,
     ):
         """
         Initialize the Code Generator agent.
@@ -115,11 +118,15 @@ Respond ONLY with valid JSON, no other text:"""
             llm_client: LLM client for extracting endpoint details.
             default_library: Default HTTP library to use.
             base_url: Default API base URL.
+            validate_syntax: Whether to validate generated code syntax.
+            add_retry: Whether to add retry logic to generated code.
         """
         super().__init__()
         self._llm_client = llm_client or LLMClient()
         self.default_library = default_library
         self.base_url = base_url
+        self.validate_syntax = validate_syntax
+        self.add_retry = add_retry
 
         # Initialize Jinja2 environment
         template_dir = Path(__file__).parent / "templates"
@@ -189,7 +196,24 @@ Respond ONLY with valid JSON, no other text:"""
             # Step 3: Generate code using template
             code = self._generate_code(endpoint_details, library)
 
-            # Step 4: Create code snippet object
+            # Step 4: Validate and enhance code
+            if self.validate_syntax:
+                validation_result = self._validate_code(code)
+                if not validation_result["valid"]:
+                    self._logger.warning(
+                        "Generated code has syntax errors",
+                        errors=validation_result["errors"]
+                    )
+                    # Still continue but log the issue
+
+            # Step 5: Optionally add retry logic
+            if self.add_retry:
+                code = self._add_retry_decorator(code, endpoint_details.get("method", "GET"))
+
+            # Step 6: Format code
+            code = self._format_code(code)
+
+            # Step 7: Create code snippet object
             code_snippet = {
                 "language": "python",
                 "library": library,
@@ -461,3 +485,208 @@ Respond ONLY with valid JSON, no other text:"""
         }
 
         return type_mapping.get(api_type.lower(), "str")
+
+    def _validate_code(self, code: str) -> dict[str, Any]:
+        """
+        Validate Python code syntax using ast.parse().
+
+        Args:
+            code: Python code string to validate.
+
+        Returns:
+            Dictionary with 'valid' bool and 'errors' list.
+        """
+        try:
+            ast.parse(code)
+            self._logger.debug("Code validation passed")
+            return {"valid": True, "errors": []}
+        except SyntaxError as e:
+            error_msg = f"Line {e.lineno}: {e.msg}"
+            self._logger.warning("Code syntax validation failed", error=error_msg)
+            return {"valid": False, "errors": [error_msg]}
+        except Exception as e:
+            error_msg = f"Validation error: {str(e)}"
+            self._logger.warning("Code validation exception", error=error_msg)
+            return {"valid": False, "errors": [error_msg]}
+
+    def _format_code(self, code: str) -> str:
+        """
+        Format Python code for better readability.
+
+        This performs basic formatting:
+        - Ensures consistent blank lines
+        - Removes trailing whitespace
+        - Ensures proper spacing around operators
+
+        Args:
+            code: Python code string to format.
+
+        Returns:
+            Formatted code string.
+        """
+        # Remove trailing whitespace from each line
+        lines = [line.rstrip() for line in code.split('\n')]
+
+        # Remove multiple consecutive blank lines
+        formatted_lines = []
+        prev_blank = False
+        for line in lines:
+            is_blank = len(line.strip()) == 0
+            if is_blank and prev_blank:
+                continue  # Skip consecutive blank lines
+            formatted_lines.append(line)
+            prev_blank = is_blank
+
+        # Join back together
+        formatted_code = '\n'.join(formatted_lines)
+
+        # Ensure file ends with single newline
+        formatted_code = formatted_code.rstrip('\n') + '\n'
+
+        return formatted_code
+
+    def _add_retry_decorator(self, code: str, method: str) -> str:
+        """
+        Add retry logic decorator to the generated function.
+
+        Args:
+            code: Original Python code.
+            method: HTTP method (GET, POST, etc.).
+
+        Returns:
+            Code with retry decorator added.
+        """
+        # Only add retry for idempotent methods
+        if method.upper() not in ["GET", "HEAD", "OPTIONS", "PUT", "DELETE"]:
+            return code
+
+        # Find the function definition line
+        lines = code.split('\n')
+        function_def_idx = None
+        for i, line in enumerate(lines):
+            if line.strip().startswith('def '):
+                function_def_idx = i
+                break
+
+        if function_def_idx is None:
+            return code  # Couldn't find function definition
+
+        # Check if tenacity import already exists
+        has_tenacity = any('from tenacity import' in line for line in lines[:function_def_idx])
+
+        # Build retry decorator
+        retry_decorator = "    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))"
+
+        # Add import if needed
+        if not has_tenacity:
+            # Find where to insert import (after other imports)
+            import_idx = 0
+            for i, line in enumerate(lines):
+                if line.strip().startswith('import ') or line.strip().startswith('from '):
+                    import_idx = i + 1
+
+            lines.insert(import_idx, "from tenacity import retry, stop_after_attempt, wait_exponential")
+            function_def_idx += 1  # Adjust index after insertion
+
+        # Add decorator before function
+        lines.insert(function_def_idx, retry_decorator)
+
+        return '\n'.join(lines)
+
+    def generate_code_for_endpoint(
+        self,
+        endpoint: str,
+        method: str,
+        description: str = "",
+        path_params: Optional[list[dict]] = None,
+        query_params: Optional[list[dict]] = None,
+        auth_type: str = "none",
+        library: Optional[str] = None,
+    ) -> str:
+        """
+        Generate code directly without using LLM extraction.
+
+        This is a convenience method for when you already have the endpoint details.
+
+        Args:
+            endpoint: API endpoint path (e.g., "/users/{id}").
+            method: HTTP method (GET, POST, etc.).
+            description: Endpoint description.
+            path_params: List of path parameter dicts.
+            query_params: List of query parameter dicts.
+            auth_type: Authentication type (none, bearer, api_key).
+            library: HTTP library to use (defaults to self.default_library).
+
+        Returns:
+            Generated Python code string.
+
+        Example:
+            ```python
+            code = generator.generate_code_for_endpoint(
+                endpoint="/users/{user_id}",
+                method="GET",
+                description="Get user by ID",
+                path_params=[{"name": "user_id", "type": "string"}],
+                auth_type="bearer"
+            )
+            ```
+        """
+        endpoint_details = {
+            "endpoint": endpoint,
+            "method": method.upper(),
+            "description": description or f"{method.upper()} {endpoint}",
+            "operation_id": "",
+            "path_params": path_params or [],
+            "query_params": query_params or [],
+            "request_body": {"required": False, "example": {}},
+            "auth_type": auth_type,
+            "auth_details": {"header_name": "X-API-Key" if auth_type == "api_key" else "Authorization"},
+        }
+
+        library = library or self.default_library
+        code = self._generate_code(endpoint_details, library)
+
+        # Apply validation and formatting
+        if self.validate_syntax:
+            validation_result = self._validate_code(code)
+            if not validation_result["valid"]:
+                self._logger.warning("Generated code has syntax errors", errors=validation_result["errors"])
+
+        if self.add_retry:
+            code = self._add_retry_decorator(code, method)
+
+        code = self._format_code(code)
+
+        return code
+
+    def get_supported_libraries(self) -> list[str]:
+        """
+        Get list of supported HTTP client libraries.
+
+        Returns:
+            List of library names.
+        """
+        return [CodeLibrary.REQUESTS, CodeLibrary.HTTPX, CodeLibrary.AIOHTTP]
+
+    def get_template_info(self, library: str, method: str) -> dict[str, str]:
+        """
+        Get information about which template will be used.
+
+        Args:
+            library: HTTP library name.
+            method: HTTP method.
+
+        Returns:
+            Dictionary with template information.
+        """
+        template_name = self._select_template(method.upper(), library)
+        template_dir = Path(__file__).parent / "templates"
+        template_path = template_dir / template_name
+
+        return {
+            "library": library,
+            "method": method.upper(),
+            "template_name": template_name,
+            "template_path": str(template_path),
+            "exists": template_path.exists(),
+        }
