@@ -28,6 +28,7 @@ from src.agents.state import (
     create_initial_state,
     set_error,
 )
+from src.agents.supervisor import SupervisorAgent, create_supervisor
 
 __all__ = [
     # State management
@@ -52,4 +53,7 @@ __all__ = [
     "RAGAgent",
     "CodeGenerator",
     "DocumentationAnalyzer",
+    # Orchestration
+    "SupervisorAgent",
+    "create_supervisor",
 ]
