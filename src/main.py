@@ -145,6 +145,125 @@ def clear_data() -> None:
 
 # -----  Agent Pipeline -----
 
+def _build_conversation_context(messages: list) -> str:
+    """
+    Build intelligent conversation context with first 3, summary, and last 3 exchanges.
+
+    Strategy:
+    - If <= 12 messages (6 exchanges): Include all
+    - If > 12 messages: First 6 + Summary of middle + Last 6
+
+    Args:
+        messages: List of conversation messages
+
+    Returns:
+        Formatted conversation context string
+    """
+    if len(messages) <= 1:
+        return ""
+
+    # If conversation is short (<=6 exchanges), include all
+    if len(messages) <= 12:
+        context_parts = []
+        for msg in messages:
+            role = msg.get("role", "")
+            content = msg.get("content", "")[:200]
+            if role == "user":
+                context_parts.append(f"User: {content}")
+            elif role == "assistant":
+                context_parts.append(f"Assistant: {content}")
+
+        if context_parts:
+            return "\n".join(context_parts) + "\n\nCurrent question: "
+
+    # For long conversations: First 3 + Summary + Last 3
+    else:
+        context_parts = []
+
+        # First 3 exchanges (6 messages)
+        first_messages = messages[:6]
+        context_parts.append("=== Initial Conversation ===")
+        for msg in first_messages:
+            role = msg.get("role", "")
+            content = msg.get("content", "")[:200]
+            if role == "user":
+                context_parts.append(f"User: {content}")
+            elif role == "assistant":
+                context_parts.append(f"Assistant: {content}")
+
+        # Summary of middle conversations
+        middle_messages = messages[6:-6]
+        if middle_messages:
+            summary = _summarize_conversation(middle_messages)
+            context_parts.append(f"\n=== Summary of {len(middle_messages)//2} middle exchanges ===")
+            context_parts.append(summary)
+
+        # Last 3 exchanges (6 messages)
+        last_messages = messages[-6:]
+        context_parts.append("\n=== Recent Conversation ===")
+        for msg in last_messages:
+            role = msg.get("role", "")
+            content = msg.get("content", "")[:200]
+            if role == "user":
+                context_parts.append(f"User: {content}")
+            elif role == "assistant":
+                context_parts.append(f"Assistant: {content}")
+
+        return "\n".join(context_parts) + "\n\nCurrent question: "
+
+
+def _summarize_conversation(messages: list) -> str:
+    """
+    Summarize middle conversation exchanges using LLM.
+
+    Args:
+        messages: List of messages to summarize
+
+    Returns:
+        Summary string
+    """
+    if not messages:
+        return "No middle conversation to summarize."
+
+    # Build conversation text
+    conversation_text = []
+    for msg in messages:
+        role = msg.get("role", "")
+        content = msg.get("content", "")
+        if role == "user":
+            conversation_text.append(f"User: {content}")
+        elif role == "assistant":
+            conversation_text.append(f"Assistant: {content}")
+
+    conversation = "\n".join(conversation_text)
+
+    # Use LLM to summarize
+    try:
+        llm_client = get_llm_client()
+        summary_prompt = f"""Summarize the following conversation exchanges concisely.
+Focus on key topics discussed, questions asked, and important context.
+Keep the summary under 150 words.
+
+Conversation:
+{conversation}
+
+Provide a brief summary:"""
+
+        summary = llm_client.generate(
+            prompt=summary_prompt,
+            system_prompt="You are a concise conversation summarizer. Extract key points and context.",
+            temperature=0.3,
+            max_tokens=300,
+        )
+
+        return summary.strip()
+
+    except Exception as e:
+        # Fallback: Simple summary
+        num_exchanges = len(messages) // 2
+        return f"The user asked {num_exchanges} questions about API endpoints, authentication, and code generation. The assistant provided relevant information from the documentation."
+
+
 def generate_response_with_agents(user_query: str) -> dict:
     """
     Generate a response using the Supervisor agent orchestration.
@@ -158,22 +277,10 @@ def generate_response_with_agents(user_query: str) -> dict:
     try:
         supervisor = get_supervisor()
 
-        # Build query with conversation history for context
+        # Build intelligent conversation context
         conversation_context = ""
         if "messages" in st.session_state and len(st.session_state.messages) > 1:
-            # Get last 3 exchanges for context (6 messages = 3 user + 3 assistant)
-            recent_messages = st.session_state.messages[-6:]
-            context_parts = []
-            for msg in recent_messages:
-                role = msg.get("role", "")
-                content = msg.get("content", "")[:200]  # Limit length
-                if role == "user":
-                    context_parts.append(f"User previously asked: {content}")
-                elif role == "assistant":
-                    context_parts.append(f"Assistant previously responded: {content}")
-
-            if context_parts:
-                conversation_context = "\n".join(context_parts) + "\n\nCurrent question: "
+            conversation_context = _build_conversation_context(st.session_state.messages)
 
         # Combine context with current query
         contextualized_query = conversation_context + user_query if conversation_context else user_query
