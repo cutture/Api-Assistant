@@ -11,7 +11,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Optional, TypedDict
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class QueryIntent(str, Enum):
@@ -74,8 +74,7 @@ class RetrievedDocument(BaseModel):
     )
     doc_id: str = Field(default="", description="Document ID in vector store")
 
-    class Config:
-        frozen = False
+    model_config = ConfigDict(frozen=False)
 
 
 class SourceCitation(BaseModel):
