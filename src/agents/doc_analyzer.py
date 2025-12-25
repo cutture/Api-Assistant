@@ -342,7 +342,7 @@ class DocumentationAnalyzer(BaseAgent):
 
     def _is_description_too_short(self, content: str) -> bool:
         """Check if description is too short."""
-        return 10 <= len(content.strip()) < self.min_description_length
+        return len(content.strip()) < self.min_description_length
 
     def _has_missing_parameters(self, content: str, method: str) -> bool:
         """Check if parameters are missing for methods that typically need them."""
@@ -386,7 +386,7 @@ class DocumentationAnalyzer(BaseAgent):
         )
 
         # If no auth info AND content is substantial, it might be missing
-        return not has_auth and len(content.strip()) > 50
+        return not has_auth and len(content.strip()) > 10
 
     def _is_response_format_missing(self, content: str) -> bool:
         """Check if response format is missing."""
