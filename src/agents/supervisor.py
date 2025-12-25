@@ -496,7 +496,6 @@ What would you like to explore?"""
 def create_supervisor(
     llm_client,
     vector_store,
-    template_dir: Optional[str] = None,
 ) -> SupervisorAgent:
     """
     Factory function to create a fully configured SupervisorAgent.
@@ -507,7 +506,6 @@ def create_supervisor(
     Args:
         llm_client: LLM client for all agents
         vector_store: Vector store for RAG agent
-        template_dir: Optional custom template directory for code generator
 
     Returns:
         Configured SupervisorAgent ready to use
@@ -524,7 +522,7 @@ def create_supervisor(
     # Initialize all agents
     query_analyzer = QueryAnalyzer(llm_client=llm_client)
     rag_agent = RAGAgent(vector_store=vector_store, llm_client=llm_client)
-    code_generator = CodeGenerator(llm_client=llm_client, template_dir=template_dir)
+    code_generator = CodeGenerator(llm_client=llm_client)
     doc_analyzer = DocumentationAnalyzer(llm_client=llm_client)
 
     # Create and return supervisor
