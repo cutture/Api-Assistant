@@ -59,10 +59,7 @@ def get_supervisor():
     initialize_monitoring()
 
     llm_client = get_llm_client()
-    vector_store_service = get_vector_store()
-
-    # Get the actual vector store instance from the service
-    vector_store = vector_store_service.vector_store
+    vector_store = get_vector_store()  # VectorStore instance is returned directly
 
     return create_supervisor(llm_client=llm_client, vector_store=vector_store)
 
