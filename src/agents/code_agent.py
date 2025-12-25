@@ -563,9 +563,12 @@ Respond ONLY with valid JSON, no other text:"""
         # Find the function definition line
         lines = code.split('\n')
         function_def_idx = None
+        function_indent = ""
         for i, line in enumerate(lines):
             if line.strip().startswith('def '):
                 function_def_idx = i
+                # Detect indentation level of the function
+                function_indent = line[:len(line) - len(line.lstrip())]
                 break
 
         if function_def_idx is None:
@@ -574,8 +577,8 @@ Respond ONLY with valid JSON, no other text:"""
         # Check if tenacity import already exists
         has_tenacity = any('from tenacity import' in line for line in lines[:function_def_idx])
 
-        # Build retry decorator
-        retry_decorator = "    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))"
+        # Build retry decorator with same indentation as function
+        retry_decorator = f"{function_indent}@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))"
 
         # Add import if needed
         if not has_tenacity:
