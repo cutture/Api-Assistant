@@ -33,6 +33,9 @@ pydantic-settings>=2.0.0
 tenacity>=8.2.0
 structlog>=23.1.0
 
+# Observability & Monitoring
+langfuse>=2.0.0
+
 # Templates
 Jinja2>=3.1.0
 
