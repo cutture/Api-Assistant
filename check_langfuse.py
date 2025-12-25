@@ -12,7 +12,10 @@ print("\n1. Checking if langfuse package is installed...")
 try:
     import langfuse
     print(f"   ✓ langfuse is installed")
-    print(f"   Version: {langfuse.__version__}")
+    try:
+        print(f"   Version: {langfuse.__version__}")
+    except AttributeError:
+        print(f"   Version: Unknown (no __version__ attribute)")
 except ImportError as e:
     print(f"   ✗ langfuse is NOT installed")
     print(f"   Error: {e}")
