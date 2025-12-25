@@ -11,6 +11,7 @@ This package contains specialized agents for query processing:
 
 from src.agents.base_agent import AgentRegistry, BaseAgent, PassThroughAgent
 from src.agents.query_analyzer import QueryAnalyzer
+from src.agents.rag_agent import RAGAgent
 from src.agents.state import (
     AgentError,
     AgentMessage,
@@ -46,4 +47,5 @@ __all__ = [
     "AgentRegistry",
     # Specialized agents
     "QueryAnalyzer",
+    "RAGAgent",
 ]
