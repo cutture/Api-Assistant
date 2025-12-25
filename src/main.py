@@ -58,10 +58,11 @@ def get_supervisor():
     # Initialize monitoring if not already done
     initialize_monitoring()
 
-    llm_client = get_llm_client()
     vector_store = get_vector_store()  # VectorStore instance is returned directly
 
-    return create_supervisor(llm_client=llm_client, vector_store=vector_store)
+    # create_supervisor now handles creating specialized LLM clients internally
+    # based on LLM_PROVIDER setting (ollama or groq)
+    return create_supervisor(vector_store=vector_store)
 
 
 # ----- File Processing -----

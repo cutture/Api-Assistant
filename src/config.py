@@ -25,13 +25,18 @@ class Settings(BaseSettings):
     debug: bool = Field(default=False)
     log_level: str = Field(default="INFO")
 
+    # ----- LLM Provider -----
+    llm_provider: str = Field(default="ollama")  # "ollama" or "groq"
+
     # ----- Ollama (Local LLM) -----
     ollama_base_url: str = Field(default="http://localhost:11434")
     ollama_model: str = Field(default="deepseek-coder:6.7b")
 
-    # ----- Groq (Cloud Fallback) -----
+    # ----- Groq (Cloud LLM) -----
     groq_api_key: Optional[str] = Field(default=None)
-    groq_model: str = Field(default="llama-3.3-70b-versatile")
+    groq_reasoning_model: str = Field(default="deepseek-r1-distill-llama-70b")  # For QueryAnalyzer, DocAnalyzer
+    groq_code_model: str = Field(default="llama-3.3-70b-versatile")  # For CodeGenerator
+    groq_general_model: str = Field(default="llama-3.3-70b-versatile")  # For RAGAgent
 
     # ----- Embeddings -----
     embedding_model: str = Field(default="all-MiniLM-L6-v2")

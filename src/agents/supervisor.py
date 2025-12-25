@@ -494,36 +494,49 @@ What would you like to explore?"""
 
 
 def create_supervisor(
-    llm_client,
-    vector_store,
+    llm_client=None,
+    vector_store=None,
 ) -> SupervisorAgent:
     """
     Factory function to create a fully configured SupervisorAgent.
 
     This is a convenience function that instantiates all required agents
-    and wires them together into a supervisor.
+    with specialized LLM clients based on the configured provider.
+
+    When using Groq:
+    - QueryAnalyzer: Uses reasoning model (DeepSeek R1)
+    - RAGAgent: Uses general model (Llama 3.3 70B)
+    - CodeGenerator: Uses code model (Llama 3.3 70B)
+    - DocumentationAnalyzer: Uses reasoning model (DeepSeek R1)
+
+    When using Ollama:
+    - All agents use the same configured Ollama model
 
     Args:
-        llm_client: LLM client for all agents
+        llm_client: Optional LLM client (deprecated, use LLM_PROVIDER env var)
         vector_store: Vector store for RAG agent
 
     Returns:
         Configured SupervisorAgent ready to use
 
     Example:
-        >>> from src.core.llm_client import OllamaClient
-        >>> from langchain_chroma import Chroma
+        >>> from src.services.vector_store import get_vector_store
         >>>
-        >>> llm = OllamaClient(model="deepseek-coder:6.7b")
-        >>> vector_store = Chroma(...)
-        >>> supervisor = create_supervisor(llm, vector_store)
+        >>> vector_store = get_vector_store()
+        >>> supervisor = create_supervisor(vector_store=vector_store)
         >>> result = supervisor.process("How do I authenticate?")
     """
-    # Initialize all agents
-    query_analyzer = QueryAnalyzer(llm_client=llm_client)
-    rag_agent = RAGAgent(vector_store=vector_store, llm_client=llm_client)
-    code_generator = CodeGenerator(llm_client=llm_client)
-    doc_analyzer = DocumentationAnalyzer(llm_client=llm_client)
+    from src.core.llm_client import (
+        create_code_client,
+        create_general_client,
+        create_reasoning_client,
+    )
+
+    # Initialize all agents with specialized LLM clients
+    query_analyzer = QueryAnalyzer(llm_client=create_reasoning_client())
+    rag_agent = RAGAgent(vector_store=vector_store, llm_client=create_general_client())
+    code_generator = CodeGenerator(llm_client=create_code_client())
+    doc_analyzer = DocumentationAnalyzer(llm_client=create_reasoning_client())
 
     # Create and return supervisor
     supervisor = SupervisorAgent(

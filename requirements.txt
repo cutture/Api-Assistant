@@ -12,8 +12,9 @@ sentence-transformers>=2.2.0
 # Vector Database
 chromadb>=0.4.0
 
-# Ollama Integration
-ollama>=0.3.0
+# LLM Providers
+ollama>=0.3.0        # Local LLM
+groq>=0.4.0          # Cloud LLM (fast inference)
 
 # OpenAPI Parsing
 prance>=23.6.0
@@ -42,6 +43,3 @@ Jinja2>=3.1.0
 # Development
 pytest>=7.4.0
 pytest-asyncio>=0.21.0
-
-# Optional: Cloud LLM fallback (uncomment if needed)
-# groq>=0.4.0

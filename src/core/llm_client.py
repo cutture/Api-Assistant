@@ -1,11 +1,10 @@
 """
 LLM Client abstraction for interacting with language models.
-Supports Ollama (local) with optional Groq (cloud) fallback.
+Supports Ollama (local) and Groq (cloud) providers.
 """
 
-from typing import AsyncGenerator, Generator, Optional
+from typing import AsyncGenerator, Generator, Literal, Optional
 
-import ollama
 import structlog
 from tenacity import retry, stop_after_attempt, wait_exponential
 
@@ -17,9 +16,9 @@ logger = structlog.get_logger(__name__)
 class LLMClient:
     """
     Unified LLM client supporting local (Ollama) and cloud (Groq) models.
-    
+
     Features:
-    - Automatic fallback to cloud if local fails
+    - Configurable provider (ollama or groq)
     - Streaming support
     - Retry with exponential backoff
     - Conversation history management
@@ -27,43 +26,60 @@ class LLMClient:
 
     def __init__(
         self,
+        provider: Optional[Literal["ollama", "groq"]] = None,
         model: Optional[str] = None,
         base_url: Optional[str] = None,
-        use_cloud_fallback: bool = True,
     ):
         """
         Initialize the LLM client.
 
         Args:
-            model: Model name to use (default from settings).
-            base_url: Ollama base URL (default from settings).
-            use_cloud_fallback: Whether to fallback to cloud if local fails.
+            provider: LLM provider ("ollama" or "groq"). Defaults to settings.llm_provider.
+            model: Model name to use. If None, uses provider-specific default from settings.
+            base_url: Ollama base URL (only for Ollama provider).
         """
-        self.model = model or settings.ollama_model
+        self.provider = provider or settings.llm_provider
         self.base_url = base_url or settings.ollama_base_url
-        self.use_cloud_fallback = use_cloud_fallback
-        
-        self._ollama_client: Optional[ollama.Client] = None
+
+        # Set model based on provider
+        if model:
+            self.model = model
+        else:
+            if self.provider == "groq":
+                self.model = settings.groq_general_model
+            else:
+                self.model = settings.ollama_model
+
+        self._ollama_client = None
+        self._groq_client = None
+
+        logger.info(
+            "llm_client_initialized",
+            provider=self.provider,
+            model=self.model,
+        )
 
     @property
-    def ollama_client(self) -> ollama.Client:
+    def ollama_client(self):
         """Get or create the Ollama client."""
         if self._ollama_client is None:
+            import ollama
             self._ollama_client = ollama.Client(host=self.base_url)
         return self._ollama_client
 
-    def _check_ollama_available(self) -> bool:
-        """Check if Ollama is available and the model is loaded."""
-        try:
-            models = self.ollama_client.list()
-            available_models = [m["name"] for m in models.get("models", [])]
-            
-            # Check if our model is available (handle tag variations)
-            model_base = self.model.split(":")[0]
-            return any(model_base in m for m in available_models)
-        except Exception as e:
-            logger.warning("Ollama not available", error=str(e))
-            return False
+    @property
+    def groq_client(self):
+        """Get or create the Groq client."""
+        if self._groq_client is None:
+            try:
+                from groq import Groq
+                if not settings.groq_api_key:
+                    raise ValueError("GROQ_API_KEY not set in environment")
+                self._groq_client = Groq(api_key=settings.groq_api_key)
+            except ImportError:
+                logger.error("Groq package not installed. Run: pip install groq")
+                raise
+        return self._groq_client
 
     @retry(
         stop=stop_after_attempt(3),
@@ -90,6 +106,7 @@ class LLMClient:
         """
         logger.debug(
             "Generating LLM response",
+            provider=self.provider,
             model=self.model,
             prompt_length=len(prompt),
         )
@@ -100,26 +117,13 @@ class LLMClient:
         messages.append({"role": "user", "content": prompt})
 
         try:
-            response = self.ollama_client.chat(
-                model=self.model,
-                messages=messages,
-                options={
-                    "temperature": temperature,
-                    "num_predict": max_tokens,
-                },
-            )
-            
-            content = response["message"]["content"]
-            logger.debug("LLM response generated", response_length=len(content))
-            return content
+            if self.provider == "groq":
+                return self._generate_with_groq(messages, temperature, max_tokens)
+            else:
+                return self._generate_with_ollama(messages, temperature, max_tokens)
 
         except Exception as e:
-            logger.error("LLM generation failed", error=str(e))
-            
-            if self.use_cloud_fallback and settings.groq_api_key:
-                logger.info("Falling back to cloud LLM")
-                return self._generate_with_groq(messages, temperature, max_tokens)
-            
+            logger.error("LLM generation failed", error=str(e), provider=self.provider)
             raise
 
     def generate_stream(
@@ -147,22 +151,13 @@ class LLMClient:
         messages.append({"role": "user", "content": prompt})
 
         try:
-            stream = self.ollama_client.chat(
-                model=self.model,
-                messages=messages,
-                stream=True,
-                options={
-                    "temperature": temperature,
-                    "num_predict": max_tokens,
-                },
-            )
-
-            for chunk in stream:
-                if "message" in chunk and "content" in chunk["message"]:
-                    yield chunk["message"]["content"]
+            if self.provider == "groq":
+                yield from self._generate_stream_with_groq(messages, temperature, max_tokens)
+            else:
+                yield from self._generate_stream_with_ollama(messages, temperature, max_tokens)
 
         except Exception as e:
-            logger.error("LLM streaming failed", error=str(e))
+            logger.error("LLM streaming failed", error=str(e), provider=self.provider)
             raise
 
     def chat(
@@ -183,18 +178,13 @@ class LLMClient:
             Assistant's response.
         """
         try:
-            response = self.ollama_client.chat(
-                model=self.model,
-                messages=messages,
-                options={
-                    "temperature": temperature,
-                    "num_predict": max_tokens,
-                },
-            )
-            return response["message"]["content"]
+            if self.provider == "groq":
+                return self._generate_with_groq(messages, temperature, max_tokens)
+            else:
+                return self._generate_with_ollama(messages, temperature, max_tokens)
 
         except Exception as e:
-            logger.error("Chat failed", error=str(e))
+            logger.error("Chat failed", error=str(e), provider=self.provider)
             raise
 
     def chat_stream(
@@ -215,32 +205,23 @@ class LLMClient:
             Text chunks as they are generated.
         """
         try:
-            stream = self.ollama_client.chat(
-                model=self.model,
-                messages=messages,
-                stream=True,
-                options={
-                    "temperature": temperature,
-                    "num_predict": max_tokens,
-                },
-            )
-
-            for chunk in stream:
-                if "message" in chunk and "content" in chunk["message"]:
-                    yield chunk["message"]["content"]
+            if self.provider == "groq":
+                yield from self._generate_stream_with_groq(messages, temperature, max_tokens)
+            else:
+                yield from self._generate_stream_with_ollama(messages, temperature, max_tokens)
 
         except Exception as e:
-            logger.error("Chat streaming failed", error=str(e))
+            logger.error("Chat streaming failed", error=str(e), provider=self.provider)
             raise
 
-    def _generate_with_groq(
+    def _generate_with_ollama(
         self,
         messages: list[dict[str, str]],
         temperature: float,
         max_tokens: int,
     ) -> str:
         """
-        Fallback generation using Groq cloud API.
+        Generate using Ollama local API.
 
         Args:
             messages: Conversation messages.
@@ -250,41 +231,166 @@ class LLMClient:
         Returns:
             Generated response.
         """
-        try:
-            from groq import Groq
-            
-            client = Groq(api_key=settings.groq_api_key)
-            response = client.chat.completions.create(
-                model=settings.groq_model,
-                messages=messages,
-                temperature=temperature,
-                max_tokens=max_tokens,
-            )
-            return response.choices[0].message.content
+        response = self.ollama_client.chat(
+            model=self.model,
+            messages=messages,
+            options={
+                "temperature": temperature,
+                "num_predict": max_tokens,
+            },
+        )
+        content = response["message"]["content"]
+        logger.debug("Ollama response generated", response_length=len(content))
+        return content
 
-        except ImportError:
-            logger.error("Groq package not installed. Run: pip install groq")
-            raise
-        except Exception as e:
-            logger.error("Groq generation failed", error=str(e))
-            raise
+    def _generate_stream_with_ollama(
+        self,
+        messages: list[dict[str, str]],
+        temperature: float,
+        max_tokens: int,
+    ) -> Generator[str, None, None]:
+        """
+        Generate streaming response using Ollama.
+
+        Args:
+            messages: Conversation messages.
+            temperature: Sampling temperature.
+            max_tokens: Maximum tokens.
+
+        Yields:
+            Text chunks.
+        """
+        stream = self.ollama_client.chat(
+            model=self.model,
+            messages=messages,
+            stream=True,
+            options={
+                "temperature": temperature,
+                "num_predict": max_tokens,
+            },
+        )
+
+        for chunk in stream:
+            if "message" in chunk and "content" in chunk["message"]:
+                yield chunk["message"]["content"]
+
+    def _generate_with_groq(
+        self,
+        messages: list[dict[str, str]],
+        temperature: float,
+        max_tokens: int,
+    ) -> str:
+        """
+        Generate using Groq cloud API.
+
+        Args:
+            messages: Conversation messages.
+            temperature: Sampling temperature.
+            max_tokens: Maximum tokens.
+
+        Returns:
+            Generated response.
+        """
+        response = self.groq_client.chat.completions.create(
+            model=self.model,
+            messages=messages,
+            temperature=temperature,
+            max_tokens=max_tokens,
+        )
+        content = response.choices[0].message.content
+        logger.debug("Groq response generated", response_length=len(content))
+        return content
+
+    def _generate_stream_with_groq(
+        self,
+        messages: list[dict[str, str]],
+        temperature: float,
+        max_tokens: int,
+    ) -> Generator[str, None, None]:
+        """
+        Generate streaming response using Groq.
+
+        Args:
+            messages: Conversation messages.
+            temperature: Sampling temperature.
+            max_tokens: Maximum tokens.
+
+        Yields:
+            Text chunks.
+        """
+        stream = self.groq_client.chat.completions.create(
+            model=self.model,
+            messages=messages,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            stream=True,
+        )
+
+        for chunk in stream:
+            if chunk.choices[0].delta.content:
+                yield chunk.choices[0].delta.content
 
     def get_model_info(self) -> dict:
         """Get information about the current model."""
         try:
-            info = self.ollama_client.show(self.model)
-            return {
-                "name": self.model,
-                "parameters": info.get("parameters", "unknown"),
-                "size": info.get("size", "unknown"),
-                "family": info.get("details", {}).get("family", "unknown"),
-            }
+            if self.provider == "ollama":
+                info = self.ollama_client.show(self.model)
+                return {
+                    "provider": "ollama",
+                    "name": self.model,
+                    "parameters": info.get("parameters", "unknown"),
+                    "size": info.get("size", "unknown"),
+                    "family": info.get("details", {}).get("family", "unknown"),
+                }
+            else:
+                return {
+                    "provider": "groq",
+                    "name": self.model,
+                }
         except Exception as e:
             logger.warning("Could not get model info", error=str(e))
-            return {"name": self.model, "error": str(e)}
+            return {"provider": self.provider, "name": self.model, "error": str(e)}
 
 
-# Convenience function
-def get_llm_client() -> LLMClient:
-    """Get an LLM client instance with default settings."""
-    return LLMClient()
+# Convenience functions
+def get_llm_client(agent_type: Optional[str] = None) -> LLMClient:
+    """
+    Get an LLM client instance configured for the current provider.
+
+    Args:
+        agent_type: Type of agent ("reasoning", "code", "general").
+                   Used to select appropriate model when provider is Groq.
+
+    Returns:
+        Configured LLMClient instance.
+    """
+    provider = settings.llm_provider
+
+    if provider == "groq":
+        # Map agent type to appropriate Groq model
+        if agent_type == "reasoning":
+            model = settings.groq_reasoning_model
+        elif agent_type == "code":
+            model = settings.groq_code_model
+        else:
+            model = settings.groq_general_model
+
+        return LLMClient(provider="groq", model=model)
+    else:
+        # Ollama uses the same model for all agents
+        return LLMClient(provider="ollama", model=settings.ollama_model)
+
+
+def create_reasoning_client() -> LLMClient:
+    """Create LLM client for reasoning/planning agents (QueryAnalyzer, DocAnalyzer)."""
+    return get_llm_client(agent_type="reasoning")
+
+
+def create_code_client() -> LLMClient:
+    """Create LLM client for code generation agent."""
+    return get_llm_client(agent_type="code")
+
+
+def create_general_client() -> LLMClient:
+    """Create LLM client for general agents (RAGAgent)."""
+    return get_llm_client(agent_type="general")
