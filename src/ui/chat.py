@@ -40,8 +40,8 @@ def render_chat(
     init_chat_state()
 
     # Display chat history
-    for message in st.session_state.messages:
-        render_message(message)
+    for idx, message in enumerate(st.session_state.messages):
+        render_message(message, message_index=idx)
 
     # Chat input
     if prompt := st.chat_input(placeholder_text, disabled=st.session_state.processing):
@@ -87,8 +87,9 @@ def render_chat(
                         }
                         st.session_state.messages.append(assistant_message)
 
-                        # Render agent metadata
-                        render_agent_metadata(agent_result)
+                        # Render agent metadata (use current message index)
+                        current_message_index = len(st.session_state.messages) - 1
+                        render_agent_metadata(agent_result, message_index=current_message_index)
 
                     except Exception as e:
                         error_msg = f"❌ Error: {str(e)}"
@@ -102,12 +103,13 @@ def render_chat(
                         st.session_state.processing = False
 
 
-def render_message(message: Union[dict, Message]) -> None:
+def render_message(message: Union[dict, Message], message_index: int = 0) -> None:
     """
     Render a single chat message with agent metadata.
 
     Args:
         message: The message to render (dict or Message object).
+        message_index: Unique index for this message in the conversation.
     """
     # Handle both dict and Message object formats
     if isinstance(message, dict):
@@ -124,15 +126,16 @@ def render_message(message: Union[dict, Message]) -> None:
 
         # Show agent metadata if available (for assistant messages)
         if role == "assistant" and agent_data:
-            render_agent_metadata(agent_data)
+            render_agent_metadata(agent_data, message_index=message_index)
 
 
-def render_agent_metadata(agent_data: dict) -> None:
+def render_agent_metadata(agent_data: dict, message_index: int = 0) -> None:
     """
     Render agent metadata including sources, code snippets, and processing path.
 
     Args:
         agent_data: Agent result data from supervisor.
+        message_index: Unique index for this message in the conversation.
     """
     if not agent_data:
         return
@@ -171,12 +174,12 @@ def render_agent_metadata(agent_data: dict) -> None:
     # Source Documents
     sources = agent_data.get("sources", [])
     if sources:
-        render_sources_section(sources)
+        render_sources_section(sources, message_index=message_index)
 
     # Code Snippets
     code_snippets = agent_data.get("code_snippets", [])
     if code_snippets:
-        render_code_snippets(code_snippets)
+        render_code_snippets(code_snippets, message_index=message_index)
 
     # Error Information
     error = agent_data.get("error")
@@ -196,12 +199,13 @@ def get_agent_icon(agent_name: str) -> str:
     return icons.get(agent_name, "🤖")
 
 
-def render_sources_section(sources: list[dict]) -> None:
+def render_sources_section(sources: list[dict], message_index: int = 0) -> None:
     """
     Render RAG sources in an expandable section.
 
     Args:
         sources: List of retrieved documents with scores.
+        message_index: Unique index for this message in the conversation.
     """
     if not sources:
         return
@@ -234,19 +238,20 @@ def render_sources_section(sources: list[dict]) -> None:
                     f"Source {i} Content",
                     preview,
                     height=100,
-                    key=f"source_{i}",
+                    key=f"source_msg{message_index}_{i}",
                     label_visibility="collapsed",
                 )
 
             st.divider()
 
 
-def render_code_snippets(code_snippets: list[dict]) -> None:
+def render_code_snippets(code_snippets: list[dict], message_index: int = 0) -> None:
     """
     Render generated code snippets.
 
     Args:
         code_snippets: List of generated code with metadata.
+        message_index: Unique index for this message in the conversation.
     """
     if not code_snippets:
         return
