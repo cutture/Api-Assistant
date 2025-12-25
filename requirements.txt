@@ -16,6 +16,9 @@ chromadb>=0.4.0
 ollama>=0.3.0        # Local LLM
 groq>=0.4.0          # Cloud LLM (fast inference)
 
+# Web Search (fallback when no vector store results)
+duckduckgo-search>=5.0.0  # Free web search
+
 # OpenAPI Parsing
 prance>=23.6.0
 openapi-spec-validator>=0.7.0

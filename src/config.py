@@ -49,6 +49,11 @@ class Settings(BaseSettings):
     max_upload_size_mb: int = Field(default=10)
     allowed_extensions: str = Field(default="json,yaml,yml,md,txt")
 
+    # ----- Web Search (Fallback) -----
+    enable_web_search: bool = Field(default=True)  # Enable web search fallback
+    web_search_min_relevance: float = Field(default=0.5)  # Min relevance score before fallback
+    web_search_max_results: int = Field(default=5)  # Max web search results to fetch
+
     @property
     def allowed_extensions_list(self) -> list[str]:
         """Get allowed extensions as a list."""

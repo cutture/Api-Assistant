@@ -19,8 +19,10 @@ from src.agents.state import (
     add_to_processing_path,
     set_error,
 )
+from src.config import settings
 from src.core.llm_client import LLMClient
 from src.core.vector_store import VectorStore, get_vector_store
+from src.services.web_search import WebSearchService
 
 logger = structlog.get_logger(__name__)
 
@@ -87,6 +89,7 @@ Respond with one variation per line, no numbering or bullets:"""
         self,
         vector_store: Optional[VectorStore] = None,
         llm_client: Optional[LLMClient] = None,
+        web_search: Optional[WebSearchService] = None,
         top_k: int = 5,
         min_relevance_score: float = 0.3,
     ):
@@ -96,14 +99,18 @@ Respond with one variation per line, no numbering or bullets:"""
         Args:
             vector_store: Vector store instance (creates default if not provided).
             llm_client: LLM client instance (creates default if not provided).
+            web_search: Web search service (creates default if not provided).
             top_k: Maximum number of documents to retrieve per query.
             min_relevance_score: Minimum relevance score (0-1) for filtering results.
         """
         super().__init__()
         self._vector_store = vector_store or get_vector_store()
         self._llm_client = llm_client or LLMClient()
+        self._web_search = web_search or WebSearchService()
         self.top_k = top_k
         self.min_relevance_score = min_relevance_score
+        self.enable_web_search = settings.enable_web_search
+        self.web_search_min_relevance = settings.web_search_min_relevance
 
     @property
     def name(self) -> str:
@@ -259,12 +266,75 @@ Respond with one variation per line, no numbering or bullets:"""
         ]
 
         self._logger.info(
-            "Documents retrieved",
+            "Documents retrieved from vector store",
             total_found=len(all_results),
             after_filtering=len(retrieved_docs),
         )
 
+        # Web search fallback if relevance is too low
+        if self.enable_web_search and retrieved_docs:
+            best_score = retrieved_docs[0].score if retrieved_docs else 0.0
+
+            if best_score < self.web_search_min_relevance:
+                self._logger.info(
+                    "Triggering web search fallback",
+                    best_vector_score=best_score,
+                    threshold=self.web_search_min_relevance,
+                )
+
+                # Perform web search
+                web_docs = self._search_web(query)
+
+                if web_docs:
+                    self._logger.info(
+                        "Web search results added",
+                        num_web_results=len(web_docs),
+                    )
+                    # Combine vector store and web search results
+                    retrieved_docs.extend(web_docs)
+
+                    # Re-sort by score and limit
+                    retrieved_docs.sort(key=lambda x: x.score, reverse=True)
+                    retrieved_docs = retrieved_docs[:self.top_k]
+
+        elif self.enable_web_search and not retrieved_docs:
+            # No vector store results - try web search
+            self._logger.info("No vector store results, trying web search")
+            web_docs = self._search_web(query)
+            retrieved_docs = web_docs[:self.top_k]
+
         return retrieved_docs
+
+    def _search_web(self, query: str) -> list[RetrievedDocument]:
+        """
+        Perform web search and convert results to RetrievedDocument format.
+
+        Args:
+            query: The search query.
+
+        Returns:
+            List of RetrievedDocument objects from web search.
+        """
+        try:
+            # Use WebSearchService to get formatted documents
+            web_results = self._web_search.search_to_documents(query)
+
+            # Convert to RetrievedDocument objects
+            web_docs = [
+                RetrievedDocument(
+                    content=result["content"],
+                    metadata=result["metadata"],
+                    score=result["score"],
+                    doc_id=result["doc_id"],
+                )
+                for result in web_results
+            ]
+
+            return web_docs
+
+        except Exception as e:
+            self._logger.error("Web search failed", error=str(e))
+            return []
 
     def _expand_query(
         self,
@@ -363,16 +433,25 @@ Respond with one variation per line, no numbering or bullets:"""
             # Add metadata context if available
             metadata_str = ""
             if doc.metadata:
-                parts = []
-                if "endpoint" in doc.metadata:
-                    parts.append(f"Endpoint: {doc.metadata['endpoint']}")
-                if "method" in doc.metadata:
-                    parts.append(f"Method: {doc.metadata['method']}")
-                if "operation_id" in doc.metadata:
-                    parts.append(f"Operation: {doc.metadata['operation_id']}")
-
-                if parts:
+                # Check if this is a web search result
+                if doc.metadata.get("source") == "web_search":
+                    parts = [
+                        "Source: Web Search",
+                        f"URL: {doc.metadata.get('url', 'N/A')}",
+                    ]
                     metadata_str = f" [{', '.join(parts)}]"
+                else:
+                    # Vector store result
+                    parts = []
+                    if "endpoint" in doc.metadata:
+                        parts.append(f"Endpoint: {doc.metadata['endpoint']}")
+                    if "method" in doc.metadata:
+                        parts.append(f"Method: {doc.metadata['method']}")
+                    if "operation_id" in doc.metadata:
+                        parts.append(f"Operation: {doc.metadata['operation_id']}")
+
+                    if parts:
+                        metadata_str = f" [{', '.join(parts)}]"
 
             context_parts.append(f"[Source {i}]{metadata_str}\n{doc.content}\n")
 
@@ -426,26 +505,36 @@ Respond with one variation per line, no numbering or bullets:"""
         citations = []
 
         for doc in documents:
-            # Extract citation info from metadata
-            endpoint_path = doc.metadata.get("endpoint", "")
-            method = doc.metadata.get("method", "")
-
-            # Create description
-            if "operation_id" in doc.metadata:
-                description = doc.metadata["operation_id"]
-            elif "summary" in doc.metadata:
-                description = doc.metadata["summary"]
-            elif endpoint_path:
-                description = f"Documentation for {endpoint_path}"
+            # Check if this is a web search result
+            if doc.metadata.get("source") == "web_search":
+                # Web search citation
+                citation = SourceCitation(
+                    endpoint_path=doc.metadata.get("url", ""),
+                    method="WEB",  # Special marker for web sources
+                    description=doc.metadata.get("title", "Web Search Result"),
+                    relevance_score=doc.score,
+                )
             else:
-                description = "API Documentation"
+                # Vector store citation
+                endpoint_path = doc.metadata.get("endpoint", "")
+                method = doc.metadata.get("method", "")
 
-            citation = SourceCitation(
-                endpoint_path=endpoint_path,
-                method=method,
-                description=description,
-                relevance_score=doc.score,
-            )
+                # Create description
+                if "operation_id" in doc.metadata:
+                    description = doc.metadata["operation_id"]
+                elif "summary" in doc.metadata:
+                    description = doc.metadata["summary"]
+                elif endpoint_path:
+                    description = f"Documentation for {endpoint_path}"
+                else:
+                    description = "API Documentation"
+
+                citation = SourceCitation(
+                    endpoint_path=endpoint_path,
+                    method=method,
+                    description=description,
+                    relevance_score=doc.score,
+                )
 
             citations.append(citation)
 
