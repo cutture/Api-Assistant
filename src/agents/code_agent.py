@@ -190,44 +190,63 @@ Respond ONLY with valid JSON, no other text:"""
             # Step 1: Extract endpoint details from context
             endpoint_details = self._extract_endpoint_details(query, retrieved_docs)
 
-            # Step 2: Determine which library to use
-            library = self._determine_library(query)
+            # Step 2: Determine requested language(s) from query
+            requested_languages = self._detect_requested_languages(query)
 
-            # Step 3: Generate code using template
-            code = self._generate_code(endpoint_details, library)
+            # Step 3: Generate code for each requested language
+            code_snippets = []
+            for language in requested_languages:
+                if language == "python":
+                    # Use template-based generation for Python
+                    library = self._determine_library(query)
+                    code = self._generate_code(endpoint_details, library)
 
-            # Step 4: Validate and enhance code
-            if self.validate_syntax:
-                validation_result = self._validate_code(code)
-                if not validation_result["valid"]:
-                    self._logger.warning(
-                        "Generated code has syntax errors",
-                        errors=validation_result["errors"]
-                    )
-                    # Still continue but log the issue
+                    # Validate and enhance code
+                    if self.validate_syntax:
+                        validation_result = self._validate_code(code)
+                        if not validation_result["valid"]:
+                            self._logger.warning(
+                                "Generated code has syntax errors",
+                                errors=validation_result["errors"]
+                            )
 
-            # Step 5: Optionally add retry logic
-            if self.add_retry:
-                code = self._add_retry_decorator(code, endpoint_details.get("method", "GET"))
+                    # Optionally add retry logic
+                    if self.add_retry:
+                        code = self._add_retry_decorator(code, endpoint_details.get("method", "GET"))
 
-            # Step 6: Format code
-            code = self._format_code(code)
+                    # Format code
+                    code = self._format_code(code)
 
-            # Step 7: Create code snippet object
-            code_snippet = {
-                "language": "python",
-                "library": library,
-                "code": code,
-                "endpoint": endpoint_details.get("endpoint", ""),
-                "method": endpoint_details.get("method", "GET"),
-                "description": endpoint_details.get("description", ""),
-            }
+                    code_snippets.append({
+                        "language": "python",
+                        "library": library,
+                        "code": code,
+                        "endpoint": endpoint_details.get("endpoint", ""),
+                        "method": endpoint_details.get("method", "GET"),
+                        "description": endpoint_details.get("description", ""),
+                    })
+                else:
+                    # Use LLM-based generation for other languages (JavaScript, etc.)
+                    code = self._generate_code_llm(endpoint_details, language, query)
+
+                    code_snippets.append({
+                        "language": language,
+                        "library": self._get_default_library_for_language(language),
+                        "code": code,
+                        "endpoint": endpoint_details.get("endpoint", ""),
+                        "method": endpoint_details.get("method", "GET"),
+                        "description": endpoint_details.get("description", ""),
+                    })
+
+            # Create response message
+            languages_str = ", ".join([lang.title() for lang in requested_languages])
+            response_msg = f"Generated code in {languages_str} for {endpoint_details.get('method')} {endpoint_details.get('endpoint')}"
 
             # Update state
             updated_state = {
                 **state,
-                "code_snippets": [code_snippet],
-                "response": f"Generated Python code using {library} library for {endpoint_details.get('method')} {endpoint_details.get('endpoint')}",
+                "code_snippets": code_snippets,
+                "response": response_msg,
             }
 
             self._logger.info(
@@ -693,3 +712,221 @@ Respond ONLY with valid JSON, no other text:"""
             "template_path": str(template_path),
             "exists": template_path.exists(),
         }
+
+    def _detect_requested_languages(self, query: str) -> list[str]:
+        """
+        Detect which programming languages the user requested.
+
+        Args:
+            query: User's query.
+
+        Returns:
+            List of requested language names (e.g., ["python", "javascript"]).
+        """
+        query_lower = query.lower()
+
+        # Language detection keywords
+        language_keywords = {
+            "python": ["python", "py"],
+            "javascript": ["javascript", "js", "node", "nodejs", "node.js"],
+            "typescript": ["typescript", "ts"],
+            "java": ["java"],
+            "csharp": ["c#", "csharp", "c sharp", ".net", "dotnet"],
+            "go": ["go", "golang"],
+            "ruby": ["ruby", "rb"],
+            "php": ["php"],
+            "rust": ["rust"],
+            "swift": ["swift"],
+        }
+
+        detected_languages = []
+
+        # Check for each language
+        for lang, keywords in language_keywords.items():
+            for keyword in keywords:
+                if keyword in query_lower:
+                    if lang not in detected_languages:
+                        detected_languages.append(lang)
+                    break
+
+        # Default to Python if no language specified
+        if not detected_languages:
+            detected_languages = ["python"]
+
+        self._logger.info(
+            "Detected languages",
+            languages=detected_languages,
+            query=query[:100]
+        )
+
+        return detected_languages
+
+    def _get_default_library_for_language(self, language: str) -> str:
+        """
+        Get the default HTTP library for a given language.
+
+        Args:
+            language: Programming language name.
+
+        Returns:
+            Default library name for that language.
+        """
+        library_defaults = {
+            "python": "requests",
+            "javascript": "fetch",
+            "typescript": "fetch",
+            "java": "HttpClient",
+            "csharp": "HttpClient",
+            "go": "net/http",
+            "ruby": "net/http",
+            "php": "curl",
+            "rust": "reqwest",
+            "swift": "URLSession",
+        }
+
+        return library_defaults.get(language, "standard library")
+
+    def _generate_code_llm(
+        self,
+        endpoint_details: dict,
+        language: str,
+        original_query: str
+    ) -> str:
+        """
+        Generate code using LLM for languages without templates.
+
+        Args:
+            endpoint_details: Extracted endpoint information.
+            language: Target programming language.
+            original_query: Original user query for context.
+
+        Returns:
+            Generated code string.
+        """
+        # Build code generation prompt
+        prompt = f"""Generate clean, production-ready {language} code to call the following API endpoint:
+
+Endpoint: {endpoint_details.get('method', 'GET')} {endpoint_details.get('endpoint', '')}
+Description: {endpoint_details.get('description', 'No description available')}
+
+"""
+
+        # Add path parameters
+        if endpoint_details.get('path_params'):
+            prompt += "Path Parameters:\n"
+            for param in endpoint_details['path_params']:
+                prompt += f"  - {param['name']} ({param.get('type', 'string')}): {param.get('description', '')}\n"
+            prompt += "\n"
+
+        # Add query parameters
+        if endpoint_details.get('query_params'):
+            prompt += "Query Parameters:\n"
+            for param in endpoint_details['query_params']:
+                required = "required" if param.get('required') else "optional"
+                prompt += f"  - {param['name']} ({param.get('type', 'string')}, {required}): {param.get('description', '')}\n"
+            prompt += "\n"
+
+        # Add request body
+        if endpoint_details.get('request_body'):
+            prompt += f"Request Body:\n{endpoint_details['request_body']}\n\n"
+
+        # Add authentication
+        if endpoint_details.get('auth_type') and endpoint_details['auth_type'] != 'none':
+            prompt += f"Authentication: {endpoint_details['auth_type']}\n"
+            if endpoint_details.get('auth_details'):
+                prompt += f"Auth Header: {endpoint_details['auth_details'].get('header_name', 'Authorization')}\n"
+            prompt += "\n"
+
+        prompt += f"""Requirements:
+- Use {self._get_default_library_for_language(language)} for HTTP requests
+- Include error handling
+- Add comments explaining the code
+- Use modern {language} best practices
+- Make it production-ready and type-safe (if applicable)
+
+Generate ONLY the code, no explanations or markdown:"""
+
+        # Call LLM to generate code
+        try:
+            code = self._llm_client.generate(
+                prompt=prompt,
+                system_prompt=f"You are an expert {language} developer. Generate clean, production-ready code.",
+                temperature=0.3,
+                max_tokens=1500,
+            )
+
+            # Clean up the code (remove markdown if present)
+            code = code.strip()
+            if code.startswith("```"):
+                # Remove code block markers
+                lines = code.split("\n")
+                if lines[0].startswith("```"):
+                    lines = lines[1:]
+                if lines and lines[-1].strip() == "```":
+                    lines = lines[:-1]
+                code = "\n".join(lines)
+
+            self._logger.info(
+                "LLM code generation complete",
+                language=language,
+                code_length=len(code)
+            )
+
+            return code
+
+        except Exception as e:
+            self._logger.error(
+                "LLM code generation failed",
+                language=language,
+                error=str(e)
+            )
+            # Return a simple fallback code template
+            return self._generate_fallback_code(endpoint_details, language)
+
+    def _generate_fallback_code(self, endpoint_details: dict, language: str) -> str:
+        """
+        Generate basic fallback code when LLM generation fails.
+
+        Args:
+            endpoint_details: Endpoint information.
+            language: Target language.
+
+        Returns:
+            Basic code template.
+        """
+        endpoint = endpoint_details.get('endpoint', '/api/endpoint')
+        method = endpoint_details.get('method', 'GET')
+
+        if language == "javascript":
+            return f"""// {method} {endpoint}
+const response = await fetch('https://api.example.com{endpoint}', {{
+  method: '{method}',
+  headers: {{
+    'Content-Type': 'application/json',
+    // Add authorization header if needed
+    // 'Authorization': 'Bearer YOUR_TOKEN'
+  }}
+}});
+
+const data = await response.json();
+console.log(data);
+"""
+        elif language == "typescript":
+            return f"""// {method} {endpoint}
+const response = await fetch('https://api.example.com{endpoint}', {{
+  method: '{method}',
+  headers: {{
+    'Content-Type': 'application/json',
+    // Add authorization header if needed
+    // 'Authorization': 'Bearer YOUR_TOKEN'
+  }}
+}});
+
+const data = await response.json();
+console.log(data);
+"""
+        else:
+            return f"""// {method} {endpoint}
+// Code generation failed. Please check the endpoint documentation
+// and implement the {language} code manually.
+"""

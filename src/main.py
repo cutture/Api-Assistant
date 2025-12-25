@@ -158,8 +158,28 @@ def generate_response_with_agents(user_query: str) -> dict:
     try:
         supervisor = get_supervisor()
 
+        # Build query with conversation history for context
+        conversation_context = ""
+        if "messages" in st.session_state and len(st.session_state.messages) > 1:
+            # Get last 3 exchanges for context (6 messages = 3 user + 3 assistant)
+            recent_messages = st.session_state.messages[-6:]
+            context_parts = []
+            for msg in recent_messages:
+                role = msg.get("role", "")
+                content = msg.get("content", "")[:200]  # Limit length
+                if role == "user":
+                    context_parts.append(f"User previously asked: {content}")
+                elif role == "assistant":
+                    context_parts.append(f"Assistant previously responded: {content}")
+
+            if context_parts:
+                conversation_context = "\n".join(context_parts) + "\n\nCurrent question: "
+
+        # Combine context with current query
+        contextualized_query = conversation_context + user_query if conversation_context else user_query
+
         # Process query through supervisor
-        result = supervisor.process(user_query)
+        result = supervisor.process(contextualized_query)
 
         # Extract response and metadata
         response_data = {
