@@ -45,6 +45,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **LLM-Powered Summaries**: Uses LLM to create concise conversation summaries
 - **Context-Aware Follow-ups**: Understands references to previous questions
 
+#### Web Search Fallback
+- **DuckDuckGo Integration**: Free web search without API key requirement
+- **Automatic Fallback**: Triggers when vector store relevance < threshold (default 0.5)
+- **Hybrid Retrieval**: Combines vector store + web search results
+- **Source Distinction**: Web sources clearly marked with URLs in citations
+- **Configurable Settings**:
+  - `ENABLE_WEB_SEARCH`: Enable/disable web search feature
+  - `WEB_SEARCH_MIN_RELEVANCE`: Relevance threshold for fallback trigger (0.0-1.0)
+  - `WEB_SEARCH_MAX_RESULTS`: Maximum web results to fetch
+- **Seamless Integration**: Search logic integrated into RAG Agent retrieve node
+
 #### UI Enhancements
 - **Real-Time Agent Status**: Live updates showing which agents are processing
 - **Intent Analysis Display**: Shows detected intent, confidence level, and keywords
