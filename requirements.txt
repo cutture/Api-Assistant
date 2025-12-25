@@ -16,8 +16,9 @@ chromadb>=0.4.0
 ollama>=0.3.0        # Local LLM
 groq>=0.4.0          # Cloud LLM (fast inference)
 
-# Web Search (fallback when no vector store results)
+# Web Search & URL Scraping
 duckduckgo-search>=5.0.0  # Free web search
+beautifulsoup4>=4.12.0    # HTML parsing for URL scraping
 
 # OpenAPI Parsing
 prance>=23.6.0

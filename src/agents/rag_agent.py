@@ -23,6 +23,8 @@ from src.config import settings
 from src.core.llm_client import LLMClient
 from src.core.vector_store import VectorStore, get_vector_store
 from src.services.web_search import WebSearchService
+from src.services.url_scraper import URLScraperService
+from src.services.conversation_memory import ConversationMemoryService
 
 logger = structlog.get_logger(__name__)
 
@@ -90,6 +92,8 @@ Respond with one variation per line, no numbering or bullets:"""
         vector_store: Optional[VectorStore] = None,
         llm_client: Optional[LLMClient] = None,
         web_search: Optional[WebSearchService] = None,
+        url_scraper: Optional[URLScraperService] = None,
+        conversation_memory: Optional[ConversationMemoryService] = None,
         top_k: int = 5,
         min_relevance_score: float = 0.3,
     ):
@@ -100,6 +104,8 @@ Respond with one variation per line, no numbering or bullets:"""
             vector_store: Vector store instance (creates default if not provided).
             llm_client: LLM client instance (creates default if not provided).
             web_search: Web search service (creates default if not provided).
+            url_scraper: URL scraper service (creates default if not provided).
+            conversation_memory: Conversation memory service (creates default if not provided).
             top_k: Maximum number of documents to retrieve per query.
             min_relevance_score: Minimum relevance score (0-1) for filtering results.
         """
@@ -107,6 +113,8 @@ Respond with one variation per line, no numbering or bullets:"""
         self._vector_store = vector_store or get_vector_store()
         self._llm_client = llm_client or LLMClient()
         self._web_search = web_search or WebSearchService()
+        self._url_scraper = url_scraper or URLScraperService()
+        self._conversation_memory = conversation_memory or ConversationMemoryService()
         self.top_k = top_k
         self.min_relevance_score = min_relevance_score
         self.enable_web_search = settings.enable_web_search
@@ -156,8 +164,13 @@ Respond with one variation per line, no numbering or bullets:"""
             if state.get("intent_analysis"):
                 intent_analysis = IntentAnalysis(**state["intent_analysis"])
 
+            # Step 0: Extract and scrape URLs from query (if any)
+            url_docs = self._extract_and_scrape_urls(query)
+            if url_docs:
+                self._logger.info("Scraped URLs from query", num_urls=len(url_docs))
+
             # Step 1: Retrieve relevant documents
-            retrieved_docs = self._retrieve_documents(query, intent_analysis)
+            retrieved_docs = self._retrieve_documents(query, intent_analysis, url_docs)
 
             if not retrieved_docs:
                 self._logger.warning("No relevant documents found")
@@ -201,10 +214,57 @@ Respond with one variation per line, no numbering or bullets:"""
                 recoverable=True,
             )
 
+    def _extract_and_scrape_urls(self, query: str) -> list[RetrievedDocument]:
+        """
+        Extract URLs from query and scrape their content.
+
+        Args:
+            query: User's query that may contain URLs.
+
+        Returns:
+            List of RetrievedDocument objects from scraped URLs.
+        """
+        try:
+            # Extract URLs
+            urls = self._url_scraper.extract_urls(query)
+            if not urls:
+                return []
+
+            # Scrape URLs
+            scraped_contents = self._url_scraper.scrape_urls(urls)
+
+            # Convert to RetrievedDocument format and embed in vector store
+            url_docs = []
+            for content in scraped_contents:
+                # Format for vector store
+                doc_dict = self._url_scraper.format_for_vector_store(content)
+
+                # Embed in vector store for future retrieval
+                self._conversation_memory.embed_url_content(
+                    url_content=content,
+                    query=query,
+                )
+
+                # Convert to RetrievedDocument
+                url_doc = RetrievedDocument(
+                    content=doc_dict["content"],
+                    metadata=doc_dict["metadata"],
+                    score=doc_dict["score"],
+                    doc_id=doc_dict["doc_id"],
+                )
+                url_docs.append(url_doc)
+
+            return url_docs
+
+        except Exception as e:
+            self._logger.error("Failed to extract and scrape URLs", error=str(e))
+            return []
+
     def _retrieve_documents(
         self,
         query: str,
         intent_analysis: Optional[IntentAnalysis] = None,
+        url_docs: Optional[list[RetrievedDocument]] = None,
     ) -> list[RetrievedDocument]:
         """
         Retrieve relevant documents using multi-query expansion.
@@ -212,10 +272,12 @@ Respond with one variation per line, no numbering or bullets:"""
         Args:
             query: The user's query.
             intent_analysis: Optional intent analysis for filtering.
+            url_docs: Optional documents scraped from URLs in the query.
 
         Returns:
             List of retrieved documents with relevance scores.
         """
+        url_docs = url_docs or []
         # Generate query variations for better recall
         queries = self._expand_query(query, intent_analysis)
         self._logger.debug("Query expansion", original=query, variations=queries)
@@ -265,13 +327,22 @@ Respond with one variation per line, no numbering or bullets:"""
             for result in filtered_results
         ]
 
+        # Add URL docs first (highest priority)
+        if url_docs:
+            retrieved_docs = url_docs + retrieved_docs
+            self._logger.info(
+                "Added scraped URL documents",
+                num_url_docs=len(url_docs),
+            )
+
         self._logger.info(
             "Documents retrieved from vector store",
             total_found=len(all_results),
             after_filtering=len(retrieved_docs),
         )
 
-        # Web search fallback if relevance is too low
+        # Web search fallback if relevance is too low or no results
+        web_docs = []
         if self.enable_web_search and retrieved_docs:
             best_score = retrieved_docs[0].score if retrieved_docs else 0.0
 
@@ -282,14 +353,18 @@ Respond with one variation per line, no numbering or bullets:"""
                     threshold=self.web_search_min_relevance,
                 )
 
-                # Perform web search
-                web_docs = self._search_web(query)
+                # Perform web search with smart query generation
+                web_docs = self._search_web_smart(query, intent_analysis)
 
                 if web_docs:
                     self._logger.info(
                         "Web search results added",
                         num_web_results=len(web_docs),
                     )
+
+                    # Embed web search results for future use
+                    self._embed_web_search_results(query, web_docs)
+
                     # Combine vector store and web search results
                     retrieved_docs.extend(web_docs)
 
@@ -298,9 +373,14 @@ Respond with one variation per line, no numbering or bullets:"""
                     retrieved_docs = retrieved_docs[:self.top_k]
 
         elif self.enable_web_search and not retrieved_docs:
-            # No vector store results - try web search
+            # No vector store results - try web search with smart queries
             self._logger.info("No vector store results, trying web search")
-            web_docs = self._search_web(query)
+            web_docs = self._search_web_smart(query, intent_analysis)
+
+            if web_docs:
+                # Embed web search results for future use
+                self._embed_web_search_results(query, web_docs)
+
             retrieved_docs = web_docs[:self.top_k]
 
         return retrieved_docs
@@ -335,6 +415,121 @@ Respond with one variation per line, no numbering or bullets:"""
         except Exception as e:
             self._logger.error("Web search failed", error=str(e))
             return []
+
+    def _search_web_smart(
+        self,
+        query: str,
+        intent_analysis: Optional[IntentAnalysis] = None,
+    ) -> list[RetrievedDocument]:
+        """
+        Perform web search with smarter query generation.
+
+        This method enhances web search by:
+        - Generating better search queries based on intent
+        - Using keywords from intent analysis
+        - Creating context-aware search terms
+
+        Args:
+            query: The original user query.
+            intent_analysis: Optional intent analysis for context.
+
+        Returns:
+            List of RetrievedDocument objects from web search.
+        """
+        # Generate smart search query
+        search_query = self._generate_smart_search_query(query, intent_analysis)
+
+        self._logger.info(
+            "Performing smart web search",
+            original_query=query[:50],
+            search_query=search_query[:50],
+        )
+
+        # Perform web search
+        return self._search_web(search_query)
+
+    def _generate_smart_search_query(
+        self,
+        query: str,
+        intent_analysis: Optional[IntentAnalysis] = None,
+    ) -> str:
+        """
+        Generate a smarter search query based on intent and keywords.
+
+        Args:
+            query: Original query.
+            intent_analysis: Optional intent analysis.
+
+        Returns:
+            Enhanced search query.
+        """
+        # Start with original query
+        search_parts = [query]
+
+        # Add intent-specific context
+        if intent_analysis:
+            intent = intent_analysis.primary_intent
+
+            # Add domain context based on intent
+            if "code" in intent.value.lower():
+                search_parts.append("code example tutorial")
+            elif "authentication" in intent.value.lower():
+                search_parts.append("API authentication guide")
+            elif "schema" in intent.value.lower():
+                search_parts.append("API schema documentation")
+
+            # Add keywords
+            if intent_analysis.keywords:
+                # Add top 2-3 keywords
+                search_parts.extend(intent_analysis.keywords[:3])
+
+        # Combine into search query
+        search_query = " ".join(search_parts)
+
+        # Limit length
+        if len(search_query) > 200:
+            search_query = search_query[:200]
+
+        return search_query
+
+    def _embed_web_search_results(
+        self,
+        query: str,
+        web_docs: list[RetrievedDocument],
+    ) -> None:
+        """
+        Embed web search results in vector store for future retrieval.
+
+        Args:
+            query: Original query that triggered web search.
+            web_docs: Web search result documents to embed.
+        """
+        try:
+            # Convert to format expected by conversation memory
+            web_results = [
+                {
+                    "content": doc.content,
+                    "metadata": doc.metadata,
+                    "score": doc.score,
+                    "doc_id": doc.doc_id,
+                }
+                for doc in web_docs
+            ]
+
+            # Embed using conversation memory service
+            embedded_count = self._conversation_memory.embed_web_search_results(
+                query=query,
+                web_results=web_results,
+            )
+
+            self._logger.info(
+                "Embedded web search results",
+                embedded=embedded_count,
+                total=len(web_docs),
+            )
+
+        except Exception as e:
+            self._logger.error("Failed to embed web search results", error=str(e))
 
     def _expand_query(
         self,
