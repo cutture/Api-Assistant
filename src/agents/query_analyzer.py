@@ -199,12 +199,28 @@ Respond ONLY with valid JSON, no other text."""
 
         # Parse JSON response
         try:
+            # Clean up response - remove markdown code blocks if present
+            cleaned_response = response.strip()
+            if cleaned_response.startswith("```json"):
+                cleaned_response = cleaned_response[7:]  # Remove ```json
+            if cleaned_response.startswith("```"):
+                cleaned_response = cleaned_response[3:]  # Remove ```
+            if cleaned_response.endswith("```"):
+                cleaned_response = cleaned_response[:-3]  # Remove trailing ```
+            cleaned_response = cleaned_response.strip()
+
             # Extract JSON from response (handle cases where LLM adds extra text)
-            json_match = re.search(r'\{.*\}', response, re.DOTALL)
+            json_match = re.search(r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}', cleaned_response, re.DOTALL)
             if not json_match:
+                self._logger.warning("No JSON found in response", response=cleaned_response[:200])
                 raise ValueError("No JSON object found in LLM response")
 
-            result = json.loads(json_match.group())
+            json_str = json_match.group()
+            result = json.loads(json_str)
+
+            # Validate required fields
+            if "primary_intent" not in result or "confidence" not in result:
+                raise KeyError("Missing required fields in JSON response")
 
             # Validate and create IntentAnalysis
             primary_intent = QueryIntent(result["primary_intent"])
@@ -229,7 +245,11 @@ Respond ONLY with valid JSON, no other text."""
             )
 
         except (json.JSONDecodeError, KeyError, ValueError) as e:
-            self._logger.error("Failed to parse LLM response", error=str(e), response=response[:200])
+            self._logger.warning(
+                "Using fallback classification",
+                error=str(e),
+                response_preview=response[:200]
+            )
 
             # Fallback: Use simple keyword matching
             return self._fallback_classification(query)
