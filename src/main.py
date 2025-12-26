@@ -20,10 +20,16 @@ from src.core.embeddings import EmbeddingService
 from src.core.vector_store import VectorStore
 from src.core.llm_client import LLMClient
 from src.core.monitoring import initialize_monitoring
+from src.core.logging_config import (
+    configure_development_logging,
+    configure_production_logging,
+    set_request_id,
+)
 from src.parsers.openapi_parser import OpenAPIParser
 from src.agents import create_supervisor
 from src.ui.sidebar import render_sidebar
 from src.ui.chat import render_chat, init_chat_state, clear_chat_history
+import structlog
 
 
 # ----- Initialize Services (cached) -----
@@ -55,6 +61,12 @@ def get_openapi_parser() -> OpenAPIParser:
 @st.cache_resource
 def get_supervisor():
     """Get cached Supervisor agent."""
+    # Initialize logging if not already done
+    if settings.debug:
+        configure_development_logging()
+    else:
+        configure_production_logging()
+
     # Initialize monitoring if not already done
     initialize_monitoring()
 
@@ -275,6 +287,10 @@ def generate_response_with_agents(user_query: str) -> dict:
     Returns:
         Dict with response, sources, code_snippets, and agent metadata
     """
+    # Set request ID for tracking
+    request_id = set_request_id()
+    logger = structlog.get_logger(__name__)
+
     try:
         supervisor = get_supervisor()
 
@@ -285,6 +301,12 @@ def generate_response_with_agents(user_query: str) -> dict:
 
         # Combine context with current query
         contextualized_query = conversation_context + user_query if conversation_context else user_query
+
+        logger.info(
+            "user_query_received",
+            query_length=len(user_query),
+            has_context=bool(conversation_context),
+        )
 
         # Process query through supervisor
         result = supervisor.process(contextualized_query)
@@ -299,9 +321,22 @@ def generate_response_with_agents(user_query: str) -> dict:
             "error": result.get("error"),
         }
 
+        logger.info(
+            "query_processed_successfully",
+            intent=result.get("intent_analysis", {}).get("intent"),
+            sources_count=len(response_data["sources"]),
+            code_snippets_count=len(response_data["code_snippets"]),
+        )
+
         return response_data
 
     except Exception as e:
+        logger.error(
+            "query_processing_failed",
+            error_type=type(e).__name__,
+            error_message=str(e),
+        )
+
         return {
             "response": f"❌ Error processing query: {str(e)}\n\nPlease make sure Ollama is running with the model loaded.",
             "sources": [],
