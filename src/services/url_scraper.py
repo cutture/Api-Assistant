@@ -28,8 +28,9 @@ class URLScraperService:
     """
 
     # Regex pattern for URL extraction
+    # Matches http/https URLs including query params (?key=value) and fragments (#section)
     URL_PATTERN = re.compile(
-        r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
+        r'http[s]?://[^\s<>"{}|\\^`\[\]]+'
     )
 
     def __init__(
