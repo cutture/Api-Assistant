@@ -126,7 +126,20 @@ If false, provide 1-3 specific questions to ask the user.
         query = state.get("query", "")
         if not query:
             self._logger.warning("No query provided to gap analysis agent")
-            return state
+            # Default to having sufficient info when no query (don't block)
+            return {
+                **state,
+                "has_sufficient_info": True,
+                "missing_info": False,
+                "gap_analysis": {
+                    "has_sufficient_info": True,
+                    "confidence": 0.5,
+                    "missing_aspects": [],
+                    "questions_for_user": [],
+                    "reasoning": "No query provided for gap analysis",
+                },
+                "questions_for_user": [],
+            }
 
         self._logger.info("Analyzing information gaps", query=query[:100])
 
