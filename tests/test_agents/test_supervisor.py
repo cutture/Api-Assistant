@@ -334,7 +334,7 @@ class TestSupervisorChaining:
         return store
 
     def test_rag_to_code_chain(self, mock_llm_client, mock_vector_store):
-        """Test complete RAG → Code generation chain."""
+        """Test complete RAG → Gap Analysis → Code generation chain."""
         supervisor = create_supervisor(llm_client=mock_llm_client, vector_store=mock_vector_store)
 
         # Simulate code generation intent
@@ -359,7 +359,8 @@ class TestSupervisorChaining:
         ]
 
         route = supervisor._route_after_rag(state)
-        assert route == "code_generator"
+        # With proactive intelligence, code generation goes through gap analysis first
+        assert route == "gap_analysis"
 
     def test_rag_without_code_generation(self, mock_llm_client, mock_vector_store):
         """Test RAG ends workflow for non-code queries."""
