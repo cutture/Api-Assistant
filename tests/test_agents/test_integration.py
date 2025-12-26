@@ -287,14 +287,22 @@ class TestAgentErrorHandling:
         empty_store = MagicMock()
         empty_store.similarity_search_with_score.return_value = []
 
-        rag = RAGAgent(vector_store=empty_store, llm_client=mock_llm_client)
+        # Mock web search to also return empty results
+        mock_web_search = MagicMock()
+        mock_web_search.search.return_value = []
+
+        rag = RAGAgent(
+            vector_store=empty_store,
+            llm_client=mock_llm_client,
+            web_search=mock_web_search
+        )
         state = create_initial_state("Query with no matching docs")
 
         result = rag(state)
 
         # Should complete without error or with graceful error handling
         assert "rag_agent" in result["processing_path"]
-        # retrieved_documents should be empty list
+        # retrieved_documents should be empty list (both vector store and web search returned nothing)
         assert result.get("retrieved_documents", []) == []
 
     def test_code_generator_handles_invalid_template_data(self, mock_llm_client):

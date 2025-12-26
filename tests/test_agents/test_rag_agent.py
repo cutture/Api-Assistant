@@ -34,11 +34,19 @@ class TestRAGAgent:
         return Mock(spec=LLMClient)
 
     @pytest.fixture
-    def rag_agent(self, mock_vector_store, mock_llm_client):
+    def mock_web_search(self):
+        """Create a mock web search service."""
+        mock = Mock()
+        mock.search.return_value = []  # Default to no web results
+        return mock
+
+    @pytest.fixture
+    def rag_agent(self, mock_vector_store, mock_llm_client, mock_web_search):
         """Create RAG agent with mocked dependencies."""
         return RAGAgent(
             vector_store=mock_vector_store,
             llm_client=mock_llm_client,
+            web_search=mock_web_search,
             top_k=5,
             min_relevance_score=0.3,
         )
