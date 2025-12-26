@@ -1,1 +1,1 @@
-"""Tests for core functionality."""
+"""Tests for core modules."""

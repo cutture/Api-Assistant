@@ -1,16 +1,90 @@
 """
 LLM Client abstraction for interacting with language models.
-Supports Ollama (local) and Groq (cloud) providers.
+Supports Ollama (local) and Groq (cloud) providers with:
+- Circuit breaker protection
+- Retry with exponential backoff
+- Request timeouts
+- Comprehensive error handling
 """
 
+import signal
+from contextlib import contextmanager
 from typing import AsyncGenerator, Generator, Literal, Optional
 
 import structlog
-from tenacity import retry, stop_after_attempt, wait_exponential
+from tenacity import (
+    retry,
+    stop_after_attempt,
+    wait_exponential,
+    retry_if_exception_type,
+    before_sleep_log,
+)
 
 from src.config import settings
+from src.core.circuit_breaker import llm_circuit_breaker
+from src.core.exceptions import (
+    LLMConnectionError,
+    LLMTimeoutError,
+    LLMResponseError,
+    LLMCircuitBreakerOpen,
+    is_retryable_error,
+)
 
 logger = structlog.get_logger(__name__)
+
+
+# ============================================================================
+# Timeout handling
+# ============================================================================
+
+
+class TimeoutError(Exception):
+    """Raised when operation times out."""
+
+    pass
+
+
+@contextmanager
+def timeout(seconds: int):
+    """
+    Context manager for operation timeout.
+
+    Args:
+        seconds: Timeout in seconds
+
+    Raises:
+        LLMTimeoutError: If operation exceeds timeout
+
+    Example:
+        ```python
+        with timeout(30):
+            result = llm_client.generate(prompt)
+        ```
+    """
+
+    def timeout_handler(signum, frame):
+        raise TimeoutError(f"Operation timed out after {seconds} seconds")
+
+    # Set the signal handler and alarm
+    old_handler = signal.signal(signal.SIGALRM, timeout_handler)
+    signal.alarm(seconds)
+
+    try:
+        yield
+    except TimeoutError as e:
+        raise LLMTimeoutError(
+            f"LLM request timed out after {seconds} seconds",
+            details={"timeout_seconds": seconds},
+        )
+    finally:
+        # Disable the alarm and restore old handler
+        signal.alarm(0)
+        signal.signal(signal.SIGALRM, old_handler)
+
+
+# ============================================================================
+# LLM Client
+# ============================================================================
 
 
 class LLMClient:
@@ -20,7 +94,10 @@ class LLMClient:
     Features:
     - Configurable provider (ollama or groq)
     - Streaming support
+    - Circuit breaker protection
     - Retry with exponential backoff
+    - Request timeouts
+    - Comprehensive error handling
     - Conversation history management
     """
 
@@ -83,7 +160,10 @@ class LLMClient:
 
     @retry(
         stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=1, max=10),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception_type((LLMConnectionError, LLMTimeoutError)),
+        before_sleep=before_sleep_log(logger, "warning"),
+        reraise=True,
     )
     def generate(
         self,
@@ -91,24 +171,33 @@ class LLMClient:
         system_prompt: Optional[str] = None,
         temperature: float = 0.7,
         max_tokens: int = 2048,
+        timeout_seconds: int = 120,
     ) -> str:
         """
-        Generate a response from the LLM.
+        Generate a response from the LLM with circuit breaker protection.
 
         Args:
             prompt: User prompt.
             system_prompt: Optional system prompt for context.
             temperature: Sampling temperature (0-2).
             max_tokens: Maximum tokens in response.
+            timeout_seconds: Request timeout in seconds (default: 120).
 
         Returns:
             Generated text response.
+
+        Raises:
+            LLMCircuitBreakerOpen: If circuit breaker is open
+            LLMTimeoutError: If request times out
+            LLMConnectionError: If connection fails
+            LLMResponseError: If response is invalid
         """
         logger.debug(
-            "Generating LLM response",
+            "llm_generate_request",
             provider=self.provider,
             model=self.model,
             prompt_length=len(prompt),
+            timeout=timeout_seconds,
         )
 
         messages = []
@@ -117,14 +206,79 @@ class LLMClient:
         messages.append({"role": "user", "content": prompt})
 
         try:
+            # Use circuit breaker to protect the call
+            result = llm_circuit_breaker.call(
+                self._generate_with_timeout,
+                messages,
+                temperature,
+                max_tokens,
+                timeout_seconds,
+            )
+            return result
+
+        except LLMCircuitBreakerOpen:
+            # Don't log as error - circuit breaker is doing its job
+            logger.warning(
+                "llm_circuit_breaker_blocking",
+                provider=self.provider,
+            )
+            raise
+
+        except (LLMTimeoutError, LLMConnectionError, LLMResponseError):
+            # Re-raise our custom exceptions
+            raise
+
+        except Exception as e:
+            # Convert unknown exceptions to our exception types
+            error_msg = str(e).lower()
+
+            if "timeout" in error_msg or "timed out" in error_msg:
+                raise LLMTimeoutError(
+                    f"LLM request timed out: {str(e)}",
+                    details={"provider": self.provider, "model": self.model},
+                ) from e
+            elif (
+                "connection" in error_msg
+                or "network" in error_msg
+                or "unreachable" in error_msg
+            ):
+                raise LLMConnectionError(
+                    f"Failed to connect to LLM: {str(e)}",
+                    details={"provider": self.provider, "model": self.model},
+                ) from e
+            else:
+                raise LLMResponseError(
+                    f"LLM generation failed: {str(e)}",
+                    details={"provider": self.provider, "model": self.model},
+                ) from e
+
+    def _generate_with_timeout(
+        self,
+        messages: list[dict[str, str]],
+        temperature: float,
+        max_tokens: int,
+        timeout_seconds: int,
+    ) -> str:
+        """
+        Generate response with timeout protection.
+
+        Args:
+            messages: Conversation messages
+            temperature: Sampling temperature
+            max_tokens: Maximum tokens
+            timeout_seconds: Timeout in seconds
+
+        Returns:
+            Generated response
+
+        Raises:
+            LLMTimeoutError: If request times out
+        """
+        with timeout(timeout_seconds):
             if self.provider == "groq":
                 return self._generate_with_groq(messages, temperature, max_tokens)
             else:
                 return self._generate_with_ollama(messages, temperature, max_tokens)
-
-        except Exception as e:
-            logger.error("LLM generation failed", error=str(e), provider=self.provider)
-            raise
 
     def generate_stream(
         self,
