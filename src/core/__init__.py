@@ -41,6 +41,15 @@ from src.core.cache import (
     get_embedding_cache,
     get_query_cache,
 )
+from src.core.security import (
+    ValidationError,
+    InputValidator,
+    InputSanitizer,
+    RateLimiter,
+    get_validator,
+    get_sanitizer,
+    get_rate_limiter,
+)
 
 __all__ = [
     "EmbeddingService",
@@ -79,4 +88,11 @@ __all__ = [
     "SemanticQueryCache",
     "get_embedding_cache",
     "get_query_cache",
+    "ValidationError",
+    "InputValidator",
+    "InputSanitizer",
+    "RateLimiter",
+    "get_validator",
+    "get_sanitizer",
+    "get_rate_limiter",
 ]

@@ -25,6 +25,11 @@ from src.core.logging_config import (
     configure_production_logging,
     set_request_id,
 )
+from src.core.security import (
+    ValidationError,
+    get_validator,
+    get_sanitizer,
+)
 from src.parsers.openapi_parser import OpenAPIParser
 from src.agents import create_supervisor
 from src.ui.sidebar import render_sidebar
@@ -81,30 +86,46 @@ def get_supervisor():
 
 def process_uploaded_files(uploaded_files: list) -> None:
     """
-    Process uploaded API specification files.
-    
+    Process uploaded API specification files with security validation.
+
     Args:
         uploaded_files: List of Streamlit uploaded file objects.
     """
     if not uploaded_files:
         return
-    
+
     vector_store = get_vector_store()
     parser = get_openapi_parser()
-    
+    validator = get_validator()
+    sanitizer = get_sanitizer()
+
     progress_bar = st.progress(0, text="Processing files...")
     total_files = len(uploaded_files)
     total_endpoints = 0
-    
+
     for i, uploaded_file in enumerate(uploaded_files):
         progress_bar.progress(
             (i + 1) / total_files,
             text=f"Processing: {uploaded_file.name}"
         )
-        
+
         try:
+            # Security validation
+            # 1. Validate filename
+            safe_filename = sanitizer.sanitize_filename(uploaded_file.name)
+            validator.validate_file_extension(safe_filename)
+
+            # 2. Validate file size
+            file_size = uploaded_file.size
+            validator.validate_file_size(file_size)
+
             # Read file content
             content = uploaded_file.read().decode("utf-8")
+
+            # 3. Validate content length
+            if len(content) > 10 * 1024 * 1024:  # 10MB content limit
+                st.error(f"❌ {safe_filename}: File content too large")
+                continue
             
             # Check if we can parse it
             if not parser.can_parse(content):
@@ -112,7 +133,7 @@ def process_uploaded_files(uploaded_files: list) -> None:
                 continue
             
             # Parse the spec
-            parsed_doc = parser.parse(content, source_file=uploaded_file.name)
+            parsed_doc = parser.parse(content, source_file=safe_filename)
             
             # Prepare documents for vector store
             documents = []
@@ -134,8 +155,10 @@ def process_uploaded_files(uploaded_files: list) -> None:
             vector_store.add_documents(documents)
             total_endpoints += len(parsed_doc.endpoints)
             
-            st.success(f"✅ Processed {uploaded_file.name}: {len(parsed_doc.endpoints)} endpoints")
-            
+            st.success(f"✅ Processed {safe_filename}: {len(parsed_doc.endpoints)} endpoints")
+
+        except ValidationError as e:
+            st.error(f"❌ Validation error for {uploaded_file.name}: {e.message}")
         except Exception as e:
             st.error(f"❌ Error processing {uploaded_file.name}: {str(e)}")
     
@@ -279,7 +302,7 @@ Provide a brief summary:"""
 
 def generate_response_with_agents(user_query: str) -> dict:
     """
-    Generate a response using the Supervisor agent orchestration.
+    Generate a response using the Supervisor agent orchestration with security validation.
 
     Args:
         user_query: The user's question.
@@ -290,8 +313,22 @@ def generate_response_with_agents(user_query: str) -> dict:
     # Set request ID for tracking
     request_id = set_request_id()
     logger = structlog.get_logger(__name__)
+    sanitizer = get_sanitizer()
 
     try:
+        # Security: Sanitize user query
+        try:
+            safe_query = sanitizer.sanitize_query(user_query, max_length=2000)
+        except ValidationError as e:
+            logger.warning("query_validation_failed", error=e.message)
+            return {
+                "response": f"⚠️ Invalid query: {e.message}\n\nPlease rephrase your question without special characters or SQL keywords.",
+                "sources": [],
+                "code_snippets": [],
+                "error": {"message": e.message, "type": "validation_error"},
+                "processing_path": [],
+            }
+
         supervisor = get_supervisor()
 
         # Build intelligent conversation context
@@ -299,12 +336,12 @@ def generate_response_with_agents(user_query: str) -> dict:
         if "messages" in st.session_state and len(st.session_state.messages) > 1:
             conversation_context = _build_conversation_context(st.session_state.messages)
 
-        # Combine context with current query
-        contextualized_query = conversation_context + user_query if conversation_context else user_query
+        # Combine context with current query (use sanitized query)
+        contextualized_query = conversation_context + safe_query if conversation_context else safe_query
 
         logger.info(
             "user_query_received",
-            query_length=len(user_query),
+            query_length=len(safe_query),
             has_context=bool(conversation_context),
         )
 
