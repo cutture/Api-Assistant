@@ -26,6 +26,21 @@ from src.core.logging_config import (
     log_performance_async,
     LogContext,
 )
+from src.core.performance import (
+    PerformanceMonitor,
+    monitor_performance,
+    monitor_performance_async,
+    get_performance_report,
+    get_slow_operations,
+    log_performance_report,
+)
+from src.core.cache import (
+    LRUCache,
+    EmbeddingCache,
+    SemanticQueryCache,
+    get_embedding_cache,
+    get_query_cache,
+)
 
 __all__ = [
     "EmbeddingService",
@@ -53,4 +68,15 @@ __all__ = [
     "log_performance",
     "log_performance_async",
     "LogContext",
+    "PerformanceMonitor",
+    "monitor_performance",
+    "monitor_performance_async",
+    "get_performance_report",
+    "get_slow_operations",
+    "log_performance_report",
+    "LRUCache",
+    "EmbeddingCache",
+    "SemanticQueryCache",
+    "get_embedding_cache",
+    "get_query_cache",
 ]

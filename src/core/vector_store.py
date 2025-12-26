@@ -1,6 +1,7 @@
 """
 Vector store service using ChromaDB for document storage and retrieval.
 Provides semantic search capabilities for API documentation.
+Includes performance monitoring for optimization.
 """
 
 import hashlib
@@ -13,6 +14,7 @@ from chromadb.config import Settings as ChromaSettings
 
 from src.config import settings
 from src.core.embeddings import EmbeddingService, get_embedding_service
+from src.core.performance import monitor_performance
 
 logger = structlog.get_logger(__name__)
 
@@ -128,13 +130,14 @@ class VectorStore:
         logger.debug("Added document", doc_id=doc_id, metadata=metadata)
         return doc_id
 
+    @monitor_performance("vector_store_add_documents")
     def add_documents(
         self,
         documents: list[dict[str, Any]],
         batch_size: int = 100,
     ) -> list[str]:
         """
-        Add multiple documents to the vector store.
+        Add multiple documents to the vector store with performance monitoring.
 
         Args:
             documents: List of dicts with 'content' and 'metadata' keys.
@@ -198,6 +201,7 @@ class VectorStore:
 
         return doc_ids
 
+    @monitor_performance("vector_store_search")
     def search(
         self,
         query: str,
@@ -206,7 +210,7 @@ class VectorStore:
         where_document: Optional[dict[str, Any]] = None,
     ) -> list[dict[str, Any]]:
         """
-        Search for similar documents.
+        Search for similar documents with performance monitoring.
 
         Args:
             query: The search query.
@@ -219,10 +223,10 @@ class VectorStore:
         """
         logger.debug("Searching vector store", query=query[:50], n_results=n_results)
 
-        # Generate query embedding
+        # Generate query embedding (cached)
         query_embedding = self.embedding_service.embed_query(query)
 
-        # Search
+        # Search ChromaDB
         results = self.collection.query(
             query_embeddings=[query_embedding],
             n_results=n_results,
