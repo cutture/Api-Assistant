@@ -6,7 +6,7 @@ results into the vector store for long-term context retrieval.
 """
 
 from typing import List, Dict, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 
 import structlog
 
@@ -76,11 +76,17 @@ class ConversationMemoryService:
         for result in web_results:
             try:
                 content = result.get("content", "")
+
+                # Skip results without content
+                if not content:
+                    logger.warning("Skipping web result with empty content")
+                    continue
+
                 metadata = result.get("metadata", {})
 
                 # Add embedding metadata
                 metadata.update({
-                    "embedded_at": datetime.utcnow().isoformat(),
+                    "embedded_at": datetime.now(timezone.utc).isoformat(),
                     "original_query": query,
                     "session_id": session_id or "unknown",
                     "type": "web_search_result",
@@ -102,7 +108,7 @@ class ConversationMemoryService:
                 logger.error(
                     "Failed to embed web result",
                     error=str(e),
-                    url=metadata.get("url"),
+                    url=result.get("metadata", {}).get("url"),
                 )
 
         logger.info(
@@ -146,7 +152,7 @@ class ConversationMemoryService:
             # Prepare metadata
             meta = metadata or {}
             meta.update({
-                "embedded_at": datetime.utcnow().isoformat(),
+                "embedded_at": datetime.now(timezone.utc).isoformat(),
                 "session_id": session_id or "unknown",
                 "type": "conversation_exchange",
                 "user_message": user_message[:200],  # Preview
@@ -195,7 +201,7 @@ class ConversationMemoryService:
                 "source": "url_scrape",
                 "url": url_content.get("url", ""),
                 "title": url_content.get("title", ""),
-                "embedded_at": datetime.utcnow().isoformat(),
+                "embedded_at": datetime.now(timezone.utc).isoformat(),
                 "original_query": query,
                 "session_id": session_id or "unknown",
                 "type": "scraped_webpage",
