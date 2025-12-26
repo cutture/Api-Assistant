@@ -108,7 +108,7 @@ class TestGapAnalysisWorkflow:
 
         # Should have gap analysis in processing path
         processing_path = result.get("processing_path", [])
-        assert "gap_analysis" in processing_path or result.get("missing_info") is not None
+        assert "gap_analysis_agent" in processing_path or result.get("missing_info") is not None
 
     def test_sufficient_info_proceeds_to_code_gen(
         self, supervisor_with_gap_analysis, mock_llm_client, mock_vector_store
@@ -186,9 +186,9 @@ class TestSupervisorRouting:
 
         result = supervisor_with_gap_analysis.process("What does this API do?")
 
-        # Processing path should NOT include gap_analysis
+        # Processing path should NOT include gap_analysis_agent
         processing_path = result.get("processing_path", [])
-        assert "gap_analysis" not in processing_path
+        assert "gap_analysis_agent" not in processing_path
 
 
 class TestErrorHandling:
