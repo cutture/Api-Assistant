@@ -389,9 +389,14 @@ def collection_clear(
             )
 
         vector_store = get_vector_store()
-        # Clear collection
-        vector_store.collection.delete()
-        console.print("[green]✓ Collection cleared successfully[/green]")
+        # Get all document IDs
+        all_docs = vector_store.collection.get()
+        if all_docs["ids"]:
+            # Delete all documents by their IDs
+            vector_store.collection.delete(ids=all_docs["ids"])
+            console.print(f"[green]✓ Cleared {len(all_docs['ids'])} documents from collection[/green]")
+        else:
+            console.print("[yellow]Collection is already empty[/yellow]")
 
     except typer.Abort:
         console.print("[yellow]Operation cancelled[/yellow]")
