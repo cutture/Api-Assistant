@@ -1,10 +1,13 @@
 # 🚀 Enterprise API Integration Assistant
 
-An AI-powered assistant that helps developers understand, document, and generate code for API integrations using advanced multi-agent orchestration.
+**Version 1.0.0** - Production Ready 🎉
 
-[![Tests](https://img.shields.io/badge/tests-458%20passing-success)](tests/)
+An AI-powered assistant that helps developers understand, document, and generate code for API integrations using advanced multi-agent orchestration, hybrid search, and comprehensive CLI tools.
+
+[![Tests](https://img.shields.io/badge/tests-831%20passing-success)](tests/)
 [![Python](https://img.shields.io/badge/python-3.11+-blue)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![Version](https://img.shields.io/badge/version-1.0.0-brightgreen)](CHANGELOG_V1.md)
 
 ## ✨ Key Features
 
@@ -42,6 +45,44 @@ An AI-powered assistant that helps developers understand, document, and generate
 - Intent analysis with confidence scores
 - Processing path visualization
 - Source document citations
+
+### 🔎 **Advanced Search (v1.0.0 New!)**
+- **Hybrid Search**: Vector + BM25 keyword search with configurable weights
+- **Re-ranking**: Cross-encoder deep semantic re-ranking
+- **Query Expansion**: Automatic synonym and concept expansion
+- **Result Diversification**: MMR algorithm to reduce redundancy
+- **Faceted Search**: Group results by metadata fields
+- **Advanced Filtering**: Complex boolean queries with 13 operators
+
+### 🛠️ **Professional CLI Tool (v1.0.0 New!)**
+- **30+ Commands**: Complete CLI built with Typer and Rich
+- **Batch Processing**: Parse multiple API specs at once
+- **Diagram Generation**: Auto-generate Mermaid diagrams
+- **Session Management**: Multi-user support with conversation history
+- **Beautiful Output**: Color-coded tables and progress indicators
+- **Shell Completion**: Auto-completion for commands
+
+### 📊 **Diagram Generation (v1.0.0 New!)**
+- **Sequence Diagrams**: API request/response flows
+- **ER Diagrams**: GraphQL schema visualization
+- **Flow Diagrams**: Authentication flows (OAuth2, Bearer, API Key)
+- **API Overview**: High-level API structure diagrams
+- **Mermaid Format**: GitHub-compatible diagram export
+
+### 🔄 **Multi-Format Support (v1.0.0 New!)**
+- **OpenAPI 3.0+**: Full YAML and JSON support
+- **GraphQL**: SDL schema parsing with type system
+- **Postman Collections**: v2.0 and v2.1 support
+- **Auto-Detection**: Automatic format recognition
+- **Unified Handler**: Single interface for all formats
+
+### 🌐 **REST API (v1.0.0 New!)**
+- **15+ Endpoints**: Complete REST API with FastAPI
+- **Interactive Docs**: Auto-generated Swagger/ReDoc
+- **Health Checks**: `/health`, `/ready`, `/stats` endpoints
+- **CORS Support**: Cross-origin resource sharing
+- **Rate Limiting**: Token bucket per-user limits
+- **API Key Auth**: Secure API access
 
 ## 🛠️ Tech Stack
 

@@ -430,9 +430,13 @@ def info_formats():
 @info_app.command("version")
 def info_version():
     """Show API Assistant version."""
+    from src.__version__ import __version__, __release_date__, __status__
+
     console.print("[bold]API Assistant CLI[/bold]")
-    console.print("Version: 1.0.0")
-    console.print("Phase 4, Day 28: CLI Tool")
+    console.print(f"Version: {__version__}")
+    console.print(f"Status: {__status__}")
+    console.print(f"Released: {__release_date__}")
+    console.print("\nAll 4 phases complete (Days 1-30) 🎉")
 
 
 # ============================================================================

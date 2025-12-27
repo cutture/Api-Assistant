@@ -15,7 +15,7 @@ Date: 2025-12-27
 from enum import Enum
 from typing import Any, Dict, List, Optional, Union
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, ValidationInfo
 
 
 # Enums
@@ -69,8 +69,7 @@ class ErrorResponse(BaseModel):
 class DocumentMetadata(BaseModel):
     """Document metadata."""
 
-    class Config:
-        extra = "allow"  # Allow additional fields
+    model_config = ConfigDict(extra="allow")  # Allow additional fields
 
 
 class Document(BaseModel):
@@ -94,7 +93,7 @@ class DocumentResponse(BaseModel):
 class AddDocumentsRequest(BaseModel):
     """Request to add multiple documents."""
 
-    documents: List[Document] = Field(..., description="Documents to add", min_items=1)
+    documents: List[Document] = Field(..., description="Documents to add", min_length=1)
 
 
 class AddDocumentsResponse(BaseModel):
@@ -122,10 +121,11 @@ class FilterSpec(BaseModel):
         None, description="Sub-filters (for AND/OR/NOT operators)"
     )
 
-    @validator("filters")
-    def validate_filters(cls, v, values):
+    @field_validator("filters")
+    @classmethod
+    def validate_filters(cls, v, info: ValidationInfo):
         """Validate filters based on operator."""
-        operator = values.get("operator")
+        operator = info.data.get("operator")
 
         if operator in [FilterOperatorEnum.AND, FilterOperatorEnum.OR]:
             if not v or len(v) < 2:
@@ -214,7 +214,7 @@ class FacetedSearchRequest(BaseModel):
     """Faceted search request."""
 
     query: str = Field(..., description="Search query", min_length=1)
-    facet_fields: List[str] = Field(..., description="Fields to facet on", min_items=1)
+    facet_fields: List[str] = Field(..., description="Fields to facet on", min_length=1)
     n_results: int = Field(20, description="Number of results to return", ge=1, le=100)
     filter: Optional[FilterSpec] = Field(None, description="Filter specification")
     top_facet_values: int = Field(10, description="Number of top facet values to return", ge=1, le=50)
@@ -248,7 +248,7 @@ class StatsResponse(BaseModel):
 class BulkDeleteRequest(BaseModel):
     """Request to delete multiple documents."""
 
-    document_ids: List[str] = Field(..., description="Document IDs to delete", min_items=1)
+    document_ids: List[str] = Field(..., description="Document IDs to delete", min_length=1)
 
 
 class BulkDeleteResponse(BaseModel):
