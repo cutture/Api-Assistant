@@ -923,6 +923,9 @@ python api_assistant_cli.py search query "data" --method POST --source openapi -
 
 **Objective**: Generate Mermaid diagrams from API specs
 
+> **⚠️ PowerShell Users**: Use backtick `` ` `` for line continuation (not backslash `\`), or use single-line commands
+
+**Bash/Linux/Mac:**
 ```bash
 # Sequence diagram (requires file path)
 python api_assistant_cli.py diagram sequence test_data/openapi/jsonplaceholder.yaml \
@@ -940,9 +943,28 @@ python api_assistant_cli.py diagram overview test_data/openapi/jsonplaceholder.y
 # Authentication flow
 python api_assistant_cli.py diagram auth oauth2 \
   --output test_data/diagrams/oauth2_flow.mmd
+```
 
-# Other auth types: bearer, apikey, basic
+**PowerShell:**
+```powershell
+# Sequence diagram - use backticks for line continuation
+python api_assistant_cli.py diagram sequence test_data/openapi/jsonplaceholder.yaml `
+  --endpoint "/posts" `
+  --output test_data/diagrams/posts_sequence.mmd
+
+# OR as single line (easier in PowerShell):
+python api_assistant_cli.py diagram sequence test_data/openapi/jsonplaceholder.yaml --endpoint "/posts" --output test_data/diagrams/posts_sequence.mmd
+
+# ER diagram
+python api_assistant_cli.py diagram er test_data/graphql/countries.graphql --output test_data/diagrams/countries_er.mmd
+
+# API overview
+python api_assistant_cli.py diagram overview test_data/openapi/jsonplaceholder.yaml --output test_data/diagrams/api_overview.mmd
+
+# Authentication flows
+python api_assistant_cli.py diagram auth oauth2 --output test_data/diagrams/oauth2_flow.mmd
 python api_assistant_cli.py diagram auth apikey --output test_data/diagrams/apikey_flow.mmd
+python api_assistant_cli.py diagram auth bearer --output test_data/diagrams/bearer_flow.mmd
 ```
 
 ### Workflow 5: Session Management

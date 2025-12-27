@@ -51,37 +51,64 @@ python api_assistant_cli.py search query "user" --source openapi
 
 ### 3. Generate Mermaid Diagrams
 
+> **⚠️ Windows PowerShell Users**: Use backtick `` ` `` for line continuation, not backslash `\`
+
 **Sequence Diagram (from OpenAPI):**
+
+**Bash/Linux/Mac:**
 ```bash
-# Generate sequence diagram for a specific endpoint
 python api_assistant_cli.py diagram sequence test_data/openapi/jsonplaceholder.yaml \
   --endpoint "/posts" \
   --output test_data/diagrams/posts_sequence.mmd
 ```
 
+**PowerShell:**
+```powershell
+python api_assistant_cli.py diagram sequence test_data/openapi/jsonplaceholder.yaml `
+  --endpoint "/posts" `
+  --output test_data/diagrams/posts_sequence.mmd
+
+# OR as a single line:
+python api_assistant_cli.py diagram sequence test_data/openapi/jsonplaceholder.yaml --endpoint "/posts" --output test_data/diagrams/posts_sequence.mmd
+```
+
 **ER Diagram (from GraphQL):**
+
+**Bash/Linux/Mac:**
 ```bash
-# Generate entity-relationship diagram
 python api_assistant_cli.py diagram er test_data/graphql/countries.graphql \
   --output test_data/diagrams/countries_er.mmd
 ```
 
+**PowerShell:**
+```powershell
+python api_assistant_cli.py diagram er test_data/graphql/countries.graphql --output test_data/diagrams/countries_er.mmd
+```
+
 **API Overview (from OpenAPI):**
+
+**Bash/Linux/Mac:**
 ```bash
-# Generate API overview flowchart
 python api_assistant_cli.py diagram overview test_data/openapi/jsonplaceholder.yaml \
   --output test_data/diagrams/api_overview.mmd
 ```
 
-**Authentication Flow:**
-```bash
-# Generate OAuth2 flow diagram
-python api_assistant_cli.py diagram auth oauth2 \
-  --output test_data/diagrams/oauth2_flow.mmd
+**PowerShell:**
+```powershell
+python api_assistant_cli.py diagram overview test_data/openapi/jsonplaceholder.yaml --output test_data/diagrams/api_overview.mmd
+```
 
-# Generate API Key flow
-python api_assistant_cli.py diagram auth apikey \
-  --output test_data/diagrams/apikey_flow.mmd
+**Authentication Flow:**
+
+```bash
+# OAuth2 flow
+python api_assistant_cli.py diagram auth oauth2 --output test_data/diagrams/oauth2_flow.mmd
+
+# API Key flow
+python api_assistant_cli.py diagram auth apikey --output test_data/diagrams/apikey_flow.mmd
+
+# Other types: bearer, basic
+python api_assistant_cli.py diagram auth bearer --output test_data/diagrams/bearer_flow.mmd
 ```
 
 ### 4. Session Management
@@ -179,40 +206,66 @@ The Streamlit UI has features that are NOT available in the CLI:
 
 ## 📋 Complete Test Workflow
 
-Here's a complete workflow that works with the current CLI:
+### Option 1: Use the Automated Script (Easiest)
 
+**PowerShell:**
+```powershell
+cd test_data
+.\quick_start_test.ps1
+```
+
+**Bash/Linux/Mac:**
+```bash
+cd test_data
+./quick_start_test.sh
+```
+
+### Option 2: Manual Commands
+
+**Bash/Linux/Mac:**
 ```bash
 # 1. Index sample APIs
-echo "Indexing APIs..."
 python api_assistant_cli.py parse file test_data/openapi/jsonplaceholder.yaml --add
 python api_assistant_cli.py parse file test_data/openapi/dummyjson.yaml --add
 
 # 2. View collection info
-echo "Checking collection..."
 python api_assistant_cli.py collection info
 
 # 3. Search for endpoints
-echo "Searching for posts endpoints..."
 python api_assistant_cli.py search query "get all posts" --limit 3
 
 # 4. Generate diagrams
-echo "Generating diagrams..."
-mkdir -p test_data/diagrams
-python api_assistant_cli.py diagram sequence test_data/openapi/jsonplaceholder.yaml \
-  --endpoint "/posts" --output test_data/diagrams/posts_sequence.mmd
-python api_assistant_cli.py diagram overview test_data/openapi/jsonplaceholder.yaml \
-  --output test_data/diagrams/api_overview.mmd
+python api_assistant_cli.py diagram sequence test_data/openapi/jsonplaceholder.yaml --endpoint "/posts" --output test_data/diagrams/posts_sequence.mmd
+python api_assistant_cli.py diagram overview test_data/openapi/jsonplaceholder.yaml --output test_data/diagrams/api_overview.mmd
 
 # 5. Create session
-echo "Creating session..."
 python api_assistant_cli.py session create --user "test" --ttl 60
 
 # 6. Export data
-echo "Exporting data..."
-mkdir -p test_data/exports
 python api_assistant_cli.py export documents test_data/exports/all_docs.json
+```
 
-echo "Done! Check test_data/ directory for outputs."
+**PowerShell:**
+```powershell
+# 1. Index sample APIs
+python api_assistant_cli.py parse file test_data/openapi/jsonplaceholder.yaml --add
+python api_assistant_cli.py parse file test_data/openapi/dummyjson.yaml --add
+
+# 2. View collection info
+python api_assistant_cli.py collection info
+
+# 3. Search for endpoints
+python api_assistant_cli.py search query "get all posts" --limit 3
+
+# 4. Generate diagrams (single line - no continuation needed)
+python api_assistant_cli.py diagram sequence test_data/openapi/jsonplaceholder.yaml --endpoint "/posts" --output test_data/diagrams/posts_sequence.mmd
+python api_assistant_cli.py diagram overview test_data/openapi/jsonplaceholder.yaml --output test_data/diagrams/api_overview.mmd
+
+# 5. Create session
+python api_assistant_cli.py session create --user "test" --ttl 60
+
+# 6. Export data
+python api_assistant_cli.py export documents test_data/exports/all_docs.json
 ```
 
 ---
