@@ -2,6 +2,31 @@
 
 Version 1.0.0 - Production Testing Workflows
 
+## ⚠️ IMPORTANT: Feature Availability
+
+**Most advanced features are ONLY available in the Streamlit UI, NOT the CLI!**
+
+| Feature | CLI | Streamlit UI |
+|---------|-----|--------------|
+| Basic Vector Search | ✅ | ✅ |
+| **Hybrid Search (Vector + BM25)** | ❌ | ✅ |
+| **Cross-encoder Re-ranking** | ❌ | ✅ |
+| **Query Expansion** | ❌ | ✅ |
+| **Code Generation** | ❌ | ✅ |
+| **Advanced AND/OR/NOT Filters** | ❌ | ✅ |
+| **Faceted Search** | ❌ | ✅ |
+| Simple Filters (method, source) | ✅ | ✅ |
+| Diagram Generation | ✅ | ✅ |
+| Session Management | ✅ | ✅ |
+| Data Export | ✅ | ✅ |
+| Interactive Chat | ❌ | ✅ |
+
+**📌 Recommendation**: Use the Streamlit UI for comprehensive testing. See [UI Testing Workflows](#ui-testing-workflows) section.
+
+**🚀 Start UI**: `PYTHONPATH=. streamlit run src/main.py` (Linux/Mac) or `$env:PYTHONPATH = "."; streamlit run src/main.py` (Windows)
+
+---
+
 ## Table of Contents
 
 1. [Introduction](#introduction)
@@ -840,297 +865,175 @@ Create `test_data/postman/reqres_collection.json`:
 
 ## CLI Testing Workflows
 
-### Workflow 1: Basic OpenAPI Parsing and Indexing
+> **⚠️ IMPORTANT**: The CLI has LIMITED features. For hybrid search, re-ranking, query expansion, code generation, and advanced filtering, use the [Streamlit UI](#ui-testing-workflows).
+>
+> **Start UI**: `PYTHONPATH=. streamlit run src/main.py`
 
-**Objective**: Parse an OpenAPI spec and add it to the vector store
+### Workflow 1: Parse and Index API Specifications
+
+**Objective**: Parse API specs and add them to the vector store
 
 ```bash
-# Step 1: Parse the JSONPlaceholder API (view only)
-python api_assistant_cli.py parse file test_data/openapi/jsonplaceholder.yaml
-
-# Expected output:
-# ✓ Successfully parsed OpenAPI specification
-# Title: JSONPlaceholder API
-# Version: 1.0.0
-# Endpoints found: 6
-# - GET /posts
-# - POST /posts
-# - GET /posts/{id}
-# - PUT /posts/{id}
-# - DELETE /posts/{id}
-# - GET /users
-# ...
-
-# Step 2: Parse and add to vector store
+# Parse OpenAPI specification
 python api_assistant_cli.py parse file test_data/openapi/jsonplaceholder.yaml --add
 
-# Expected output:
-# ✓ Successfully parsed and indexed OpenAPI specification
-# Documents added to vector store: 14
-# Ready for semantic search!
+# Parse GraphQL schema
+python api_assistant_cli.py parse file test_data/graphql/countries.graphql --format graphql --add
 
-# Step 3: Verify documents are indexed
-python api_assistant_cli.py search query "get all posts" --limit 3
+# Parse Postman collection
+python api_assistant_cli.py parse file test_data/postman/reqres_collection.json --format postman --add
 
-# Expected output:
-# Search Results (Top 3):
-#
-# 1. GET /posts - Get all posts
-#    Score: 0.92
-#    Description: Retrieve a list of all posts
-#    ...
+# View collection info
+python api_assistant_cli.py collection info
 ```
 
-### Workflow 2: Hybrid Search with Re-ranking
+### Workflow 2: Basic Vector Search
 
-**Objective**: Test hybrid search combining vector and BM25
+**Objective**: Search indexed APIs using vector similarity
 
 ```bash
-# Step 1: Basic vector search
-python api_assistant_cli.py search query "create a new user" --limit 5
+# Basic search
+python api_assistant_cli.py search query "get all posts" --limit 5
 
-# Step 2: Hybrid search (vector + BM25)
-python api_assistant_cli.py search query "create a new user" --hybrid --limit 5
+# Search with result limit
+python api_assistant_cli.py search query "create user" --limit 3
 
-# Expected: More relevant results with hybrid approach
-
-# Step 3: Hybrid search with re-ranking
-python api_assistant_cli.py search query "update user information" --hybrid --rerank --limit 3
-
-# Expected output:
-# Hybrid Search Results (Re-ranked, Top 3):
-#
-# 1. PUT /users/{id} - Update a user (Score: 0.95)
-# 2. POST /users - Create a new user (Score: 0.82)
-# 3. GET /users/{id} - Get a specific user (Score: 0.71)
+# Hide content, show only metadata
+python api_assistant_cli.py search query "update data" --no-content --limit 5
 ```
 
-### Workflow 3: Query Expansion
+### Workflow 3: Simple Filtering
 
-**Objective**: Use query expansion to improve search recall
+**Objective**: Filter search results by method or source
 
 ```bash
-# Step 1: Search without expansion
-python api_assistant_cli.py search query "remove post" --limit 3
+# Filter by HTTP method
+python api_assistant_cli.py search query "posts" --method GET --limit 5
 
-# Step 2: Search with query expansion
-python api_assistant_cli.py search query "remove post" --expand --limit 5
+# Filter by source type
+python api_assistant_cli.py search query "user" --source openapi --limit 3
 
-# Expected: More variations like "delete post", "remove article", etc.
-
-# Step 3: View expanded queries
-python api_assistant_cli.py search query "user authentication" --expand --verbose
-
-# Expected output:
-# Original query: user authentication
-# Expanded queries:
-# - user authentication
-# - user login
-# - user authorization
-# - authenticate user
-# - user credentials
+# Combined filters
+python api_assistant_cli.py search query "data" --method POST --source openapi --limit 5
 ```
 
-### Workflow 4: Advanced Filtering
+**Note**: For complex AND/OR/NOT filters, use the Streamlit UI.
 
-**Objective**: Test complex filtering capabilities
+### Workflow 4: Diagram Generation
 
-```bash
-# Step 1: Filter by HTTP method
-python api_assistant_cli.py search query "posts" --filter '{"operator": "and", "filters": [{"field": "method", "operator": "eq", "value": "GET"}]}'
-
-# Step 2: Filter by tag
-python api_assistant_cli.py search query "user" --filter '{"operator": "and", "filters": [{"field": "tags", "operator": "contains", "value": "Users"}]}'
-
-# Step 3: Complex OR filter
-python api_assistant_cli.py search query "api" --filter '{"operator": "or", "filters": [{"field": "method", "operator": "eq", "value": "POST"}, {"field": "method", "operator": "eq", "value": "PUT"}]}'
-
-# Expected: Only POST and PUT endpoints
-```
-
-### Workflow 5: Faceted Search
-
-**Objective**: Explore API structure with faceted navigation
+**Objective**: Generate Mermaid diagrams from API specs
 
 ```bash
-# Step 1: Get facets for HTTP methods
-python api_assistant_cli.py search facets --field method
-
-# Expected output:
-# Facets for 'method':
-# - GET: 15 documents
-# - POST: 8 documents
-# - PUT: 6 documents
-# - DELETE: 4 documents
-
-# Step 2: Get facets for tags
-python api_assistant_cli.py search facets --field tags
-
-# Expected output:
-# Facets for 'tags':
-# - Posts: 12 documents
-# - Users: 8 documents
-# - Comments: 6 documents
-
-# Step 3: Faceted search with filter
-python api_assistant_cli.py search query "user data" --facet-field tags --limit 5
-```
-
-### Workflow 6: Mermaid Diagram Generation
-
-**Objective**: Generate various types of diagrams from API specs
-
-```bash
-# Step 1: Generate sequence diagram
-python api_assistant_cli.py diagram generate sequence \
+# Sequence diagram (requires file path)
+python api_assistant_cli.py diagram sequence test_data/openapi/jsonplaceholder.yaml \
   --endpoint "/posts" \
-  --method GET \
   --output test_data/diagrams/posts_sequence.mmd
 
-# Expected: Mermaid sequence diagram saved to file
+# ER diagram (GraphQL only)
+python api_assistant_cli.py diagram er test_data/graphql/countries.graphql \
+  --output test_data/diagrams/countries_er.mmd
 
-# Step 2: Generate ER diagram
-python api_assistant_cli.py diagram generate er \
-  --output test_data/diagrams/jsonplaceholder_er.mmd
-
-# Expected: Entity-relationship diagram with all schemas
-
-# Step 3: Generate API overview
-python api_assistant_cli.py diagram generate overview \
+# API overview flowchart (OpenAPI only)
+python api_assistant_cli.py diagram overview test_data/openapi/jsonplaceholder.yaml \
   --output test_data/diagrams/api_overview.mmd
 
-# Expected: High-level API structure diagram
+# Authentication flow
+python api_assistant_cli.py diagram auth oauth2 \
+  --output test_data/diagrams/oauth2_flow.mmd
 
-# Step 4: Generate flowchart for specific operation
-python api_assistant_cli.py diagram generate flow \
-  --endpoint "/users/{id}" \
-  --method PUT \
-  --output test_data/diagrams/update_user_flow.mmd
+# Other auth types: bearer, apikey, basic
+python api_assistant_cli.py diagram auth apikey --output test_data/diagrams/apikey_flow.mmd
 ```
 
-### Workflow 7: Multi-Language Code Generation
+### Workflow 5: Session Management
 
-**Objective**: Generate client code in different languages
+**Objective**: Create and manage user sessions
 
 ```bash
-# Step 1: Generate Python client code
-python api_assistant_cli.py generate code \
-  --endpoint "/posts" \
-  --method GET \
-  --language python \
-  --output test_data/clients/get_posts.py
+# Create a session
+python api_assistant_cli.py session create --user "testuser" --ttl 60
 
-# Expected: Python requests code
+# List all sessions
+python api_assistant_cli.py session list
 
-# Step 2: Generate JavaScript/Node.js code
-python api_assistant_cli.py generate code \
-  --endpoint "/posts" \
-  --method POST \
-  --language javascript \
-  --output test_data/clients/create_post.js
+# Get session info (replace SESSION_ID with actual ID)
+python api_assistant_cli.py session info SESSION_ID --history
 
-# Expected: JavaScript fetch/axios code
+# Session statistics
+python api_assistant_cli.py session stats
 
-# Step 3: Generate cURL command
-python api_assistant_cli.py generate code \
-  --endpoint "/users/{id}" \
-  --method DELETE \
-  --language curl \
-  --output test_data/clients/delete_user.sh
+# Extend session expiration
+python api_assistant_cli.py session extend SESSION_ID --minutes 30
 
-# Expected: cURL command with proper headers
+# Clean up expired sessions
+python api_assistant_cli.py session cleanup
+
+# Delete a session
+python api_assistant_cli.py session delete SESSION_ID --yes
 ```
 
-### Workflow 8: Batch Operations
+### Workflow 6: Data Export
 
-**Objective**: Process multiple API specs at once
+**Objective**: Export indexed documents and data
 
 ```bash
-# Step 1: Create a batch file list
-echo "test_data/openapi/jsonplaceholder.yaml" > batch_files.txt
-echo "test_data/openapi/dummyjson.yaml" >> batch_files.txt
+# Export all documents
+python api_assistant_cli.py export documents test_data/exports/all_docs.json
 
-# Step 2: Batch parse and index
-python api_assistant_cli.py batch parse --file-list batch_files.txt --add
-
-# Expected output:
-# Processing 2 files...
-# [1/2] ✓ jsonplaceholder.yaml - 14 documents indexed
-# [2/2] ✓ dummyjson.yaml - 8 documents indexed
-# Total: 22 documents indexed
-
-# Step 3: Batch export
-python api_assistant_cli.py batch export \
-  --format json \
-  --output test_data/exports/all_apis.json
+# Export with limit
+python api_assistant_cli.py export documents test_data/exports/sample.json --limit 20
 ```
 
-### Workflow 9: Session Management
+### Workflow 7: Collection Management
 
-**Objective**: Test session-based interactions
+**Objective**: Manage the vector store collection
 
 ```bash
-# Step 1: Create a new session
-python api_assistant_cli.py session create --name "testing_session"
+# View collection information
+python api_assistant_cli.py collection info
 
-# Expected output:
-# ✓ Session created: testing_session
-# Session ID: abc123def456
-
-# Step 2: Use session for queries
-python api_assistant_cli.py search query "user endpoints" \
-  --session testing_session \
-  --save-history
-
-# Step 3: View session history
-python api_assistant_cli.py session history --name "testing_session"
-
-# Expected: List of all queries in this session
-
-# Step 4: Export session
-python api_assistant_cli.py session export \
-  --name "testing_session" \
-  --output test_data/sessions/testing_session.json
-
-# Step 5: Clean up session
-python api_assistant_cli.py session delete --name "testing_session"
+# Clear all documents (CAUTION!)
+python api_assistant_cli.py collection clear --yes
 ```
 
-### Workflow 10: Statistics and Analytics
-
-**Objective**: Get insights about indexed APIs
+### CLI Quick Reference
 
 ```bash
-# Step 1: View database statistics
-python api_assistant_cli.py info stats
-
-# Expected output:
-# Database Statistics:
-# Total documents: 22
-# Total APIs: 2
-# HTTP Methods:
-#   GET: 15
-#   POST: 8
-#   PUT: 6
-#   DELETE: 4
-# Tags:
-#   Posts: 12
-#   Users: 8
-#   Products: 6
-
-# Step 2: List all APIs
-python api_assistant_cli.py info list-apis
-
-# Expected output:
-# Indexed APIs:
-# 1. JSONPlaceholder API (v1.0.0) - 14 endpoints
-# 2. DummyJSON Products API (v1.0.0) - 8 endpoints
-
-# Step 3: Export statistics
-python api_assistant_cli.py info stats --export test_data/stats.json
+# Most common commands
+python api_assistant_cli.py parse file <path> --add          # Index API
+python api_assistant_cli.py search query "<text>" --limit 5  # Search
+python api_assistant_cli.py collection info                  # View stats
+python api_assistant_cli.py info version                     # Version info
+python api_assistant_cli.py info formats                     # Supported formats
 ```
 
 ---
+
+## ⚠️ Features NOT Available in CLI
+
+The following features can **ONLY** be accessed through the Streamlit UI:
+
+- ❌ **Hybrid Search** (Vector + BM25 with RRF fusion)
+- ❌ **Cross-encoder Re-ranking** (Better relevance)
+- ❌ **Query Expansion** (Automatic query variations)
+- ❌ **Code Generation** (Python, JavaScript, cURL)
+- ❌ **Advanced Filtering** (Complex AND/OR/NOT logic)
+- ❌ **Faceted Search** (Browse by categories)
+- ❌ **Interactive Chat** (Natural language queries)
+- ❌ **Visual Analytics** (Charts and statistics)
+
+**📌 To use these features, start the Streamlit UI:**
+
+```bash
+# Linux/Mac
+PYTHONPATH=. streamlit run src/main.py
+
+# Windows PowerShell
+$env:PYTHONPATH = "."; streamlit run src/main.py
+```
+
+Then see the [UI Testing Workflows](#ui-testing-workflows) section below for comprehensive testing.
+
 
 ## UI Testing Workflows
 
