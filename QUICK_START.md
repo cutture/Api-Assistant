@@ -15,6 +15,92 @@ cd Api-Assistant
 
 ---
 
+## 🎯 Copy-Paste Ready: Complete Test Workflow
+
+Run these commands in sequence to test all features in 5 minutes:
+
+### Bash/Linux/Mac:
+```bash
+# 1. Create output directories
+mkdir -p test_data/diagrams test_data/exports
+
+# 2. Index sample APIs
+python api_assistant_cli.py parse file test_data/openapi/jsonplaceholder.yaml --add
+python api_assistant_cli.py parse file test_data/openapi/dummyjson.yaml --add
+python api_assistant_cli.py parse file test_data/graphql/countries.graphql --format graphql --add
+
+# 3. View indexed data
+python api_assistant_cli.py collection info
+
+# 4. Search for endpoints
+python api_assistant_cli.py search query "get all posts" --limit 3
+python api_assistant_cli.py search query "create user" --method POST --limit 3
+python api_assistant_cli.py search query "user data" --source openapi --limit 3
+
+# 5. Generate diagrams
+python api_assistant_cli.py diagram sequence test_data/openapi/jsonplaceholder.yaml --endpoint "/posts" --output test_data/diagrams/posts_sequence.mmd
+python api_assistant_cli.py diagram overview test_data/openapi/jsonplaceholder.yaml --output test_data/diagrams/api_overview.mmd
+python api_assistant_cli.py diagram er test_data/graphql/countries.graphql --output test_data/diagrams/countries_er.mmd
+python api_assistant_cli.py diagram auth oauth2 --output test_data/diagrams/oauth2_flow.mmd
+
+# 6. Session management
+python api_assistant_cli.py session create --user "testuser" --ttl 60
+python api_assistant_cli.py session list
+python api_assistant_cli.py session stats
+
+# 7. Export data
+python api_assistant_cli.py export documents test_data/exports/all_docs.json
+
+# 8. View version
+python api_assistant_cli.py info version
+```
+
+### PowerShell:
+```powershell
+# 1. Create output directories
+New-Item -ItemType Directory -Path test_data/diagrams -Force
+New-Item -ItemType Directory -Path test_data/exports -Force
+
+# 2. Index sample APIs
+python api_assistant_cli.py parse file test_data/openapi/jsonplaceholder.yaml --add
+python api_assistant_cli.py parse file test_data/openapi/dummyjson.yaml --add
+python api_assistant_cli.py parse file test_data/graphql/countries.graphql --format graphql --add
+
+# 3. View indexed data
+python api_assistant_cli.py collection info
+
+# 4. Search for endpoints
+python api_assistant_cli.py search query "get all posts" --limit 3
+python api_assistant_cli.py search query "create user" --method POST --limit 3
+python api_assistant_cli.py search query "user data" --source openapi --limit 3
+
+# 5. Generate diagrams (single line - easier in PowerShell)
+python api_assistant_cli.py diagram sequence test_data/openapi/jsonplaceholder.yaml --endpoint "/posts" --output test_data/diagrams/posts_sequence.mmd
+python api_assistant_cli.py diagram overview test_data/openapi/jsonplaceholder.yaml --output test_data/diagrams/api_overview.mmd
+python api_assistant_cli.py diagram er test_data/graphql/countries.graphql --output test_data/diagrams/countries_er.mmd
+python api_assistant_cli.py diagram auth oauth2 --output test_data/diagrams/oauth2_flow.mmd
+
+# 6. Session management
+python api_assistant_cli.py session create --user "testuser" --ttl 60
+python api_assistant_cli.py session list
+python api_assistant_cli.py session stats
+
+# 7. Export data
+python api_assistant_cli.py export documents test_data/exports/all_docs.json
+
+# 8. View version
+python api_assistant_cli.py info version
+```
+
+**Expected Time**: ~5 minutes
+**Expected Results**:
+- Collection with 50+ indexed endpoints
+- Multiple Mermaid diagrams in `test_data/diagrams/`
+- JSON export in `test_data/exports/`
+- Active session visible in session list
+
+---
+
 ## ✅ Working CLI Commands
 
 ### 1. Parse and Index an API
@@ -35,18 +121,67 @@ python api_assistant_cli.py parse file test_data/postman/reqres_collection.json 
 
 ### 2. Search for API Endpoints
 
+**Basic Search:**
 ```bash
-# Basic search
+# Search for posts endpoints
 python api_assistant_cli.py search query "get all posts"
 
-# Limit results
+# Limit results to 3
 python api_assistant_cli.py search query "create user" --limit 3
 
-# Filter by HTTP method
-python api_assistant_cli.py search query "posts" --method GET
+# Hide content, show only metadata
+python api_assistant_cli.py search query "update data" --no-content --limit 5
+```
 
-# Filter by source
-python api_assistant_cli.py search query "user" --source openapi
+**Filtered Search:**
+```bash
+# Filter by HTTP method only
+python api_assistant_cli.py search query "posts" --method GET --limit 5
+
+# Filter by source only
+python api_assistant_cli.py search query "user" --source openapi --limit 5
+
+# Combined filters (method AND source)
+python api_assistant_cli.py search query "data" --method POST --source openapi --limit 5
+```
+
+**Real-World Example Queries:**
+```bash
+# Find authentication endpoints
+python api_assistant_cli.py search query "login authentication" --limit 5
+
+# Find user management endpoints
+python api_assistant_cli.py search query "user profile management" --method GET --limit 5
+
+# Find data creation endpoints
+python api_assistant_cli.py search query "create new record" --method POST --limit 5
+
+# Find product-related endpoints
+python api_assistant_cli.py search query "product catalog inventory" --limit 5
+
+# Find deletion endpoints
+python api_assistant_cli.py search query "delete remove" --method DELETE --limit 5
+```
+
+**Expected Output:**
+```
+╭──────────────────── Search Results (3 matches) ────────────────────╮
+│                                                                     │
+│  [1] GET /posts                                                     │
+│  Summary: Get all posts                                             │
+│  Description: Retrieve a list of all posts                          │
+│  Source: openapi | Method: GET | Score: 0.89                        │
+│                                                                     │
+│  [2] GET /posts/{id}                                                │
+│  Summary: Get a specific post                                       │
+│  Description: Retrieve a post by its ID                             │
+│  Source: openapi | Method: GET | Score: 0.85                        │
+│                                                                     │
+│  [3] POST /posts                                                    │
+│  Summary: Create a new post                                         │
+│  Description: Add a new post to the collection                      │
+│  Source: openapi | Method: POST | Score: 0.82                       │
+╰─────────────────────────────────────────────────────────────────────╯
 ```
 
 ### 3. Generate Mermaid Diagrams

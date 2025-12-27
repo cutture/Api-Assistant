@@ -27,6 +27,194 @@ Version 1.0.0 - Production Testing Workflows
 
 ---
 
+## 🎯 Quick Start Test Suite (Copy-Paste Ready)
+
+### Complete CLI Test Workflow
+
+Run this complete test suite to verify all CLI features in ~10 minutes:
+
+**Bash/Linux/Mac:**
+```bash
+#!/bin/bash
+echo "=== API Assistant CLI Test Suite ==="
+
+# 1. Setup
+echo "Step 1: Creating directories..."
+mkdir -p test_data/diagrams test_data/exports
+
+# 2. Parse and Index
+echo "Step 2: Parsing and indexing APIs..."
+python api_assistant_cli.py parse file test_data/openapi/jsonplaceholder.yaml --add
+python api_assistant_cli.py parse file test_data/openapi/dummyjson.yaml --add
+python api_assistant_cli.py parse file test_data/graphql/countries.graphql --format graphql --add
+python api_assistant_cli.py parse file test_data/postman/reqres_collection.json --format postman --add
+
+# 3. Collection Info
+echo "Step 3: Checking collection..."
+python api_assistant_cli.py collection info
+
+# 4. Search Tests
+echo "Step 4: Running search tests..."
+echo "  - Basic search:"
+python api_assistant_cli.py search query "get all posts" --limit 3
+
+echo "  - Method filter:"
+python api_assistant_cli.py search query "user" --method GET --limit 3
+
+echo "  - Source filter:"
+python api_assistant_cli.py search query "data" --source openapi --limit 3
+
+echo "  - Combined filters:"
+python api_assistant_cli.py search query "posts" --method POST --source openapi --limit 3
+
+# 5. Diagram Generation
+echo "Step 5: Generating diagrams..."
+python api_assistant_cli.py diagram sequence test_data/openapi/jsonplaceholder.yaml --endpoint "/posts" --output test_data/diagrams/posts_sequence.mmd
+python api_assistant_cli.py diagram overview test_data/openapi/jsonplaceholder.yaml --output test_data/diagrams/api_overview.mmd
+python api_assistant_cli.py diagram er test_data/graphql/countries.graphql --output test_data/diagrams/countries_er.mmd
+python api_assistant_cli.py diagram auth oauth2 --output test_data/diagrams/oauth2_flow.mmd
+python api_assistant_cli.py diagram auth apikey --output test_data/diagrams/apikey_flow.mmd
+
+# 6. Session Management
+echo "Step 6: Testing session management..."
+echo "  - Creating session..."
+SESSION_OUTPUT=$(python api_assistant_cli.py session create --user "testuser" --ttl 120)
+echo "$SESSION_OUTPUT"
+SESSION_ID=$(echo "$SESSION_OUTPUT" | grep "Session ID" | awk '{print $3}')
+
+echo "  - Listing sessions..."
+python api_assistant_cli.py session list
+
+echo "  - Session stats..."
+python api_assistant_cli.py session stats
+
+if [ ! -z "$SESSION_ID" ]; then
+    echo "  - Session info for $SESSION_ID..."
+    python api_assistant_cli.py session info $SESSION_ID --history
+
+    echo "  - Extending session..."
+    python api_assistant_cli.py session extend $SESSION_ID --minutes 30
+
+    echo "  - Deleting session..."
+    python api_assistant_cli.py session delete $SESSION_ID --yes
+fi
+
+# 7. Export
+echo "Step 7: Exporting data..."
+python api_assistant_cli.py export documents test_data/exports/all_docs.json
+python api_assistant_cli.py export documents test_data/exports/sample_10.json --limit 10
+
+# 8. Info Commands
+echo "Step 8: Checking version and formats..."
+python api_assistant_cli.py info version
+python api_assistant_cli.py info formats
+
+echo ""
+echo "=== Test Suite Complete! ==="
+echo "Check results in:"
+echo "  - Diagrams: test_data/diagrams/"
+echo "  - Exports: test_data/exports/"
+```
+
+**PowerShell:**
+```powershell
+Write-Host "=== API Assistant CLI Test Suite ===" -ForegroundColor Green
+
+# 1. Setup
+Write-Host "Step 1: Creating directories..." -ForegroundColor Cyan
+New-Item -ItemType Directory -Path test_data/diagrams -Force | Out-Null
+New-Item -ItemType Directory -Path test_data/exports -Force | Out-Null
+
+# 2. Parse and Index
+Write-Host "Step 2: Parsing and indexing APIs..." -ForegroundColor Cyan
+python api_assistant_cli.py parse file test_data/openapi/jsonplaceholder.yaml --add
+python api_assistant_cli.py parse file test_data/openapi/dummyjson.yaml --add
+python api_assistant_cli.py parse file test_data/graphql/countries.graphql --format graphql --add
+python api_assistant_cli.py parse file test_data/postman/reqres_collection.json --format postman --add
+
+# 3. Collection Info
+Write-Host "Step 3: Checking collection..." -ForegroundColor Cyan
+python api_assistant_cli.py collection info
+
+# 4. Search Tests
+Write-Host "Step 4: Running search tests..." -ForegroundColor Cyan
+Write-Host "  - Basic search:" -ForegroundColor Yellow
+python api_assistant_cli.py search query "get all posts" --limit 3
+
+Write-Host "  - Method filter:" -ForegroundColor Yellow
+python api_assistant_cli.py search query "user" --method GET --limit 3
+
+Write-Host "  - Source filter:" -ForegroundColor Yellow
+python api_assistant_cli.py search query "data" --source openapi --limit 3
+
+Write-Host "  - Combined filters:" -ForegroundColor Yellow
+python api_assistant_cli.py search query "posts" --method POST --source openapi --limit 3
+
+# 5. Diagram Generation
+Write-Host "Step 5: Generating diagrams..." -ForegroundColor Cyan
+python api_assistant_cli.py diagram sequence test_data/openapi/jsonplaceholder.yaml --endpoint "/posts" --output test_data/diagrams/posts_sequence.mmd
+python api_assistant_cli.py diagram overview test_data/openapi/jsonplaceholder.yaml --output test_data/diagrams/api_overview.mmd
+python api_assistant_cli.py diagram er test_data/graphql/countries.graphql --output test_data/diagrams/countries_er.mmd
+python api_assistant_cli.py diagram auth oauth2 --output test_data/diagrams/oauth2_flow.mmd
+python api_assistant_cli.py diagram auth apikey --output test_data/diagrams/apikey_flow.mmd
+
+# 6. Session Management
+Write-Host "Step 6: Testing session management..." -ForegroundColor Cyan
+Write-Host "  - Creating session..." -ForegroundColor Yellow
+$SESSION_OUTPUT = python api_assistant_cli.py session create --user "testuser" --ttl 120
+Write-Host $SESSION_OUTPUT
+
+# Extract session ID (parse from output)
+$SESSION_ID = ($SESSION_OUTPUT | Select-String -Pattern "Session ID: ([a-f0-9\-]+)" | ForEach-Object { $_.Matches.Groups[1].Value })
+
+Write-Host "  - Listing sessions..." -ForegroundColor Yellow
+python api_assistant_cli.py session list
+
+Write-Host "  - Session stats..." -ForegroundColor Yellow
+python api_assistant_cli.py session stats
+
+if ($SESSION_ID) {
+    Write-Host "  - Session info for $SESSION_ID..." -ForegroundColor Yellow
+    python api_assistant_cli.py session info $SESSION_ID --history
+
+    Write-Host "  - Extending session..." -ForegroundColor Yellow
+    python api_assistant_cli.py session extend $SESSION_ID --minutes 30
+
+    Write-Host "  - Deleting session..." -ForegroundColor Yellow
+    python api_assistant_cli.py session delete $SESSION_ID --yes
+}
+
+# 7. Export
+Write-Host "Step 7: Exporting data..." -ForegroundColor Cyan
+python api_assistant_cli.py export documents test_data/exports/all_docs.json
+python api_assistant_cli.py export documents test_data/exports/sample_10.json --limit 10
+
+# 8. Info Commands
+Write-Host "Step 8: Checking version and formats..." -ForegroundColor Cyan
+python api_assistant_cli.py info version
+python api_assistant_cli.py info formats
+
+Write-Host ""
+Write-Host "=== Test Suite Complete! ===" -ForegroundColor Green
+Write-Host "Check results in:" -ForegroundColor Yellow
+Write-Host "  - Diagrams: test_data/diagrams/" -ForegroundColor White
+Write-Host "  - Exports: test_data/exports/" -ForegroundColor White
+```
+
+**Expected Runtime:** ~10 minutes
+**Expected Results:**
+- ✅ 50+ endpoints indexed from 4 different sources
+- ✅ 5 Mermaid diagrams generated
+- ✅ 2 JSON export files created
+- ✅ Session created, managed, and deleted
+- ✅ All search filters working correctly
+
+**To save as a script:**
+- Bash: Save as `test_suite.sh`, run with `chmod +x test_suite.sh && ./test_suite.sh`
+- PowerShell: Save as `test_suite.ps1`, run with `.\test_suite.ps1`
+
+---
+
 ## Table of Contents
 
 1. [Introduction](#introduction)
