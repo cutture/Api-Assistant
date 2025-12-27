@@ -497,12 +497,91 @@ initialize_monitoring(config)
 
 ---
 
+## 🏗️ Infrastructure Monitoring
+
+In addition to application-level monitoring with Langfuse, you should set up infrastructure monitoring for production deployments.
+
+### Quick Setup
+
+Use the monitoring setup script for your cloud provider:
+
+```bash
+# AWS CloudWatch
+./scripts/monitoring/setup-monitoring.sh aws
+
+# GCP Cloud Monitoring
+./scripts/monitoring/setup-monitoring.sh gcp
+
+# Azure Monitor
+./scripts/monitoring/setup-monitoring.sh azure
+
+# Self-hosted Prometheus + Grafana
+./scripts/monitoring/setup-monitoring.sh prometheus
+```
+
+### Infrastructure Metrics Monitored
+
+1. **Resource Usage**
+   - CPU utilization (alert if > 80%)
+   - Memory utilization (alert if > 90%)
+   - Disk usage (alert if > 85%)
+
+2. **Application Health**
+   - HTTP health check status
+   - Response time (P50, P95, P99)
+   - Request rate and error rate
+
+3. **Container/Service Metrics**
+   - Container restart count
+   - Service deployment status
+   - Network I/O
+
+### Health Check Script
+
+Run comprehensive health checks:
+
+```bash
+# Check local deployment
+./scripts/monitoring/health-check.sh
+
+# Check production
+export APP_URL=https://api-assistant.yourdomain.com
+./scripts/monitoring/health-check.sh
+
+# With alerts
+export SLACK_WEBHOOK_URL=https://hooks.slack.com/...
+export ALERT_EMAIL=admin@example.com
+./scripts/monitoring/health-check.sh
+```
+
+**Automated health checks** (add to crontab):
+```bash
+# Run every 5 minutes
+*/5 * * * * /app/scripts/monitoring/health-check.sh
+```
+
+### Monitoring Best Practices
+
+1. **Application + Infrastructure**: Use both Langfuse (application) and cloud monitoring (infrastructure)
+2. **Set up alerts**: Don't just collect metrics - configure alerts for critical issues
+3. **Test alerts**: Verify alert notifications are delivered correctly
+4. **Review regularly**: Check dashboards weekly to identify trends
+5. **Correlate metrics**: Use timestamps to correlate application and infrastructure issues
+
+For detailed infrastructure monitoring setup, see:
+- [Production Deployment Guide](../PRODUCTION_DEPLOYMENT.md#monitoring-and-alerting)
+- [Scripts README](../scripts/README.md#monitoring-scripts)
+
+---
+
 ## 📚 Additional Resources
 
 - [Langfuse Documentation](https://langfuse.com/docs)
 - [Langfuse Python SDK](https://langfuse.com/docs/sdk/python)
 - [Langfuse Dashboard Guide](https://langfuse.com/docs/dashboard)
 - [LangChain + Langfuse Integration](https://langfuse.com/docs/integrations/langchain)
+- [Production Deployment Guide](../PRODUCTION_DEPLOYMENT.md)
+- [Deployment Scripts](../scripts/README.md)
 
 ---
 
@@ -555,6 +634,8 @@ result = supervisor.process("How to authenticate?")
 
 ## 📊 Monitoring Checklist
 
+### Application Monitoring (Langfuse)
+
 Before deploying to production:
 
 - [ ] Langfuse credentials configured
@@ -567,8 +648,28 @@ Before deploying to production:
 - [ ] Dashboard configured with alerts
 - [ ] Team has access to Langfuse dashboard
 
+### Infrastructure Monitoring
+
+Before deploying to production:
+
+- [ ] Cloud monitoring configured (CloudWatch/Cloud Monitoring/Azure Monitor)
+- [ ] Health check endpoint verified (`/_stcore/health`)
+- [ ] Automated health checks scheduled (cron)
+- [ ] Alerts configured for:
+  - [ ] High CPU usage (> 80%)
+  - [ ] High memory usage (> 90%)
+  - [ ] High error rate (> 1%)
+  - [ ] Slow response time (P95 > 30s)
+  - [ ] Health check failures
+- [ ] Alert notifications tested (email, Slack, etc.)
+- [ ] Log aggregation configured
+- [ ] Uptime monitoring configured (external service)
+- [ ] Team trained on monitoring dashboards
+
+For complete checklist, see [Production Checklist](../PRODUCTION_CHECKLIST.md).
+
 ---
 
-**Last Updated:** December 25, 2024
+**Last Updated:** December 27, 2025
 **Version:** 1.0
 **Author:** API Integration Assistant Team
