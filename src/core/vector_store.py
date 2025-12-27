@@ -6,13 +6,18 @@ Includes performance monitoring and hybrid search (BM25 + Vector).
 
 import hashlib
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 import chromadb
 import structlog
 from chromadb.config import Settings as ChromaSettings
 
 from src.config import settings
+from src.core.advanced_filtering import (
+    FacetResult,
+    FacetedSearch,
+    Filter,
+)
 from src.core.cross_encoder import CrossEncoderReranker
 from src.core.embeddings import EmbeddingService, get_embedding_service
 from src.core.hybrid_search import (
@@ -269,7 +274,7 @@ class VectorStore:
         self,
         query: str,
         n_results: int = 5,
-        where: Optional[dict[str, Any]] = None,
+        where: Optional[Union[dict[str, Any], Filter]] = None,
         where_document: Optional[dict[str, Any]] = None,
         use_hybrid: bool = True,
         use_reranker: bool = False,
@@ -291,7 +296,7 @@ class VectorStore:
         Args:
             query: The search query.
             n_results: Maximum number of results to return.
-            where: Metadata filter conditions.
+            where: Metadata filter conditions (dict or Filter object).
             where_document: Document content filter conditions.
             use_hybrid: Use hybrid search if available (default: True).
             use_reranker: Use cross-encoder re-ranking (default: False).
@@ -300,6 +305,12 @@ class VectorStore:
         Returns:
             List of search results with content, metadata, and similarity score.
         """
+        # Store original filter object for client-side filtering if needed
+        original_filter = where if isinstance(where, Filter) else None
+
+        # Convert Filter object to dict if needed
+        where_dict, where_doc_dict = self._process_filters(where, where_document)
+
         # Determine if we should use re-ranking
         use_reranker_mode = use_reranker and self.enable_reranker
 
@@ -312,9 +323,14 @@ class VectorStore:
             use_hybrid_mode = use_hybrid and self.enable_hybrid_search and self._bm25 is not None
 
             if use_hybrid_mode:
-                candidates = self._hybrid_search_impl(query, rerank_top_k, where, where_document)
+                candidates = self._hybrid_search_impl(query, rerank_top_k, where_dict, where_doc_dict)
             else:
-                candidates = self._vector_search_impl(query, rerank_top_k, where, where_document)
+                candidates = self._vector_search_impl(query, rerank_top_k, where_dict, where_doc_dict)
+
+            # Apply client-side filtering if original filter couldn't be converted
+            if original_filter and where_dict is None and where_doc_dict is None:
+                from src.core.advanced_filtering import FacetedSearch
+                candidates = FacetedSearch.apply_client_side_filter(candidates, original_filter)
 
             # Re-rank with cross-encoder
             return self._rerank_results(query, candidates, n_results)
@@ -323,9 +339,16 @@ class VectorStore:
             use_hybrid_mode = use_hybrid and self.enable_hybrid_search and self._bm25 is not None
 
             if use_hybrid_mode:
-                return self._hybrid_search_impl(query, n_results, where, where_document)
+                results = self._hybrid_search_impl(query, n_results, where_dict, where_doc_dict)
             else:
-                return self._vector_search_impl(query, n_results, where, where_document)
+                results = self._vector_search_impl(query, n_results, where_dict, where_doc_dict)
+
+            # Apply client-side filtering if original filter couldn't be converted
+            if original_filter and where_dict is None and where_doc_dict is None:
+                from src.core.advanced_filtering import FacetedSearch
+                results = FacetedSearch.apply_client_side_filter(results, original_filter)
+
+            return results
 
     def _vector_search_impl(
         self,
@@ -401,7 +424,32 @@ class VectorStore:
         bm25_results = []
         if self._bm25:
             bm25_raw = self._bm25.search(query, top_k=n_results * 2)
-            bm25_results = [(doc_id, score) for doc_id, score in bm25_raw]
+
+            # Apply client-side filtering to BM25 results if filters are specified
+            if where or where_document:
+                from src.core.advanced_filtering import FacetedSearch, FilterBuilder
+
+                filtered_bm25 = []
+                for doc_id, score in bm25_raw:
+                    # Get document metadata and content
+                    doc = next((d for d in self._documents_cache if d["id"] == doc_id), None)
+                    if doc:
+                        # Apply metadata filter
+                        if where:
+                            # Convert ChromaDB where clause to filter matches
+                            if not self._matches_where_clause(doc["metadata"], where):
+                                continue
+
+                        # Apply document filter
+                        if where_document:
+                            if not self._matches_where_document_clause(doc["content"], where_document):
+                                continue
+
+                        filtered_bm25.append((doc_id, score))
+
+                bm25_results = filtered_bm25
+            else:
+                bm25_results = [(doc_id, score) for doc_id, score in bm25_raw]
 
         # 3. Merge using Reciprocal Rank Fusion
         if not self._hybrid_search:
@@ -501,6 +549,202 @@ class VectorStore:
             })
 
         return formatted_results
+
+    def _process_filters(
+        self,
+        where: Optional[Union[dict[str, Any], Filter]],
+        where_document: Optional[dict[str, Any]],
+    ) -> tuple[Optional[dict[str, Any]], Optional[dict[str, Any]]]:
+        """
+        Process filter parameters.
+
+        Converts Filter objects to ChromaDB filter dicts.
+
+        Args:
+            where: Metadata filter (dict or Filter object)
+            where_document: Document content filter (dict)
+
+        Returns:
+            Tuple of (where_dict, where_document_dict)
+        """
+        where_dict = None
+        where_doc_dict = where_document
+
+        # Process where parameter
+        if where is not None:
+            if isinstance(where, Filter):
+                # Convert Filter to ChromaDB format
+                where_dict = where.to_chroma_where()
+                # Also get document filter if any
+                filter_doc = where.to_chroma_where_document()
+                if filter_doc and not where_doc_dict:
+                    where_doc_dict = filter_doc
+            else:
+                # Already a dict
+                where_dict = where
+
+        return where_dict, where_doc_dict
+
+    def _matches_where_clause(
+        self,
+        metadata: Dict[str, Any],
+        where: Dict[str, Any],
+    ) -> bool:
+        """
+        Check if metadata matches a ChromaDB where clause.
+
+        Args:
+            metadata: Document metadata
+            where: ChromaDB where clause
+
+        Returns:
+            True if metadata matches the where clause
+        """
+        for field, condition in where.items():
+            # Handle logical operators
+            if field == "$and":
+                return all(self._matches_where_clause(metadata, c) for c in condition)
+            elif field == "$or":
+                return any(self._matches_where_clause(metadata, c) for c in condition)
+            elif field == "$not":
+                return not self._matches_where_clause(metadata, condition)
+
+            # Handle field conditions
+            if field not in metadata:
+                return False
+
+            field_value = metadata[field]
+
+            if isinstance(condition, dict):
+                # Operator-based condition
+                for op, value in condition.items():
+                    if op == "$eq":
+                        if field_value != value:
+                            return False
+                    elif op == "$ne":
+                        if field_value == value:
+                            return False
+                    elif op == "$gt":
+                        if not (field_value > value):
+                            return False
+                    elif op == "$gte":
+                        if not (field_value >= value):
+                            return False
+                    elif op == "$lt":
+                        if not (field_value < value):
+                            return False
+                    elif op == "$lte":
+                        if not (field_value <= value):
+                            return False
+                    elif op == "$in":
+                        if field_value not in value:
+                            return False
+                    elif op == "$nin":
+                        if field_value in value:
+                            return False
+                    elif op == "$contains":
+                        if value not in str(field_value):
+                            return False
+                    elif op == "$not_contains":
+                        if value in str(field_value):
+                            return False
+            else:
+                # Direct equality
+                if field_value != condition:
+                    return False
+
+        return True
+
+    def _matches_where_document_clause(
+        self,
+        content: str,
+        where_document: Dict[str, Any],
+    ) -> bool:
+        """
+        Check if document content matches a where_document clause.
+
+        Args:
+            content: Document content
+            where_document: ChromaDB where_document clause
+
+        Returns:
+            True if content matches the where_document clause
+        """
+        for op, value in where_document.items():
+            if op == "$contains":
+                if value not in content:
+                    return False
+            elif op == "$not_contains":
+                if value in content:
+                    return False
+            elif op == "$and":
+                return all(self._matches_where_document_clause(content, c) for c in value)
+            elif op == "$or":
+                return any(self._matches_where_document_clause(content, c) for c in value)
+            elif op == "$not":
+                return not self._matches_where_document_clause(content, value)
+
+        return True
+
+    def search_with_facets(
+        self,
+        query: str,
+        facet_fields: List[str],
+        n_results: int = 20,
+        where: Optional[Union[dict[str, Any], Filter]] = None,
+        where_document: Optional[dict[str, Any]] = None,
+        use_hybrid: bool = True,
+    ) -> tuple[list[dict[str, Any]], Dict[str, FacetResult]]:
+        """
+        Search with faceted aggregation.
+
+        Performs search and computes facet counts for specified fields.
+        Useful for building filtered search UIs with category counts.
+
+        Args:
+            query: Search query
+            facet_fields: List of metadata fields to compute facets for
+            n_results: Number of results to return
+            where: Metadata filter (dict or Filter object)
+            where_document: Document content filter
+            use_hybrid: Use hybrid search if available
+
+        Returns:
+            Tuple of (search_results, facets_dict)
+                - search_results: List of search results
+                - facets_dict: Map of field names to FacetResult objects
+
+        Example:
+            >>> results, facets = store.search_with_facets(
+            ...     "authentication",
+            ...     facet_fields=["method", "category"],
+            ...     n_results=20
+            ... )
+            >>> print(f"Found {len(results)} results")
+            >>> for field, facet in facets.items():
+            ...     print(f"{field}: {facet.get_top_values(5)}")
+        """
+        # Perform search
+        results = self.search(
+            query=query,
+            n_results=n_results,
+            where=where,
+            where_document=where_document,
+            use_hybrid=use_hybrid,
+            use_reranker=False,  # Don't use reranker for faceted search
+        )
+
+        # Compute facets
+        facets = FacetedSearch.compute_facets(results, facet_fields)
+
+        logger.debug(
+            "Faceted search completed",
+            query=query[:50],
+            result_count=len(results),
+            facet_fields=facet_fields,
+        )
+
+        return results, facets
 
     def get_document(self, doc_id: str) -> Optional[dict[str, Any]]:
         """

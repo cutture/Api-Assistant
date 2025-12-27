@@ -75,6 +75,19 @@ from src.core.result_diversification import (
     get_result_diversifier,
     diversify_results,
 )
+from src.core.advanced_filtering import (
+    FilterOperator,
+    Filter,
+    MetadataFilter,
+    ContentFilter,
+    CombinedFilter,
+    FacetResult,
+    FilterBuilder,
+    FacetedSearch,
+    create_filter,
+    combine_filters,
+    compute_facets,
+)
 
 __all__ = [
     "EmbeddingService",
@@ -97,6 +110,17 @@ __all__ = [
     "ResultDiversifier",
     "get_result_diversifier",
     "diversify_results",
+    "FilterOperator",
+    "Filter",
+    "MetadataFilter",
+    "ContentFilter",
+    "CombinedFilter",
+    "FacetResult",
+    "FilterBuilder",
+    "FacetedSearch",
+    "create_filter",
+    "combine_filters",
+    "compute_facets",
     "APIAssistantError",
     "LLMError",
     "LLMConnectionError",
