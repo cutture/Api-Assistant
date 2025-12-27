@@ -58,6 +58,12 @@ from src.core.hybrid_search import (
     get_bm25,
     get_hybrid_search,
 )
+from src.core.cross_encoder import (
+    CrossEncoderReranker,
+    RerankResult,
+    get_cross_encoder_reranker,
+    rerank_results,
+)
 
 __all__ = [
     "EmbeddingService",
@@ -69,6 +75,10 @@ __all__ = [
     "create_bm25_index",
     "get_bm25",
     "get_hybrid_search",
+    "CrossEncoderReranker",
+    "RerankResult",
+    "get_cross_encoder_reranker",
+    "rerank_results",
     "APIAssistantError",
     "LLMError",
     "LLMConnectionError",

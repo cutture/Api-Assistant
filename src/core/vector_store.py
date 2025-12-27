@@ -13,6 +13,7 @@ import structlog
 from chromadb.config import Settings as ChromaSettings
 
 from src.config import settings
+from src.core.cross_encoder import CrossEncoderReranker
 from src.core.embeddings import EmbeddingService, get_embedding_service
 from src.core.hybrid_search import (
     BM25,
@@ -36,6 +37,7 @@ class VectorStore:
     - Semantic similarity search (vector embeddings)
     - BM25 keyword search (traditional IR)
     - Hybrid search (BM25 + Vector with RRF fusion)
+    - Cross-encoder re-ranking for improved accuracy
     - Duplicate detection via content hashing
     """
 
@@ -45,6 +47,8 @@ class VectorStore:
         persist_directory: Optional[str] = None,
         embedding_service: Optional[EmbeddingService] = None,
         enable_hybrid_search: bool = True,
+        enable_reranker: bool = False,
+        reranker_model: str = "ms-marco-mini-lm-6",
     ):
         """
         Initialize the vector store.
@@ -54,16 +58,21 @@ class VectorStore:
             persist_directory: Directory for persistent storage.
             embedding_service: Service for generating embeddings.
             enable_hybrid_search: Enable BM25 + Vector hybrid search (default: True).
+            enable_reranker: Enable cross-encoder re-ranking (default: False, lazy loaded).
+            reranker_model: Cross-encoder model to use for re-ranking.
         """
         self.collection_name = collection_name or settings.chroma_collection_name
         self.persist_directory = persist_directory or settings.chroma_persist_dir
         self.embedding_service = embedding_service or get_embedding_service()
         self.enable_hybrid_search = enable_hybrid_search
+        self.enable_reranker = enable_reranker
+        self.reranker_model = reranker_model
 
         self._client: Optional[chromadb.PersistentClient] = None
         self._collection: Optional[chromadb.Collection] = None
         self._bm25: Optional[BM25] = None  # BM25 index for keyword search
         self._hybrid_search: Optional[HybridSearch] = None  # Hybrid search strategy
+        self._reranker: Optional[CrossEncoderReranker] = None  # Cross-encoder re-ranker
         self._documents_cache: List[Dict[str, Any]] = []  # Cache for BM25 indexing
 
     @property
@@ -263,13 +272,21 @@ class VectorStore:
         where: Optional[dict[str, Any]] = None,
         where_document: Optional[dict[str, Any]] = None,
         use_hybrid: bool = True,
+        use_reranker: bool = False,
+        rerank_top_k: Optional[int] = None,
     ) -> list[dict[str, Any]]:
         """
         Search for similar documents with performance monitoring.
 
-        Supports three search modes:
-        1. Vector-only search (use_hybrid=False or hybrid disabled)
-        2. Hybrid search (use_hybrid=True and hybrid enabled) - RECOMMENDED
+        Supports multiple search modes:
+        1. Vector-only search (use_hybrid=False)
+        2. Hybrid search (use_hybrid=True) - BM25 + Vector with RRF
+        3. Re-ranked search (use_reranker=True) - Cross-encoder re-ranking
+
+        Search pipeline:
+        - If use_reranker=True: Retrieve candidates → Re-rank with cross-encoder
+        - If use_hybrid=True: BM25 + Vector with RRF fusion
+        - Otherwise: Pure vector search
 
         Args:
             query: The search query.
@@ -277,17 +294,38 @@ class VectorStore:
             where: Metadata filter conditions.
             where_document: Document content filter conditions.
             use_hybrid: Use hybrid search if available (default: True).
+            use_reranker: Use cross-encoder re-ranking (default: False).
+            rerank_top_k: Number of candidates to retrieve before re-ranking (default: n_results * 3).
 
         Returns:
             List of search results with content, metadata, and similarity score.
         """
-        # Determine search mode
-        use_hybrid_mode = use_hybrid and self.enable_hybrid_search and self._bm25 is not None
+        # Determine if we should use re-ranking
+        use_reranker_mode = use_reranker and self.enable_reranker
 
-        if use_hybrid_mode:
-            return self._hybrid_search_impl(query, n_results, where, where_document)
+        if use_reranker_mode:
+            # Re-ranking pipeline: retrieve more candidates, then re-rank
+            if rerank_top_k is None:
+                rerank_top_k = max(n_results * 3, 20)  # Retrieve 3x candidates by default
+
+            # Retrieve candidates using hybrid or vector search
+            use_hybrid_mode = use_hybrid and self.enable_hybrid_search and self._bm25 is not None
+
+            if use_hybrid_mode:
+                candidates = self._hybrid_search_impl(query, rerank_top_k, where, where_document)
+            else:
+                candidates = self._vector_search_impl(query, rerank_top_k, where, where_document)
+
+            # Re-rank with cross-encoder
+            return self._rerank_results(query, candidates, n_results)
         else:
-            return self._vector_search_impl(query, n_results, where, where_document)
+            # Standard search without re-ranking
+            use_hybrid_mode = use_hybrid and self.enable_hybrid_search and self._bm25 is not None
+
+            if use_hybrid_mode:
+                return self._hybrid_search_impl(query, n_results, where, where_document)
+            else:
+                return self._vector_search_impl(query, n_results, where, where_document)
 
     def _vector_search_impl(
         self,
@@ -415,6 +453,55 @@ class VectorStore:
 
         return formatted_results
 
+    def _rerank_results(
+        self,
+        query: str,
+        candidates: List[Dict[str, Any]],
+        top_k: int,
+    ) -> List[Dict[str, Any]]:
+        """
+        Re-rank search results using cross-encoder.
+
+        Args:
+            query: Search query
+            candidates: List of candidate results
+            top_k: Number of top results to return
+
+        Returns:
+            Re-ranked results
+        """
+        if not candidates:
+            return []
+
+        # Lazy load cross-encoder
+        if self._reranker is None:
+            logger.info(
+                "Initializing cross-encoder re-ranker",
+                model=self.reranker_model,
+            )
+            self._reranker = CrossEncoderReranker(
+                model_name=self.reranker_model,
+                use_cache=True,
+            )
+
+        # Re-rank
+        rerank_results = self._reranker.rerank(query, candidates, top_k)
+
+        # Convert to dict format
+        formatted_results = []
+        for result in rerank_results:
+            formatted_results.append({
+                "id": result.doc_id,
+                "content": result.content,
+                "metadata": result.metadata,
+                "score": result.rerank_score,
+                "original_score": result.original_score,
+                "original_rank": result.original_rank,
+                "method": "reranked",
+            })
+
+        return formatted_results
+
     def get_document(self, doc_id: str) -> Optional[dict[str, Any]]:
         """
         Get a specific document by ID.
@@ -473,23 +560,39 @@ class VectorStore:
             "document_count": self.collection.count(),
             "persist_directory": self.persist_directory,
             "hybrid_search_enabled": self.enable_hybrid_search,
+            "reranker_enabled": self.enable_reranker,
         }
 
         if self.enable_hybrid_search and self._bm25:
             stats["bm25_indexed_documents"] = len(self._documents_cache)
 
+        if self.enable_reranker:
+            stats["reranker_model"] = self.reranker_model
+            if self._reranker:
+                stats["reranker_loaded"] = True
+                cache_stats = self._reranker.get_cache_stats()
+                if cache_stats:
+                    stats["reranker_cache"] = cache_stats
+
         return stats
 
 
 # Convenience function
-def get_vector_store(enable_hybrid_search: bool = True) -> VectorStore:
+def get_vector_store(
+    enable_hybrid_search: bool = True,
+    enable_reranker: bool = False,
+) -> VectorStore:
     """
     Get a VectorStore instance with default settings.
 
     Args:
         enable_hybrid_search: Enable BM25 + Vector hybrid search (default: True).
+        enable_reranker: Enable cross-encoder re-ranking (default: False).
 
     Returns:
         VectorStore instance.
     """
-    return VectorStore(enable_hybrid_search=enable_hybrid_search)
+    return VectorStore(
+        enable_hybrid_search=enable_hybrid_search,
+        enable_reranker=enable_reranker,
+    )
