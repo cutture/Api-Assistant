@@ -300,7 +300,7 @@ def query(
         # Search
         vector_store = get_vector_store()
         results = vector_store.search(
-            query=query_text, n_results=n_results, filter=filter_dict if filter_dict else None
+            query=query_text, n_results=n_results, where=filter_dict if filter_dict else None
         )
 
         if not results:
