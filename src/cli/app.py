@@ -686,6 +686,262 @@ def diagram_overview(
 
 
 # ============================================================================
+# SESSION COMMANDS
+# ============================================================================
+
+session_app = typer.Typer(help="Manage user sessions")
+app.add_typer(session_app, name="session")
+
+
+@session_app.command("create")
+def session_create(
+    user_id: Optional[str] = typer.Option(None, "--user", "-u", help="User identifier"),
+    ttl: int = typer.Option(60, "--ttl", "-t", help="Session TTL in minutes"),
+    collection: Optional[str] = typer.Option(
+        None, "--collection", "-c", help="Collection name for this session"
+    ),
+):
+    """Create a new user session."""
+    try:
+        from src.sessions import get_session_manager
+
+        manager = get_session_manager()
+        session = manager.create_session(
+            user_id=user_id, ttl_minutes=ttl, collection_name=collection
+        )
+
+        console.print("\n[green]✓ Session created successfully[/green]\n")
+
+        # Display session info
+        table = Table(title="Session Details", show_header=False)
+        table.add_column("Property", style="cyan")
+        table.add_column("Value", style="yellow")
+
+        table.add_row("Session ID", session.session_id)
+        table.add_row("User ID", session.user_id or "Anonymous")
+        table.add_row("Created At", session.created_at.strftime("%Y-%m-%d %H:%M:%S"))
+        table.add_row("Expires At", session.expires_at.strftime("%Y-%m-%d %H:%M:%S") if session.expires_at else "Never")
+        table.add_row("Status", session.status.value)
+        table.add_row("Collection", session.collection_name or "None")
+
+        console.print(table)
+        console.print(f"\n[dim]Use this session ID: {session.session_id}[/dim]")
+
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)
+
+
+@session_app.command("list")
+def session_list(
+    user_id: Optional[str] = typer.Option(None, "--user", "-u", help="Filter by user ID"),
+    status: Optional[str] = typer.Option(None, "--status", "-s", help="Filter by status (active, inactive, expired)"),
+):
+    """List all sessions with optional filters."""
+    try:
+        from src.sessions import get_session_manager, SessionStatus
+
+        manager = get_session_manager()
+
+        # Parse status filter
+        status_filter = None
+        if status:
+            try:
+                status_filter = SessionStatus(status.lower())
+            except ValueError:
+                console.print(f"[red]Invalid status. Choose from: active, inactive, expired[/red]")
+                raise typer.Exit(1)
+
+        sessions = manager.list_sessions(user_id=user_id, status=status_filter)
+
+        if not sessions:
+            console.print("[yellow]No sessions found[/yellow]")
+            return
+
+        # Display sessions table
+        table = Table(title=f"Sessions ({len(sessions)} total)")
+        table.add_column("Session ID", style="cyan")
+        table.add_column("User ID", style="yellow")
+        table.add_column("Status", style="magenta")
+        table.add_column("Created", style="blue")
+        table.add_column("Last Accessed", style="blue")
+        table.add_column("Messages", style="green")
+
+        for session in sessions:
+            table.add_row(
+                session.session_id[:8] + "...",
+                session.user_id or "Anonymous",
+                session.status.value,
+                session.created_at.strftime("%H:%M:%S"),
+                session.last_accessed.strftime("%H:%M:%S"),
+                str(len(session.conversation_history)),
+            )
+
+        console.print(table)
+
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)
+
+
+@session_app.command("info")
+def session_info(
+    session_id: str = typer.Argument(..., help="Session ID"),
+    show_history: bool = typer.Option(False, "--history", "-h", help="Show conversation history"),
+):
+    """Show detailed information about a session."""
+    try:
+        from src.sessions import get_session_manager
+
+        manager = get_session_manager()
+        session = manager.get_session(session_id)
+
+        if not session:
+            console.print(f"[red]Session not found: {session_id}[/red]")
+            raise typer.Exit(1)
+
+        # Display session details
+        table = Table(title="Session Details", show_header=False)
+        table.add_column("Property", style="cyan")
+        table.add_column("Value", style="yellow")
+
+        table.add_row("Session ID", session.session_id)
+        table.add_row("User ID", session.user_id or "Anonymous")
+        table.add_row("Status", session.status.value)
+        table.add_row("Created At", session.created_at.strftime("%Y-%m-%d %H:%M:%S"))
+        table.add_row("Last Accessed", session.last_accessed.strftime("%Y-%m-%d %H:%M:%S"))
+        table.add_row("Expires At", session.expires_at.strftime("%Y-%m-%d %H:%M:%S") if session.expires_at else "Never")
+        table.add_row("Collection", session.collection_name or "None")
+        table.add_row("Messages", str(len(session.conversation_history)))
+
+        console.print(table)
+
+        # Display settings
+        console.print("\n[bold]Session Settings:[/bold]")
+        settings_table = Table(show_header=False)
+        settings_table.add_column("Setting", style="cyan")
+        settings_table.add_column("Value", style="yellow")
+
+        settings_table.add_row("Search Mode", session.settings.default_search_mode)
+        settings_table.add_row("Results Limit", str(session.settings.default_n_results))
+        settings_table.add_row("Use Reranking", str(session.settings.use_reranking))
+        settings_table.add_row("Show Scores", str(session.settings.show_scores))
+        settings_table.add_row("Max Content Length", str(session.settings.max_content_length))
+
+        console.print(settings_table)
+
+        # Show conversation history if requested
+        if show_history and session.conversation_history:
+            console.print(f"\n[bold]Conversation History ({len(session.conversation_history)} messages):[/bold]\n")
+            for i, msg in enumerate(session.conversation_history[-10:], 1):  # Last 10 messages
+                role_color = "green" if msg.role == "user" else "blue"
+                console.print(f"[{role_color}]{msg.role}[/{role_color}] ({msg.timestamp.strftime('%H:%M:%S')}): {msg.content[:100]}")
+
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)
+
+
+@session_app.command("delete")
+def session_delete(
+    session_id: str = typer.Argument(..., help="Session ID to delete"),
+    confirm: bool = typer.Option(False, "--yes", "-y", help="Skip confirmation prompt"),
+):
+    """Delete a session."""
+    try:
+        from src.sessions import get_session_manager
+
+        if not confirm:
+            confirmed = typer.confirm(
+                f"Are you sure you want to delete session {session_id}?", abort=True
+            )
+
+        manager = get_session_manager()
+        deleted = manager.delete_session(session_id)
+
+        if deleted:
+            console.print(f"[green]✓ Session {session_id} deleted successfully[/green]")
+        else:
+            console.print(f"[yellow]Session not found: {session_id}[/yellow]")
+
+    except typer.Abort:
+        console.print("[yellow]Operation cancelled[/yellow]")
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)
+
+
+@session_app.command("extend")
+def session_extend(
+    session_id: str = typer.Argument(..., help="Session ID to extend"),
+    minutes: int = typer.Option(60, "--minutes", "-m", help="Minutes to add to expiration"),
+):
+    """Extend session expiration time."""
+    try:
+        from src.sessions import get_session_manager
+
+        manager = get_session_manager()
+        session = manager.extend_session(session_id, minutes)
+
+        if not session:
+            console.print(f"[red]Session not found: {session_id}[/red]")
+            raise typer.Exit(1)
+
+        console.print(f"[green]✓ Session extended by {minutes} minutes[/green]")
+        console.print(f"New expiration: {session.expires_at.strftime('%Y-%m-%d %H:%M:%S') if session.expires_at else 'Never'}")
+
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)
+
+
+@session_app.command("cleanup")
+def session_cleanup():
+    """Remove all expired sessions."""
+    try:
+        from src.sessions import get_session_manager
+
+        manager = get_session_manager()
+        count = manager.cleanup_expired_sessions()
+
+        if count > 0:
+            console.print(f"[green]✓ Cleaned up {count} expired session(s)[/green]")
+        else:
+            console.print("[yellow]No expired sessions found[/yellow]")
+
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)
+
+
+@session_app.command("stats")
+def session_stats():
+    """Show session statistics."""
+    try:
+        from src.sessions import get_session_manager
+
+        manager = get_session_manager()
+        stats = manager.get_stats()
+
+        # Display stats
+        table = Table(title="Session Statistics")
+        table.add_column("Metric", style="cyan")
+        table.add_column("Value", style="yellow")
+
+        table.add_row("Total Sessions", str(stats["total_sessions"]))
+        table.add_row("Active Sessions", str(stats["active_sessions"]))
+        table.add_row("Inactive Sessions", str(stats["inactive_sessions"]))
+        table.add_row("Expired Sessions", str(stats["expired_sessions"]))
+        table.add_row("Unique Users", str(stats["unique_users"]))
+
+        console.print(table)
+
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)
+
+
+# ============================================================================
 # MAIN CALLBACK
 # ============================================================================
 
