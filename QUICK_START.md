@@ -53,6 +53,18 @@ python api_assistant_cli.py search query "user" --source openapi
 
 > **⚠️ Windows PowerShell Users**: Use backtick `` ` `` for line continuation, not backslash `\`
 
+**First, create the output directory:**
+
+**PowerShell:**
+```powershell
+New-Item -ItemType Directory -Path test_data/diagrams -Force
+```
+
+**Bash/Linux/Mac:**
+```bash
+mkdir -p test_data/diagrams
+```
+
 **Sequence Diagram (from OpenAPI):**
 
 **Bash/Linux/Mac:**

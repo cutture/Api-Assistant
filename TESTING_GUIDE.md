@@ -925,6 +925,20 @@ python api_assistant_cli.py search query "data" --method POST --source openapi -
 
 > **⚠️ PowerShell Users**: Use backtick `` ` `` for line continuation (not backslash `\`), or use single-line commands
 
+**First, create the output directory:**
+
+**PowerShell:**
+```powershell
+New-Item -ItemType Directory -Path test_data/diagrams -Force
+```
+
+**Bash/Linux/Mac:**
+```bash
+mkdir -p test_data/diagrams
+```
+
+**Now generate diagrams:**
+
 **Bash/Linux/Mac:**
 ```bash
 # Sequence diagram (requires file path)
