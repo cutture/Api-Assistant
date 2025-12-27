@@ -50,11 +50,25 @@ from src.core.security import (
     get_sanitizer,
     get_rate_limiter,
 )
+from src.core.hybrid_search import (
+    BM25,
+    HybridSearch,
+    SearchResult,
+    create_bm25_index,
+    get_bm25,
+    get_hybrid_search,
+)
 
 __all__ = [
     "EmbeddingService",
     "VectorStore",
     "LLMClient",
+    "BM25",
+    "HybridSearch",
+    "SearchResult",
+    "create_bm25_index",
+    "get_bm25",
+    "get_hybrid_search",
     "APIAssistantError",
     "LLMError",
     "LLMConnectionError",
