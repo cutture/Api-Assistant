@@ -5,12 +5,12 @@
 | Phase | Status | Effort | Priority |
 |-------|--------|--------|----------|
 | Phase 1: RAG Foundation | ✅ Complete | - | - |
-| Phase 2: Agent Layer | ✅ COMPLETE (Days 1-13) | ~10-12 days | High |
-| Phase 3: Production Hardening | 📋 Planned | ~5-6 days | Medium |
-| Phase 4: Advanced Features | 📋 Planned | ~7-8 days | Low |
+| Phase 2: Agent Layer | ✅ COMPLETE (Days 1-14) | 14 days | High |
+| Phase 3: Production Hardening | ✅ COMPLETE (Days 15-20) | 6 days | Medium |
+| Phase 4: Advanced Features | 🔄 IN PROGRESS (Days 21-30) | ~10 days | High |
 
-**Total Estimated Time**: ~25-30 days (at 2-3 hours/day)
-**Current Progress**: Day 1 of 30 complete
+**Total Estimated Time**: ~30 days (at 2-3 hours/day)
+**Current Progress**: Day 26 of 30 complete (Phase 4 in progress)
 
 ---
 
@@ -36,14 +36,17 @@
 - [ ] 3.5 Security Hardening
 - [ ] 3.6 Deployment to Cloud
 
-### Phase 4: Advanced Features (Priority: LOW)
-- [ ] 4.1 Hybrid Search (Vector + BM25)
-- [ ] 4.2 Re-ranking with Cross-Encoders
-- [ ] 4.3 Semantic Caching
-- [ ] 4.4 Additional API Format Support
-- [ ] 4.5 CLI Tool
-- [ ] 4.6 Diagram Generation
-- [ ] 4.7 Multi-user Support
+### Phase 4: Advanced Features (Priority: HIGH)
+- [x] 4.1 Hybrid Search (Vector + BM25) - Day 21 ✅
+- [x] 4.2 Re-ranking with Cross-Encoders - Day 22 ✅
+- [x] 4.3 Query Expansion - Day 23 ✅
+- [x] 4.4 Result Diversification (MMR) - Day 24 ✅
+- [x] 4.5 Advanced Filtering & Faceted Search - Day 25 ✅
+- [x] 4.6 REST API with FastAPI - Day 26 ✅
+- [ ] 4.7 Additional API Format Support (GraphQL) - Day 27 🔄
+- [ ] 4.8 CLI Tool - Day 28
+- [ ] 4.9 Diagram Generation - Day 29
+- [ ] 4.10 Multi-user Support - Day 30
 
 ---
 

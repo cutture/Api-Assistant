@@ -43,14 +43,18 @@
 
 | Day | Focus | Key Deliverable | Status |
 |-----|-------|-----------------|--------|
-| 21 | Hybrid Search | BM25 + Vector | ⬜ |
-| 22 | Re-ranking | Cross-encoder | ⬜ |
-| 23 | Caching | Semantic cache | ⬜ |
-| 24 | More Formats | GraphQL parser | ⬜ |
-| 25 | CLI Tool | Typer commands | ⬜ |
-| 26 | Diagrams | Mermaid gen | ⬜ |
-| 27 | Multi-user | Sessions | ⬜ |
-| 28-30 | Polish | v1.0.0 release | ⬜ |
+| 21 | Hybrid Search | BM25 + Vector (48 tests) | ✅ DONE |
+| 22 | Re-ranking | Cross-encoder (28 tests) | ✅ DONE |
+| 23 | Query Expansion | Domain-specific expansion (40 tests) | ✅ DONE |
+| 24 | Result Diversification | MMR algorithm (27 tests) | ✅ DONE |
+| 25 | Advanced Filtering | Faceted search (67 tests) | ✅ DONE |
+| 26 | REST API | FastAPI (26 tests) | ✅ DONE |
+| 27 | GraphQL Parser | Additional format support | 🔄 NEXT |
+| 28 | CLI Tool | Typer commands | ⬜ |
+| 29 | Diagrams | Mermaid generation | ⬜ |
+| 30 | Multi-user | Sessions & auth | ⬜ |
+
+**Phase 4 Progress**: Days 21-26 complete (236 total tests passing)
 
 ---
 
