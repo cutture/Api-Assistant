@@ -70,6 +70,11 @@ from src.core.query_expansion import (
     get_query_expander,
     expand_query,
 )
+from src.core.result_diversification import (
+    ResultDiversifier,
+    get_result_diversifier,
+    diversify_results,
+)
 
 __all__ = [
     "EmbeddingService",
@@ -89,6 +94,9 @@ __all__ = [
     "ExpandedQuery",
     "get_query_expander",
     "expand_query",
+    "ResultDiversifier",
+    "get_result_diversifier",
+    "diversify_results",
     "APIAssistantError",
     "LLMError",
     "LLMConnectionError",
