@@ -290,17 +290,24 @@ def query(
     try:
         console.print(f"[cyan]Searching for: '{query_text}'...[/cyan]\n")
 
-        # Build filter
-        filter_dict = {}
+        # Build filter in ChromaDB format
+        filter_conditions = []
         if filter_source:
-            filter_dict["source"] = filter_source
+            filter_conditions.append({"source": {"$eq": filter_source}})
         if filter_method:
-            filter_dict["method"] = filter_method.upper()
+            filter_conditions.append({"method": {"$eq": filter_method.upper()}})
+
+        # Combine filters with $and if multiple conditions
+        filter_dict = None
+        if len(filter_conditions) == 1:
+            filter_dict = filter_conditions[0]
+        elif len(filter_conditions) > 1:
+            filter_dict = {"$and": filter_conditions}
 
         # Search
         vector_store = get_vector_store()
         results = vector_store.search(
-            query=query_text, n_results=n_results, where=filter_dict if filter_dict else None
+            query=query_text, n_results=n_results, where=filter_dict
         )
 
         if not results:
