@@ -985,27 +985,58 @@ python api_assistant_cli.py diagram auth bearer --output test_data/diagrams/bear
 
 **Objective**: Create and manage user sessions
 
+> **⚠️ Note**: `SESSION_ID` is a placeholder - replace with the actual ID from creation output
+
+**Bash/Linux/Mac:**
 ```bash
-# Create a session
+# Create a session (note the Session ID in the output)
 python api_assistant_cli.py session create --user "testuser" --ttl 60
+# Output: Session ID: e93c7be1-1a37-4cb1-b921-65d637aa0a25
 
 # List all sessions
 python api_assistant_cli.py session list
 
-# Get session info (replace SESSION_ID with actual ID)
-python api_assistant_cli.py session info SESSION_ID --history
-
 # Session statistics
 python api_assistant_cli.py session stats
 
+# Get session info - use your actual session ID
+python api_assistant_cli.py session info e93c7be1-1a37-4cb1-b921-65d637aa0a25 --history
+
 # Extend session expiration
-python api_assistant_cli.py session extend SESSION_ID --minutes 30
+python api_assistant_cli.py session extend e93c7be1-1a37-4cb1-b921-65d637aa0a25 --minutes 30
 
 # Clean up expired sessions
 python api_assistant_cli.py session cleanup
 
 # Delete a session
-python api_assistant_cli.py session delete SESSION_ID --yes
+python api_assistant_cli.py session delete e93c7be1-1a37-4cb1-b921-65d637aa0a25 --yes
+```
+
+**PowerShell (using a variable):**
+```powershell
+# Create a session
+python api_assistant_cli.py session create --user "testuser" --ttl 60
+
+# Store the session ID in a variable (copy from output above)
+$SESSION_ID = "e93c7be1-1a37-4cb1-b921-65d637aa0a25"
+
+# List all sessions
+python api_assistant_cli.py session list
+
+# Session statistics
+python api_assistant_cli.py session stats
+
+# Get session info
+python api_assistant_cli.py session info $SESSION_ID --history
+
+# Extend session
+python api_assistant_cli.py session extend $SESSION_ID --minutes 30
+
+# Clean up expired sessions
+python api_assistant_cli.py session cleanup
+
+# Delete session
+python api_assistant_cli.py session delete $SESSION_ID --yes
 ```
 
 ### Workflow 6: Data Export

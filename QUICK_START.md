@@ -125,9 +125,13 @@ python api_assistant_cli.py diagram auth bearer --output test_data/diagrams/bear
 
 ### 4. Session Management
 
+> **⚠️ Note**: `SESSION_ID` is a placeholder - replace it with the actual session ID from the creation command output
+
+**Bash/Linux/Mac:**
 ```bash
-# Create a new session
+# Create a new session (note the Session ID in the output)
 python api_assistant_cli.py session create --user "testuser" --ttl 60
+# Output shows: Session ID: e93c7be1-1a37-4cb1-b921-65d637aa0a25
 
 # List all sessions
 python api_assistant_cli.py session list
@@ -135,17 +139,45 @@ python api_assistant_cli.py session list
 # Show session statistics
 python api_assistant_cli.py session stats
 
-# Get session info (replace SESSION_ID with actual ID from create command)
-python api_assistant_cli.py session info SESSION_ID --history
+# Get session info - replace SESSION_ID with your actual ID
+python api_assistant_cli.py session info e93c7be1-1a37-4cb1-b921-65d637aa0a25 --history
 
 # Extend session expiration
-python api_assistant_cli.py session extend SESSION_ID --minutes 30
+python api_assistant_cli.py session extend e93c7be1-1a37-4cb1-b921-65d637aa0a25 --minutes 30
 
 # Clean up expired sessions
 python api_assistant_cli.py session cleanup
 
 # Delete a session
-python api_assistant_cli.py session delete SESSION_ID --yes
+python api_assistant_cli.py session delete e93c7be1-1a37-4cb1-b921-65d637aa0a25 --yes
+```
+
+**PowerShell (with variable for easier reuse):**
+```powershell
+# Create a new session and note the Session ID
+python api_assistant_cli.py session create --user "testuser" --ttl 60
+# Output shows: Session ID: e93c7be1-1a37-4cb1-b921-65d637aa0a25
+
+# Store the session ID in a PowerShell variable
+$SESSION_ID = "e93c7be1-1a37-4cb1-b921-65d637aa0a25"
+
+# List all sessions
+python api_assistant_cli.py session list
+
+# Show session statistics
+python api_assistant_cli.py session stats
+
+# Get session info using the variable
+python api_assistant_cli.py session info $SESSION_ID --history
+
+# Extend session expiration
+python api_assistant_cli.py session extend $SESSION_ID --minutes 30
+
+# Clean up expired sessions
+python api_assistant_cli.py session cleanup
+
+# Delete a session
+python api_assistant_cli.py session delete $SESSION_ID --yes
 ```
 
 ### 5. Collection Management
