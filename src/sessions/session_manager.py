@@ -16,6 +16,9 @@ import time
 import uuid
 import threading
 import structlog
+import json
+import os
+from pathlib import Path
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any
@@ -119,7 +122,7 @@ class Session:
         self.conversation_history = []
 
     def to_dict(self) -> Dict[str, Any]:
-        """Convert session to dictionary."""
+        """Convert session to dictionary for serialization."""
         return {
             "session_id": self.session_id,
             "user_id": self.user_id,
@@ -139,10 +142,63 @@ class Session:
                 "default_collection": self.settings.default_collection,
                 "custom_metadata": self.settings.custom_metadata,
             },
-            "message_count": len(self.conversation_history),
+            "conversation_history": [
+                {
+                    "role": msg.role,
+                    "content": msg.content,
+                    "timestamp": msg.timestamp.isoformat(),
+                    "metadata": msg.metadata,
+                }
+                for msg in self.conversation_history
+            ],
             "metadata": self.metadata,
             "collection_name": self.collection_name,
         }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "Session":
+        """Create session from dictionary."""
+        # Parse settings
+        settings_data = data.get("settings", {})
+        settings = UserSettings(
+            default_search_mode=settings_data.get("default_search_mode", "hybrid"),
+            default_n_results=settings_data.get("default_n_results", 5),
+            use_reranking=settings_data.get("use_reranking", False),
+            use_query_expansion=settings_data.get("use_query_expansion", False),
+            use_diversification=settings_data.get("use_diversification", False),
+            show_scores=settings_data.get("show_scores", True),
+            show_metadata=settings_data.get("show_metadata", True),
+            max_content_length=settings_data.get("max_content_length", 500),
+            default_collection=settings_data.get("default_collection"),
+            custom_metadata=settings_data.get("custom_metadata", {}),
+        )
+
+        # Parse conversation history
+        conversation_history = []
+        for msg_data in data.get("conversation_history", []):
+            msg = ConversationMessage(
+                role=msg_data["role"],
+                content=msg_data["content"],
+                timestamp=datetime.fromisoformat(msg_data["timestamp"]),
+                metadata=msg_data.get("metadata", {}),
+            )
+            conversation_history.append(msg)
+
+        # Create session
+        session = cls(
+            session_id=data["session_id"],
+            user_id=data.get("user_id"),
+            created_at=datetime.fromisoformat(data["created_at"]),
+            last_accessed=datetime.fromisoformat(data["last_accessed"]),
+            expires_at=datetime.fromisoformat(data["expires_at"]) if data.get("expires_at") else None,
+            status=SessionStatus(data["status"]),
+            settings=settings,
+            conversation_history=conversation_history,
+            metadata=data.get("metadata", {}),
+            collection_name=data.get("collection_name"),
+        )
+
+        return session
 
 
 class SessionManager:
@@ -161,6 +217,7 @@ class SessionManager:
         self,
         default_ttl_minutes: int = 60,
         cleanup_interval_minutes: int = 10,
+        sessions_file: Optional[str] = None,
     ):
         """
         Initialize session manager.
@@ -168,6 +225,7 @@ class SessionManager:
         Args:
             default_ttl_minutes: Default session TTL in minutes
             cleanup_interval_minutes: How often to run cleanup
+            sessions_file: Path to sessions JSON file (default: data/sessions.json)
         """
         self.sessions: Dict[str, Session] = {}
         self.default_ttl = timedelta(minutes=default_ttl_minutes)
@@ -175,11 +233,65 @@ class SessionManager:
         self.lock = threading.RLock()
         self.last_cleanup = datetime.now()
 
+        # Set sessions file path
+        if sessions_file is None:
+            # Default to data/sessions.json in project root
+            project_root = Path(__file__).parent.parent.parent
+            sessions_file = project_root / "data" / "sessions.json"
+        self.sessions_file = Path(sessions_file)
+
+        # Load existing sessions from file
+        self._load_sessions()
+
         logger.info(
             "Session manager initialized",
             default_ttl_minutes=default_ttl_minutes,
             cleanup_interval_minutes=cleanup_interval_minutes,
+            sessions_file=str(self.sessions_file),
+            loaded_sessions=len(self.sessions),
         )
+
+    def _load_sessions(self):
+        """Load sessions from JSON file."""
+        try:
+            if self.sessions_file.exists():
+                with open(self.sessions_file, "r") as f:
+                    data = json.load(f)
+                    for session_data in data.get("sessions", []):
+                        try:
+                            session = Session.from_dict(session_data)
+                            self.sessions[session.session_id] = session
+                        except Exception as e:
+                            logger.error(
+                                "Failed to load session",
+                                session_id=session_data.get("session_id"),
+                                error=str(e),
+                            )
+                logger.info(f"Loaded {len(self.sessions)} sessions from {self.sessions_file}")
+            else:
+                logger.info(f"No existing sessions file found at {self.sessions_file}")
+        except Exception as e:
+            logger.error(f"Failed to load sessions file: {e}")
+
+    def _save_sessions(self):
+        """Save sessions to JSON file."""
+        try:
+            # Create directory if it doesn't exist
+            self.sessions_file.parent.mkdir(parents=True, exist_ok=True)
+
+            # Serialize all sessions
+            data = {
+                "sessions": [session.to_dict() for session in self.sessions.values()],
+                "last_updated": datetime.now().isoformat(),
+            }
+
+            # Write to file
+            with open(self.sessions_file, "w") as f:
+                json.dump(data, f, indent=2)
+
+            logger.debug(f"Saved {len(self.sessions)} sessions to {self.sessions_file}")
+        except Exception as e:
+            logger.error(f"Failed to save sessions file: {e}")
 
     def create_session(
         self,
@@ -221,6 +333,9 @@ class SessionManager:
                 user_id=user_id,
                 expires_at=expires_at.isoformat(),
             )
+
+            # Persist to file
+            self._save_sessions()
 
             return session
 
@@ -284,6 +399,9 @@ class SessionManager:
 
             logger.info("Session updated", session_id=session_id)
 
+            # Persist to file
+            self._save_sessions()
+
             return session
 
     def delete_session(self, session_id: str) -> bool:
@@ -300,6 +418,10 @@ class SessionManager:
             if session_id in self.sessions:
                 del self.sessions[session_id]
                 logger.info("Session deleted", session_id=session_id)
+
+                # Persist to file
+                self._save_sessions()
+
                 return True
 
             return False
@@ -348,6 +470,9 @@ class SessionManager:
 
             if expired_ids:
                 logger.info("Cleaned up expired sessions", count=len(expired_ids))
+
+                # Persist to file
+                self._save_sessions()
 
             self.last_cleanup = datetime.now()
 
@@ -408,6 +533,9 @@ class SessionManager:
                 session.expires_at += timedelta(minutes=minutes)
 
             logger.info("Session extended", session_id=session_id, minutes=minutes)
+
+            # Persist to file
+            self._save_sessions()
 
             return session
 
