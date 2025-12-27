@@ -64,6 +64,12 @@ from src.core.cross_encoder import (
     get_cross_encoder_reranker,
     rerank_results,
 )
+from src.core.query_expansion import (
+    QueryExpander,
+    ExpandedQuery,
+    get_query_expander,
+    expand_query,
+)
 
 __all__ = [
     "EmbeddingService",
@@ -79,6 +85,10 @@ __all__ = [
     "RerankResult",
     "get_cross_encoder_reranker",
     "rerank_results",
+    "QueryExpander",
+    "ExpandedQuery",
+    "get_query_expander",
+    "expand_query",
     "APIAssistantError",
     "LLMError",
     "LLMConnectionError",
