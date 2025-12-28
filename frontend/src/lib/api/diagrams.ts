@@ -8,6 +8,8 @@ import type {
   DiagramResponse,
   GenerateSequenceDiagramRequest,
   GenerateAuthFlowRequest,
+  GenerateERDiagramRequest,
+  GenerateOverviewRequest,
 } from "@/types";
 
 /**
@@ -32,6 +34,32 @@ export async function generateAuthFlowDiagram(
   return apiRequest<DiagramResponse>({
     method: "POST",
     url: "/diagrams/auth-flow",
+    data: request,
+  });
+}
+
+/**
+ * Generate an Entity-Relationship diagram from GraphQL schema
+ */
+export async function generateERDiagram(
+  request: GenerateERDiagramRequest
+): Promise<ApiResponse<DiagramResponse>> {
+  return apiRequest<DiagramResponse>({
+    method: "POST",
+    url: "/diagrams/er",
+    data: request,
+  });
+}
+
+/**
+ * Generate an API overview diagram
+ */
+export async function generateOverviewDiagram(
+  request: GenerateOverviewRequest
+): Promise<ApiResponse<DiagramResponse>> {
+  return apiRequest<DiagramResponse>({
+    method: "POST",
+    url: "/diagrams/overview",
     data: request,
   });
 }

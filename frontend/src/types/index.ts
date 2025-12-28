@@ -189,6 +189,23 @@ export interface GenerateAuthFlowRequest {
   endpoints?: string[];
 }
 
+export interface GenerateERDiagramRequest {
+  schema_content: string;
+  include_types?: string[];
+}
+
+export interface GenerateOverviewRequest {
+  api_title: string;
+  endpoints: Array<{
+    path: string;
+    method: string;
+    summary?: string;
+    description?: string;
+    tags?: string[];
+    operation_id?: string;
+  }>;
+}
+
 export interface DiagramResponse {
   diagram_type: DiagramType;
   mermaid_code: string;

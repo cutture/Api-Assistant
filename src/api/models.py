@@ -379,6 +379,20 @@ class GenerateAuthFlowRequest(BaseModel):
     endpoints: Optional[List[str]] = Field(None, description="Optional list of endpoints")
 
 
+class GenerateERDiagramRequest(BaseModel):
+    """Request to generate ER diagram from GraphQL schema."""
+
+    schema_content: str = Field(..., description="GraphQL schema content")
+    include_types: Optional[List[str]] = Field(None, description="Optional list of type names to include")
+
+
+class GenerateOverviewRequest(BaseModel):
+    """Request to generate API overview diagram."""
+
+    api_title: str = Field(..., description="API title")
+    endpoints: List[Dict[str, Any]] = Field(..., description="List of endpoint summaries with tags")
+
+
 class DiagramResponse(BaseModel):
     """Diagram generation response."""
 

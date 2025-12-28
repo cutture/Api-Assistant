@@ -40,6 +40,8 @@ from src.api.models import (
     FilterOperatorEnum,
     FilterSpec,
     GenerateAuthFlowRequest,
+    GenerateERDiagramRequest,
+    GenerateOverviewRequest,
     GenerateSequenceDiagramRequest,
     HealthResponse,
     SearchMode,
@@ -932,6 +934,105 @@ def create_app(
             )
         except Exception as e:
             logger.error("Error generating auth flow diagram", exc_info=e)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error generating diagram: {str(e)}",
+            )
+
+    @app.post(
+        "/diagrams/er",
+        response_model=DiagramResponse,
+        tags=["Diagrams"],
+    )
+    async def generate_er_diagram(request: GenerateERDiagramRequest):
+        """
+        Generate an Entity-Relationship diagram from GraphQL schema.
+
+        Creates a Mermaid ER diagram showing entities and relationships.
+        """
+        try:
+            from src.parsers import GraphQLParser
+
+            # Parse GraphQL schema
+            parser = GraphQLParser()
+            schema = parser.parse_schema(request.schema_content)
+
+            # Generate ER diagram
+            include_set = set(request.include_types) if request.include_types else None
+            diagram = mermaid_generator.generate_er_diagram_from_graphql(
+                schema=schema,
+                include_types=include_set,
+            )
+
+            mermaid_code = diagram.to_mermaid()
+
+            logger.info("ER diagram generated", type_count=len(diagram.entities))
+
+            return DiagramResponse(
+                diagram_type=DiagramType.ER,
+                mermaid_code=mermaid_code,
+                title=diagram.title,
+            )
+        except Exception as e:
+            logger.error("Error generating ER diagram", exc_info=e)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error generating diagram: {str(e)}",
+            )
+
+    @app.post(
+        "/diagrams/overview",
+        response_model=DiagramResponse,
+        tags=["Diagrams"],
+    )
+    async def generate_overview_diagram(request: GenerateOverviewRequest):
+        """
+        Generate an API overview diagram.
+
+        Creates a flowchart showing API structure and endpoint groupings.
+        """
+        try:
+            from src.parsers import ParsedDocument, ParsedEndpoint
+
+            # Create a ParsedDocument from the request data
+            endpoints = []
+            for ep_data in request.endpoints:
+                endpoint = ParsedEndpoint(
+                    path=ep_data.get("path", "/"),
+                    method=ep_data.get("method", "GET"),
+                    summary=ep_data.get("summary", ""),
+                    description=ep_data.get("description", ""),
+                    tags=ep_data.get("tags", []),
+                    operation_id=ep_data.get("operation_id"),
+                    parameters=[],
+                    request_body=None,
+                    responses=[],
+                    security=None,
+                )
+                endpoints.append(endpoint)
+
+            parsed_doc = ParsedDocument(
+                title=request.api_title,
+                version="1.0.0",
+                description="",
+                base_url="",
+                endpoints=endpoints,
+            )
+
+            # Generate overview diagram
+            diagram = mermaid_generator.generate_api_overview_flow(parsed_doc)
+
+            mermaid_code = diagram.to_mermaid()
+
+            logger.info("Overview diagram generated", endpoint_count=len(endpoints))
+
+            return DiagramResponse(
+                diagram_type=DiagramType.FLOWCHART,
+                mermaid_code=mermaid_code,
+                title=diagram.title,
+            )
+        except Exception as e:
+            logger.error("Error generating overview diagram", exc_info=e)
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Error generating diagram: {str(e)}",
