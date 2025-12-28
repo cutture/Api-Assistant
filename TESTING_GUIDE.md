@@ -1245,6 +1245,20 @@ python api_assistant_cli.py session delete $SESSION_ID --yes
 
 **Objective**: Export indexed documents and data
 
+**First, create the output directory:**
+
+**PowerShell:**
+```powershell
+New-Item -ItemType Directory -Path test_data/exports -Force
+```
+
+**Bash/Linux/Mac:**
+```bash
+mkdir -p test_data/exports
+```
+
+**Now export data:**
+
 ```bash
 # Export all documents
 python api_assistant_cli.py export documents test_data/exports/all_docs.json
