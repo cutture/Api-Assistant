@@ -23,6 +23,9 @@ const nextConfig: NextConfig = {
     // Optimize package imports
     optimizePackageImports: ['lucide-react', '@radix-ui/react-icons'],
   },
+
+  // Output configuration for Docker deployment
+  output: 'standalone',
 };
 
 export default nextConfig;
