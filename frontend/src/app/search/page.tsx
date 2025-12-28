@@ -8,19 +8,23 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { SearchBar } from "@/components/search/SearchBar";
 import { SearchResults } from "@/components/search/SearchResults";
 import { FilterPanel } from "@/components/search/FilterPanel";
+import { AdvancedFilterBuilder } from "@/components/search/AdvancedFilterBuilder";
 import { FacetedSearch } from "@/components/search/FacetedSearch";
 import { useSearch, useFacetedSearch } from "@/hooks/useSearch";
 import { useSearchStore } from "@/lib/stores/searchStore";
-import { Filter, SearchRequest } from "@/types";
+import { Filter, SearchRequest, SearchFilters } from "@/types";
 import { useState } from "react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function SearchPage() {
   const { mutate: search } = useSearch();
   const { mutate: facetedSearch } = useFacetedSearch();
   const { useHybrid, useReranking, useQueryExpansion, resultsLimit } = useSearchStore();
-  const [filters, setFilters] = useState<Filter[]>([]);
+  const [simpleFilters, setSimpleFilters] = useState<Filter[]>([]);
+  const [advancedFilters, setAdvancedFilters] = useState<SearchFilters | null>(null);
   const [facets, setFacets] = useState<any[]>([]);
   const [useFacets, setUseFacets] = useState(false);
+  const [filterMode, setFilterMode] = useState<"simple" | "advanced">("simple");
 
   const handleSearch = (query: string) => {
     if (!query.trim()) return;
@@ -33,12 +37,14 @@ export default function SearchPage() {
       use_query_expansion: useQueryExpansion,
     };
 
-    // Add filters if any
-    if (filters.length > 0) {
+    // Add filters based on mode
+    if (filterMode === "simple" && simpleFilters.length > 0) {
       request.filters = {
         operator: "and",
-        filters: filters,
+        filters: simpleFilters,
       };
+    } else if (filterMode === "advanced" && advancedFilters) {
+      request.filters = advancedFilters;
     }
 
     // Use faceted search if enabled
@@ -64,7 +70,9 @@ export default function SearchPage() {
       operator: "eq",
       value,
     };
-    setFilters([...filters, newFilter]);
+    if (filterMode === "simple") {
+      setSimpleFilters([...simpleFilters, newFilter]);
+    }
   };
 
   return (
@@ -82,7 +90,19 @@ export default function SearchPage() {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Filters Sidebar */}
           <div className="lg:col-span-1 space-y-4">
-            <FilterPanel onFiltersChange={setFilters} />
+            <Tabs value={filterMode} onValueChange={(v) => setFilterMode(v as any)}>
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="simple">Simple</TabsTrigger>
+                <TabsTrigger value="advanced">Advanced</TabsTrigger>
+              </TabsList>
+              <TabsContent value="simple" className="space-y-4 mt-4">
+                <FilterPanel onFiltersChange={setSimpleFilters} />
+              </TabsContent>
+              <TabsContent value="advanced" className="mt-4">
+                <AdvancedFilterBuilder onFiltersChange={setAdvancedFilters} />
+              </TabsContent>
+            </Tabs>
+
             {useFacets && facets.length > 0 && (
               <FacetedSearch facets={facets} onFacetSelect={handleFacetSelect} />
             )}
