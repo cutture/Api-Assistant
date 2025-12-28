@@ -4,26 +4,38 @@ Version 1.0.0 - Production Testing Workflows
 
 ## ⚠️ IMPORTANT: Feature Availability
 
-**Most advanced features are ONLY available in the Streamlit UI, NOT the CLI!**
+**The current Streamlit UI is minimal. Most features are in CLI or backend only!**
 
-| Feature | CLI | Streamlit UI |
-|---------|-----|--------------|
-| Basic Vector Search | ✅ | ✅ |
-| **Hybrid Search (Vector + BM25)** | ❌ | ✅ |
-| **Cross-encoder Re-ranking** | ❌ | ✅ |
-| **Query Expansion** | ❌ | ✅ |
-| **Code Generation** | ❌ | ✅ |
-| **Advanced AND/OR/NOT Filters** | ❌ | ✅ |
-| **Faceted Search** | ❌ | ✅ |
-| Simple Filters (method, source) | ✅ | ✅ |
-| Diagram Generation | ✅ | ✅ |
-| Session Management | ✅ | ✅ |
-| Data Export | ✅ | ✅ |
-| Interactive Chat | ❌ | ✅ |
+| Feature | CLI | Streamlit UI | Backend API |
+|---------|-----|--------------|-------------|
+| Basic Vector Search | ✅ | ✅ (via chat) | ✅ |
+| **Hybrid Search (Vector + BM25)** | ❌ | ❌ | ✅ |
+| **Cross-encoder Re-ranking** | ❌ | ❌ | ✅ |
+| **Query Expansion** | ❌ | ❌ | ✅ |
+| **Code Generation** | ❌ | ✅ (via chat) | ✅ |
+| **Advanced AND/OR/NOT Filters** | ❌ | ❌ | ✅ |
+| **Faceted Search** | ❌ | ❌ | ✅ |
+| Simple Filters (method, source) | ✅ | ❌ | ✅ |
+| Diagram Generation | ✅ | ❌ | ✅ |
+| Session Management | ✅ | ❌ | ✅ |
+| Data Export | ✅ | ❌ | ✅ |
+| Interactive Chat | ❌ | ✅ | ✅ |
+| File Upload (OpenAPI) | ✅ | ✅ | ✅ |
+| File Upload (GraphQL/Postman) | ✅ | ❌ | ✅ |
 
-**📌 Recommendation**: Use the Streamlit UI for comprehensive testing. See [UI Testing Workflows](#ui-testing-workflows) section.
+**📌 Recommendation**:
+- **For testing most features**: Use the CLI (see [CLI Testing Workflows](#cli-testing-workflows))
+- **For chat/interactive queries**: Use the Streamlit UI (see [UI Testing Workflows](#ui-testing-workflows))
+- **For full feature access**: Wait for new Next.js UI (see `docs/UI_REPLACEMENT_PLAN.md`)
 
-**🚀 Start UI**: `PYTHONPATH=. streamlit run src/main.py` (Linux/Mac) or `$env:PYTHONPATH = "."; streamlit run src/main.py` (Windows)
+**🚀 Start Streamlit UI**:
+```bash
+# Linux/Mac
+PYTHONPATH=. streamlit run src/main.py
+
+# Windows PowerShell
+$env:PYTHONPATH = "."; streamlit run src/main.py
+```
 
 ---
 
@@ -1292,20 +1304,29 @@ python api_assistant_cli.py info formats                     # Supported formats
 
 ---
 
-## ⚠️ Features NOT Available in CLI
+## ⚠️ IMPORTANT: Current UI Limitations
 
-The following features can **ONLY** be accessed through the Streamlit UI:
+**The current Streamlit UI is minimal and does NOT include most advanced features.**
 
-- ❌ **Hybrid Search** (Vector + BM25 with RRF fusion)
-- ❌ **Cross-encoder Re-ranking** (Better relevance)
-- ❌ **Query Expansion** (Automatic query variations)
-- ❌ **Code Generation** (Python, JavaScript, cURL)
-- ❌ **Advanced Filtering** (Complex AND/OR/NOT logic)
-- ❌ **Faceted Search** (Browse by categories)
-- ❌ **Interactive Chat** (Natural language queries)
-- ❌ **Visual Analytics** (Charts and statistics)
+**Currently Available in Streamlit UI:**
+- ✅ **File Upload** (OpenAPI/Swagger only, via sidebar)
+- ✅ **Interactive Chat** (Natural language queries)
+- ✅ **Code Generation** (via chat responses)
+- ✅ **Basic Settings** (Model selection, temperature)
 
-**📌 To use these features, start the Streamlit UI:**
+**NOT Available in Current UI (Backend Implemented, No Frontend):**
+- ❌ **Hybrid Search Toggle** (uses vector search only)
+- ❌ **Cross-encoder Re-ranking Toggle**
+- ❌ **Query Expansion Toggle**
+- ❌ **Advanced Filtering UI** (method/source filters)
+- ❌ **Faceted Search Interface**
+- ❌ **GraphQL/Postman Upload** (backend supports, UI doesn't)
+- ❌ **Session Management UI**
+- ❌ **Diagram Generation UI**
+- ❌ **Search Interface** (only chat available)
+- ❌ **Document Management** (view/delete indexed docs)
+
+**📌 To use the current Streamlit UI:**
 
 ```bash
 # Linux/Mac
@@ -1315,10 +1336,14 @@ PYTHONPATH=. streamlit run src/main.py
 $env:PYTHONPATH = "."; streamlit run src/main.py
 ```
 
-Then see the [UI Testing Workflows](#ui-testing-workflows) section below for comprehensive testing.
+**⚠️ Note:** A new Next.js UI is being developed to expose all backend features. See `docs/UI_REPLACEMENT_PLAN.md` for details.
 
 
-## UI Testing Workflows
+## UI Testing Workflows (Current Streamlit UI)
+
+> **⚠️ DISCLAIMER:** These workflows describe the CURRENT minimal Streamlit UI.
+> A new Next.js UI with full feature parity is under development.
+> See `docs/UI_REPLACEMENT_PLAN.md` for details.
 
 ### Starting the Streamlit UI
 
@@ -1332,278 +1357,85 @@ PYTHONPATH=. streamlit run src/main.py
 # Expected: Browser opens at http://localhost:8501
 ```
 
-### Workflow 1: Document Upload and Indexing (UI)
+### Workflow 1: Document Upload and Chat (Current UI)
+
+**What You'll See:**
+- Single page with chat interface (main area)
+- Sidebar with settings and file upload
+- No tabs or separate pages
 
 **Steps**:
 
-1. **Navigate to "📄 Document Manager"** tab
-
-2. **Upload First API Specification**:
-   - Click "Browse files"
+1. **Upload API Specification** (Sidebar):
+   - In sidebar, find "📄 API Documentation" section
+   - Click "Browse files" or drag & drop
    - Select `test_data/openapi/jsonplaceholder.yaml`
-   - Choose format: "OpenAPI/Swagger"
-   - Click "Parse and Index"
+   - Click "🔄 Process Files" button
 
-3. **Verify First Upload**:
-   - Check success message: "✓ Successfully indexed 9 documents"
-   - See document count update in sidebar: "14 documents indexed"
+2. **Verify Upload**:
+   - Wait for processing progress bar
+   - Check success message: "✅ Processed jsonplaceholder.yaml: 8 endpoints"
+   - Check final message: "🎉 Processing complete! Added 8 endpoints to the knowledge base."
+   - See "Documents Indexed" metric in sidebar update
 
-4. **Upload Second API Specification** (Optional but Recommended):
-   - Click "Browse files" again
-   - Select `test_data/openapi/dummyjson.yaml`
-   - Choose format: "OpenAPI/Swagger"
-   - Click "Parse and Index"
+3. **Upload Additional Files** (Optional):
+   - Repeat upload process for `test_data/openapi/dummyjson.yaml`
+   - Each file processes independently
+   - Document count increments with each upload
 
-5. **Verify Second Upload**:
-   - Check success message: "✓ Successfully indexed 5 documents"
-   - See total count update: "14 documents indexed and ready for questions!"
+4. **Ask Questions via Chat**:
+   - In main area, see "📚 **X documents** indexed and ready for questions!"
+   - Click example questions on the right, OR
+   - Type your own question in chat input at bottom
+   - Examples:
+     - "What endpoints are available?"
+     - "How do I authenticate?"
+     - "Generate code to call the /users endpoint"
 
-6. **View Indexed Documents**:
-   - Scroll to "Indexed Documents" section
-   - Review the endpoint list showing all indexed APIs
-   - Note: Each document includes API summary + individual endpoints
+5. **View Chat Response**:
+   - AI responds with relevant information from indexed APIs
+   - Code blocks with syntax highlighting
+   - Copy button for code snippets
 
 **Expected Result**:
-- JSONPlaceholder: 9 documents (1 API summary + 8 endpoints)
-- DummyJSON: 5 documents (1 API summary + 4 endpoints)
-- Total: 14 documents indexed and searchable
+- Files uploaded and processed successfully
+- Document count shows total indexed documents
+- Chat provides intelligent answers about your APIs
+- Code generation works via chat
 
-**Note**: The sidebar shows total document count across all uploaded APIs.
+**Limitations** (Features NOT in current UI):
+- ❌ Cannot view list of indexed documents
+- ❌ Cannot delete individual documents (use CLI: `collection clear`)
+- ❌ Cannot toggle search modes or advanced features
+- ❌ Cannot upload GraphQL/Postman (UI only shows OpenAPI/Swagger)
+- ❌ No filtering, faceted search, or session management UI
 
-### Workflow 2: Semantic Search (UI)
+### Additional Features (Use CLI or Await New UI)
 
-**Steps**:
+The current Streamlit UI does not provide interfaces for the following features. Please use the CLI workflows described earlier in this guide:
 
-1. **Navigate to "🔍 API Search"** tab
-2. **Basic Search**:
-   - Enter query: "get all posts"
-   - Click "Search"
-   - Review top 5 results
+**Features Available via CLI Only:**
+- ✅ **Advanced Search** - Use CLI `search` command with `--method`, `--source` filters
+- ✅ **Diagram Generation** - Use CLI `diagram` command for sequence/ER/overview/auth diagrams
+- ✅ **Session Management** - Use CLI `session` commands for create/list/stats/delete
+- ✅ **Data Export** - Use CLI `export` command
+- ✅ **GraphQL/Postman Upload** - Use CLI `parse` command with `--format` flag
+- ✅ **Collection Management** - Use CLI `collection` commands
 
-3. **Hybrid Search**:
-   - Enable "Use Hybrid Search" checkbox
-   - Search again: "get all posts"
-   - Compare results with basic search
+**Features Not Currently Available (Backend Implemented, Awaiting UI):**
+- ⏳ **Hybrid Search Toggle** - Backend ready, no UI controls
+- ⏳ **Re-ranking Toggle** - Backend ready, no UI controls
+- ⏳ **Query Expansion** - Backend ready, no UI controls
+- ⏳ **Advanced AND/OR/NOT Filtering** - Backend ready, no UI builder
+- ⏳ **Faceted Search** - Backend ready, no UI interface
+- ⏳ **Visual Analytics** - Backend ready, no dashboard
 
-4. **Re-ranking**:
-   - Enable "Enable Re-ranking" checkbox
-   - Search: "create new user"
-   - Note improved relevance scores
+**📢 Coming Soon:**
+A new Next.js UI is under development to expose all backend features with a modern, professional interface.
 
-5. **Query Expansion**:
-   - Enable "Enable Query Expansion"
-   - Search: "delete item"
-   - See expanded query variations in results
+**Progress:** See `docs/UI_REPLACEMENT_PLAN.md` for full implementation plan and timeline.
 
-**Expected Result**: More relevant results with hybrid search and re-ranking enabled
-
-### Workflow 3: Advanced Filtering (UI)
-
-**Steps**:
-
-1. **Navigate to "🔍 API Search"** tab
-2. **Filter by Method**:
-   - Expand "Advanced Filters" section
-   - Select "Filter by HTTP Method"
-   - Choose "POST"
-   - Search: "user"
-   - See only POST endpoints
-
-3. **Filter by Tag**:
-   - Select "Filter by Tag"
-   - Enter tag: "Users"
-   - Search: "get data"
-   - See only User-related endpoints
-
-4. **Combined Filters**:
-   - Select both "GET" method and "Posts" tag
-   - Search: "retrieve"
-   - See only GET endpoints tagged "Posts"
-
-**Expected Result**: Filtered results matching selected criteria
-
-### Workflow 4: Diagram Generation (UI)
-
-**Steps**:
-
-1. **Navigate to "📊 Diagram Generator"** tab
-2. **Generate Sequence Diagram**:
-   - Select diagram type: "Sequence Diagram"
-   - Choose endpoint: "GET /posts"
-   - Click "Generate Diagram"
-   - View rendered Mermaid diagram
-
-3. **Generate ER Diagram**:
-   - Select diagram type: "ER Diagram"
-   - Click "Generate Diagram"
-   - See all entities and relationships
-
-4. **Generate API Overview**:
-   - Select diagram type: "API Overview"
-   - Click "Generate Diagram"
-   - View high-level API structure
-
-5. **Download Diagram**:
-   - Click "Download Mermaid Code"
-   - Save `.mmd` file for external use
-
-**Expected Result**: Professional diagrams generated and downloadable
-
-### Workflow 5: Code Generation (UI)
-
-**Steps**:
-
-1. **Navigate to "💻 Code Generator"** tab
-2. **Select Endpoint**:
-   - Choose API: "JSONPlaceholder API"
-   - Choose endpoint: "POST /posts"
-
-3. **Generate Python Code**:
-   - Select language: "Python"
-   - Select library: "requests"
-   - Click "Generate Code"
-   - Review generated client code
-
-4. **Generate JavaScript Code**:
-   - Select language: "JavaScript"
-   - Select library: "axios"
-   - Click "Generate Code"
-   - Review generated code
-
-5. **Generate cURL**:
-   - Select language: "cURL"
-   - Click "Generate Code"
-   - Copy command to clipboard
-
-**Expected Result**: Working client code ready to use
-
-### Workflow 6: Interactive Chat Agent (UI)
-
-**Steps**:
-
-1. **Navigate to "💬 Chat Assistant"** tab
-2. **Basic Question**:
-   - Type: "What endpoints are available for managing posts?"
-   - Press Enter
-   - Review AI response with endpoint list
-
-3. **Complex Query**:
-   - Type: "How do I create a new user and then update their information?"
-   - Review step-by-step workflow
-
-4. **Code Request**:
-   - Type: "Show me Python code to get all posts filtered by user ID 1"
-   - Review generated code with explanation
-
-5. **Diagram Request**:
-   - Type: "Generate a sequence diagram for creating a post"
-   - See inline Mermaid diagram
-
-6. **Session History**:
-   - Scroll up to review conversation
-   - Click "Export Chat" to save conversation
-
-**Expected Result**: Natural language interaction with API documentation
-
-### Workflow 7: Faceted Navigation (UI)
-
-**Steps**:
-
-1. **Navigate to "📊 Analytics"** tab
-2. **View Method Distribution**:
-   - See pie chart of HTTP methods
-   - Click on "GET" segment
-   - Filter results to GET endpoints only
-
-3. **View Tag Distribution**:
-   - See bar chart of tags
-   - Click on "Users" bar
-   - See all User-related endpoints
-
-4. **View API Coverage**:
-   - See statistics for each indexed API
-   - Compare endpoint counts
-   - Review version information
-
-**Expected Result**: Visual analytics and interactive filtering
-
-### Workflow 8: Batch Upload (UI)
-
-**Steps**:
-
-1. **Navigate to "📄 Document Manager"** tab
-2. **Upload Multiple Files**:
-   - Click "Upload Multiple Files" section
-   - Select both:
-     - `test_data/openapi/jsonplaceholder.yaml`
-     - `test_data/openapi/dummyjson.yaml`
-   - Click "Parse All and Index"
-
-3. **Monitor Progress**:
-   - Watch progress bar
-   - See status for each file
-   - Review total documents indexed
-
-4. **View All APIs**:
-   - Navigate to "Indexed APIs" section
-   - See both APIs listed
-   - Review endpoint counts
-
-**Expected Result**: Multiple APIs indexed in one operation
-
-### Workflow 9: Export and Backup (UI)
-
-**Steps**:
-
-1. **Navigate to "⚙️ Settings"** tab
-2. **Export All Data**:
-   - Click "Export Database"
-   - Choose format: "JSON"
-   - Click "Download Export"
-   - Save file locally
-
-3. **Export Specific API**:
-   - Select API: "JSONPlaceholder API"
-   - Click "Export Selected API"
-   - Choose format: "YAML"
-   - Download file
-
-4. **View Export Stats**:
-   - See document count
-   - See file size
-   - Review export timestamp
-
-**Expected Result**: Complete backup of indexed data
-
-### Workflow 10: Session Management (UI)
-
-**Steps**:
-
-1. **Navigate to "👤 Session Manager"** tab
-2. **Create Session**:
-   - Enter session name: "Product Testing"
-   - Click "Create Session"
-   - See session ID assigned
-
-3. **Use Session**:
-   - Navigate to "🔍 API Search"
-   - Search with session active
-   - All queries saved to session
-
-4. **View Session History**:
-   - Return to "👤 Session Manager"
-   - Click "View History" for "Product Testing"
-   - See all queries and results
-
-5. **Export Session**:
-   - Click "Export Session"
-   - Download JSON file with full history
-
-6. **Delete Session**:
-   - Click "Delete Session"
-   - Confirm deletion
-
-**Expected Result**: Organized testing sessions with full history
+**For now:** Use the [CLI Testing Workflows](#cli-testing-workflows) section above to access all advanced features through the command line.
 
 ---
 
@@ -1623,13 +1455,7 @@ python api_assistant_cli.py search query "country information" --limit 3
 # Expected: Country type and queries
 ```
 
-**UI Test**:
-
-1. Upload `test_data/graphql/countries.graphql`
-2. Select format: "GraphQL"
-3. Click "Parse and Index"
-4. Search for "continent data"
-5. See GraphQL types and queries
+**UI Support**: ❌ Current Streamlit UI does not support GraphQL uploads. Use CLI only.
 
 ### Feature 2: Postman Collection Parsing
 
@@ -1645,13 +1471,7 @@ python api_assistant_cli.py search query "list users" --limit 3
 # Expected: Postman requests with descriptions
 ```
 
-**UI Test**:
-
-1. Upload `test_data/postman/reqres_collection.json`
-2. Select format: "Postman Collection"
-3. Click "Parse and Index"
-4. Search for "authentication"
-5. See login and register requests
+**UI Support**: ❌ Current Streamlit UI does not support Postman uploads. Use CLI only.
 
 ### Feature 3: Multi-API Search
 
@@ -1668,76 +1488,57 @@ python api_assistant_cli.py search query "get products or posts" --limit 5
 # Expected: Results from both APIs
 ```
 
-**UI Test**:
+**UI Test** (Limited):
 
-1. Index both JSONPlaceholder and DummyJSON APIs
-2. Search: "retrieve items"
-3. See mixed results from both APIs
-4. Filter by specific API using dropdown
+1. Upload `jsonplaceholder.yaml` via sidebar → Process Files
+2. Upload `dummyjson.yaml` via sidebar → Process Files
+3. Use chat to ask: "What endpoints are available?"
+4. See combined results from both APIs in chat response
 
-### Feature 4: Query History and Recommendations
+**Note**: Current UI has no filtering dropdown. Use CLI for filtered searches.
 
-**CLI Test**:
-
-```bash
-# Enable session
-python api_assistant_cli.py session create --name "test_session"
-
-# Perform multiple searches
-python api_assistant_cli.py search query "create user" --session test_session
-python api_assistant_cli.py search query "update user" --session test_session
-python api_assistant_cli.py search query "delete user" --session test_session
-
-# View history
-python api_assistant_cli.py session history --name "test_session"
-
-# Get recommendations
-python api_assistant_cli.py recommend --based-on-history --session test_session
-```
-
-**UI Test**:
-
-1. Create session in UI
-2. Perform 5+ different searches
-3. Navigate to "History" tab
-4. See query history with timestamps
-5. Click "Get Recommendations"
-6. See suggested related queries
-
-### Feature 5: Performance Benchmarking
+### Feature 4: Session Management and History
 
 **CLI Test**:
 
 ```bash
-# Benchmark search performance
-python api_assistant_cli.py benchmark search \
-  --queries "get users,create post,update user,delete item" \
-  --iterations 10
+# Create session
+python api_assistant_cli.py session create --user "testuser" --ttl 60
 
-# Expected output:
-# Benchmark Results:
-# Average query time: 45ms
-# Min: 32ms
-# Max: 68ms
-# Median: 43ms
+# List sessions
+python api_assistant_cli.py session list
 
-# Benchmark with different strategies
-python api_assistant_cli.py benchmark compare \
-  --query "user authentication" \
-  --strategies "vector,bm25,hybrid,hybrid+rerank"
+# View session stats
+python api_assistant_cli.py session stats
+
+# Session info with history
+python api_assistant_cli.py session info <SESSION_ID> --history
 ```
 
-**UI Test**:
+**UI Support**: ❌ Current Streamlit UI does not have session management UI. Use CLI only.
 
-1. Navigate to "⚡ Performance" tab
-2. Enter test query: "get all posts"
-3. Click "Run Benchmark"
-4. See comparison chart:
-   - Vector search time
-   - BM25 search time
-   - Hybrid search time
-   - Hybrid + Re-rank time
-5. Review relevance scores
+### Feature 5: Advanced Search Features
+
+**Hybrid Search, Re-ranking, and Query Expansion**:
+
+**Backend Status**: ✅ Fully implemented in FastAPI backend
+**CLI Support**: ❌ Not available in CLI (search is basic vector only)
+**UI Support**: ❌ Not available in current Streamlit UI (no toggles or controls)
+
+**To test these features**: Wait for the new Next.js UI (see `docs/UI_REPLACEMENT_PLAN.md`) or directly test the FastAPI backend:
+
+```bash
+# Test backend directly with curl/httpx
+curl -X POST http://localhost:8000/search \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "user authentication",
+    "use_hybrid": true,
+    "use_reranking": true,
+    "use_query_expansion": true,
+    "n_results": 5
+  }'
+```
 
 ---
 
@@ -2092,14 +1893,15 @@ python api_assistant_cli.py session create --name "<name>"
 python api_assistant_cli.py batch export --format json --output <file>
 ```
 
-### Most Common UI Actions
+### Most Common UI Actions (Current Streamlit UI)
 
-1. **Upload & Index**: Document Manager → Upload → Parse and Index
-2. **Search**: API Search → Enter query → Enable hybrid + rerank → Search
-3. **Generate Diagram**: Diagram Generator → Select type → Generate
-4. **Generate Code**: Code Generator → Select endpoint → Select language → Generate
-5. **Chat**: Chat Assistant → Ask questions naturally
-6. **Export**: Settings → Export Database → Download
+1. **Upload & Index**: Sidebar → 📄 API Documentation → Upload files → 🔄 Process Files
+2. **Chat**: Main area → Type question in chat input → Get AI response
+3. **Settings**: Sidebar → Adjust model, temperature, max tokens
+4. **Clear Data**: Sidebar → 🗑️ Clear button → Confirms and clears session state
+5. **Refresh**: Sidebar → 🔍 Refresh button → Reloads the UI
+
+**Note**: Advanced features (Search UI, Diagram Generator, Code Generator, Export) are not available in current UI. Use CLI or wait for new Next.js UI.
 
 ---
 
