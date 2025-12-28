@@ -1337,22 +1337,38 @@ PYTHONPATH=. streamlit run src/main.py
 **Steps**:
 
 1. **Navigate to "📄 Document Manager"** tab
-2. **Upload API Specification**:
+
+2. **Upload First API Specification**:
    - Click "Browse files"
    - Select `test_data/openapi/jsonplaceholder.yaml`
    - Choose format: "OpenAPI/Swagger"
    - Click "Parse and Index"
 
-3. **Verify Indexing**:
-   - Check success message: "✓ Successfully indexed 14 documents"
-   - See document count update in sidebar
+3. **Verify First Upload**:
+   - Check success message: "✓ Successfully indexed 9 documents"
+   - See document count update in sidebar: "14 documents indexed"
 
-4. **View Indexed Documents**:
+4. **Upload Second API Specification** (Optional but Recommended):
+   - Click "Browse files" again
+   - Select `test_data/openapi/dummyjson.yaml`
+   - Choose format: "OpenAPI/Swagger"
+   - Click "Parse and Index"
+
+5. **Verify Second Upload**:
+   - Check success message: "✓ Successfully indexed 5 documents"
+   - See total count update: "14 documents indexed and ready for questions!"
+
+6. **View Indexed Documents**:
    - Scroll to "Indexed Documents" section
-   - Filter by API name: "JSONPlaceholder"
-   - Review endpoint list
+   - Review the endpoint list showing all indexed APIs
+   - Note: Each document includes API summary + individual endpoints
 
-**Expected Result**: All 14 endpoints from JSONPlaceholder API are indexed and searchable
+**Expected Result**:
+- JSONPlaceholder: 9 documents (1 API summary + 8 endpoints)
+- DummyJSON: 5 documents (1 API summary + 4 endpoints)
+- Total: 14 documents indexed and searchable
+
+**Note**: The sidebar shows total document count across all uploaded APIs.
 
 ### Workflow 2: Semantic Search (UI)
 
