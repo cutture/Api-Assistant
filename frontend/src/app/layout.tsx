@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { QueryProvider } from "@/lib/providers/QueryProvider";
 import { Toaster } from "@/components/ui/toaster";
+import { ErrorBoundary } from "@/components/error/ErrorBoundary";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -19,10 +20,12 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
-        <QueryProvider>
-          {children}
-          <Toaster />
-        </QueryProvider>
+        <ErrorBoundary>
+          <QueryProvider>
+            {children}
+            <Toaster />
+          </QueryProvider>
+        </ErrorBoundary>
       </body>
     </html>
   );
