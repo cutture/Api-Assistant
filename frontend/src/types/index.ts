@@ -106,18 +106,93 @@ export interface DocumentUploadResponse {
 }
 
 // Session Types
-export interface Session {
-  session_id: string;
-  user_id: string;
-  created_at: string;
-  expires_at: string;
-  conversation_history: ConversationMessage[];
+export enum SessionStatus {
+  ACTIVE = "active",
+  INACTIVE = "inactive",
+  EXPIRED = "expired",
+}
+
+export interface UserSettings {
+  default_search_mode: string;
+  default_n_results: number;
+  use_reranking: boolean;
+  use_query_expansion: boolean;
+  use_diversification: boolean;
+  show_scores: boolean;
+  show_metadata: boolean;
+  max_content_length: number;
+  default_collection?: string;
+  custom_metadata: Record<string, any>;
 }
 
 export interface ConversationMessage {
   role: "user" | "assistant" | "system";
   content: string;
   timestamp: string;
+  metadata?: Record<string, any>;
+}
+
+export interface Session {
+  session_id: string;
+  user_id?: string;
+  created_at: string;
+  last_accessed: string;
+  expires_at?: string;
+  status: SessionStatus;
+  settings: UserSettings;
+  conversation_history: ConversationMessage[];
+  metadata: Record<string, any>;
+  collection_name?: string;
+}
+
+export interface CreateSessionRequest {
+  user_id?: string;
+  ttl_minutes?: number;
+  settings?: UserSettings;
+  collection_name?: string;
+}
+
+export interface UpdateSessionRequest {
+  user_id?: string;
+  status?: SessionStatus;
+  metadata?: Record<string, any>;
+  collection_name?: string;
+}
+
+export interface SessionListResponse {
+  sessions: Session[];
+  total: number;
+}
+
+export interface SessionStatsResponse {
+  total_sessions: number;
+  active_sessions: number;
+  inactive_sessions: number;
+  expired_sessions: number;
+  unique_users: number;
+}
+
+// Diagram Types
+export enum DiagramType {
+  SEQUENCE = "sequence",
+  ER = "er",
+  FLOWCHART = "flowchart",
+  CLASS = "class",
+}
+
+export interface GenerateSequenceDiagramRequest {
+  endpoint_id: string;
+}
+
+export interface GenerateAuthFlowRequest {
+  auth_type: "bearer" | "oauth2" | "apikey" | "basic";
+  endpoints?: string[];
+}
+
+export interface DiagramResponse {
+  diagram_type: DiagramType;
+  mermaid_code: string;
+  title?: string;
 }
 
 // Chat Types

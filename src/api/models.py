@@ -257,3 +257,131 @@ class BulkDeleteResponse(BaseModel):
     deleted_count: int = Field(..., description="Number of documents deleted")
     not_found_count: int = Field(..., description="Number of documents not found")
     document_ids: List[str] = Field(..., description="IDs of deleted documents")
+
+
+# Session Models
+class SessionStatus(str, Enum):
+    """Session status."""
+
+    ACTIVE = "active"
+    INACTIVE = "inactive"
+    EXPIRED = "expired"
+
+
+class UserSettings(BaseModel):
+    """User-specific settings and preferences."""
+
+    default_search_mode: str = Field("hybrid", description="Default search mode")
+    default_n_results: int = Field(5, description="Default number of results", ge=1, le=100)
+    use_reranking: bool = Field(False, description="Use reranking by default")
+    use_query_expansion: bool = Field(False, description="Use query expansion by default")
+    use_diversification: bool = Field(False, description="Use diversification by default")
+    show_scores: bool = Field(True, description="Show relevance scores")
+    show_metadata: bool = Field(True, description="Show metadata in results")
+    max_content_length: int = Field(500, description="Max content length to display", ge=100, le=2000)
+    default_collection: Optional[str] = Field(None, description="Default collection name")
+    custom_metadata: Dict[str, Any] = Field(default_factory=dict, description="Custom user metadata")
+
+
+class ConversationMessage(BaseModel):
+    """A single message in conversation history."""
+
+    role: str = Field(..., description="Message role (user/assistant/system)")
+    content: str = Field(..., description="Message content")
+    timestamp: str = Field(..., description="ISO timestamp")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Message metadata")
+
+
+class Session(BaseModel):
+    """User session."""
+
+    session_id: str = Field(..., description="Unique session ID")
+    user_id: Optional[str] = Field(None, description="User ID")
+    created_at: str = Field(..., description="Creation timestamp (ISO)")
+    last_accessed: str = Field(..., description="Last accessed timestamp (ISO)")
+    expires_at: Optional[str] = Field(None, description="Expiration timestamp (ISO)")
+    status: SessionStatus = Field(SessionStatus.ACTIVE, description="Session status")
+    settings: UserSettings = Field(default_factory=UserSettings, description="User settings")
+    conversation_history: List[ConversationMessage] = Field(default_factory=list, description="Conversation history")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Session metadata")
+    collection_name: Optional[str] = Field(None, description="Collection name for this session")
+
+
+class CreateSessionRequest(BaseModel):
+    """Request to create a new session."""
+
+    user_id: Optional[str] = Field(None, description="User ID")
+    ttl_minutes: Optional[int] = Field(60, description="Session TTL in minutes", ge=1, le=10080)
+    settings: Optional[UserSettings] = Field(None, description="User settings")
+    collection_name: Optional[str] = Field(None, description="Collection name")
+
+
+class CreateSessionResponse(BaseModel):
+    """Response after creating a session."""
+
+    session: Session = Field(..., description="Created session")
+
+
+class UpdateSessionRequest(BaseModel):
+    """Request to update a session."""
+
+    user_id: Optional[str] = Field(None, description="User ID")
+    status: Optional[SessionStatus] = Field(None, description="Session status")
+    metadata: Optional[Dict[str, Any]] = Field(None, description="Session metadata")
+    collection_name: Optional[str] = Field(None, description="Collection name")
+
+
+class SessionListResponse(BaseModel):
+    """Response with list of sessions."""
+
+    sessions: List[Session] = Field(..., description="List of sessions")
+    total: int = Field(..., description="Total number of sessions")
+
+
+class SessionStatsResponse(BaseModel):
+    """Session statistics response."""
+
+    total_sessions: int = Field(..., description="Total sessions")
+    active_sessions: int = Field(..., description="Active sessions")
+    inactive_sessions: int = Field(..., description="Inactive sessions")
+    expired_sessions: int = Field(..., description="Expired sessions")
+    unique_users: int = Field(..., description="Unique users")
+
+
+class AddMessageRequest(BaseModel):
+    """Request to add a message to session."""
+
+    role: str = Field(..., description="Message role")
+    content: str = Field(..., description="Message content")
+    metadata: Optional[Dict[str, Any]] = Field(None, description="Message metadata")
+
+
+# Diagram Models
+class DiagramType(str, Enum):
+    """Types of Mermaid diagrams."""
+
+    SEQUENCE = "sequence"
+    ER = "er"
+    FLOWCHART = "flowchart"
+    CLASS = "class"
+
+
+class GenerateSequenceDiagramRequest(BaseModel):
+    """Request to generate sequence diagram."""
+
+    endpoint_id: str = Field(..., description="Document ID of the endpoint")
+
+
+class GenerateAuthFlowRequest(BaseModel):
+    """Request to generate authentication flow diagram."""
+
+    auth_type: str = Field(..., description="Authentication type (bearer, oauth2, apikey, basic)")
+    endpoints: Optional[List[str]] = Field(None, description="Optional list of endpoints")
+
+
+class DiagramResponse(BaseModel):
+    """Diagram generation response."""
+
+    diagram_type: DiagramType = Field(..., description="Type of diagram")
+    mermaid_code: str = Field(..., description="Mermaid diagram code")
+    title: Optional[str] = Field(None, description="Diagram title")

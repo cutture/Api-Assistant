@@ -5,7 +5,7 @@
 "use client";
 
 import Link from "next/link";
-import { FileText, Search, MessageSquare, Settings } from "lucide-react";
+import { FileText, Search, MessageSquare, Settings, Users, Network } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -28,6 +28,16 @@ export function Navbar() {
       href: "/chat",
       label: "Chat",
       icon: MessageSquare,
+    },
+    {
+      href: "/sessions",
+      label: "Sessions",
+      icon: Users,
+    },
+    {
+      href: "/diagrams",
+      label: "Diagrams",
+      icon: Network,
     },
   ];
 

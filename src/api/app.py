@@ -20,10 +20,16 @@ from fastapi.responses import JSONResponse
 from src.api.models import (
     AddDocumentsRequest,
     AddDocumentsResponse,
+    AddMessageRequest,
     BulkDeleteRequest,
     BulkDeleteResponse,
     CollectionStats,
+    ConversationMessage,
+    CreateSessionRequest,
+    CreateSessionResponse,
     DeleteDocumentResponse,
+    DiagramResponse,
+    DiagramType,
     Document,
     DocumentResponse,
     ErrorResponse,
@@ -33,12 +39,20 @@ from src.api.models import (
     FacetValue,
     FilterOperatorEnum,
     FilterSpec,
+    GenerateAuthFlowRequest,
+    GenerateSequenceDiagramRequest,
     HealthResponse,
     SearchMode,
     SearchRequest,
     SearchResponse,
     SearchResult,
+    Session,
+    SessionListResponse,
+    SessionStatsResponse,
+    SessionStatus,
     StatsResponse,
+    UpdateSessionRequest,
+    UserSettings,
 )
 from src.core import (
     CombinedFilter,
@@ -50,6 +64,8 @@ from src.core import (
     ResultDiversifier,
     VectorStore,
 )
+from src.sessions import get_session_manager
+from src.diagrams import MermaidGenerator
 
 logger = structlog.get_logger(__name__)
 
@@ -98,6 +114,8 @@ def create_app(
     )
     query_expander = QueryExpander()
     result_diversifier = ResultDiversifier()
+    session_manager = get_session_manager()
+    mermaid_generator = MermaidGenerator()
 
     # Helper functions
     def convert_filter_spec_to_filter(filter_spec: FilterSpec):
@@ -546,6 +564,377 @@ def create_app(
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Error in faceted search: {str(e)}",
+            )
+
+    # Session Management Endpoints
+    @app.post(
+        "/sessions",
+        response_model=CreateSessionResponse,
+        status_code=status.HTTP_201_CREATED,
+        tags=["Sessions"],
+    )
+    async def create_session(request: CreateSessionRequest):
+        """
+        Create a new user session.
+
+        Creates an isolated session with user-specific settings and conversation history.
+        """
+        try:
+            # Convert Pydantic model to dataclass
+            from src.sessions.session_manager import UserSettings as SessionUserSettings
+
+            settings = None
+            if request.settings:
+                settings = SessionUserSettings(
+                    default_search_mode=request.settings.default_search_mode,
+                    default_n_results=request.settings.default_n_results,
+                    use_reranking=request.settings.use_reranking,
+                    use_query_expansion=request.settings.use_query_expansion,
+                    use_diversification=request.settings.use_diversification,
+                    show_scores=request.settings.show_scores,
+                    show_metadata=request.settings.show_metadata,
+                    max_content_length=request.settings.max_content_length,
+                    default_collection=request.settings.default_collection,
+                    custom_metadata=request.settings.custom_metadata,
+                )
+
+            session = session_manager.create_session(
+                user_id=request.user_id,
+                ttl_minutes=request.ttl_minutes,
+                settings=settings,
+                collection_name=request.collection_name,
+            )
+
+            # Convert to API model
+            session_dict = session.to_dict()
+            api_session = Session(**session_dict)
+
+            logger.info("Session created via API", session_id=session.session_id)
+
+            return CreateSessionResponse(session=api_session)
+        except Exception as e:
+            logger.error("Error creating session", exc_info=e)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error creating session: {str(e)}",
+            )
+
+    @app.get(
+        "/sessions/{session_id}",
+        response_model=Session,
+        tags=["Sessions"],
+    )
+    async def get_session(session_id: str):
+        """
+        Get session by ID.
+
+        Returns session details including conversation history and settings.
+        """
+        try:
+            session = session_manager.get_session(session_id)
+
+            if session is None:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Session not found: {session_id}",
+                )
+
+            session_dict = session.to_dict()
+            return Session(**session_dict)
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error("Error getting session", session_id=session_id, exc_info=e)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error getting session: {str(e)}",
+            )
+
+    @app.get(
+        "/sessions",
+        response_model=SessionListResponse,
+        tags=["Sessions"],
+    )
+    async def list_sessions(
+        user_id: Optional[str] = None,
+        status_filter: Optional[SessionStatus] = None,
+    ):
+        """
+        List all sessions with optional filters.
+
+        Filter by user_id or status to get specific sessions.
+        """
+        try:
+            from src.sessions.session_manager import SessionStatus as BackendSessionStatus
+
+            backend_status = None
+            if status_filter:
+                backend_status = BackendSessionStatus(status_filter.value)
+
+            sessions = session_manager.list_sessions(
+                user_id=user_id,
+                status=backend_status,
+            )
+
+            api_sessions = [Session(**s.to_dict()) for s in sessions]
+
+            return SessionListResponse(
+                sessions=api_sessions,
+                total=len(api_sessions),
+            )
+        except Exception as e:
+            logger.error("Error listing sessions", exc_info=e)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error listing sessions: {str(e)}",
+            )
+
+    @app.patch(
+        "/sessions/{session_id}",
+        response_model=Session,
+        tags=["Sessions"],
+    )
+    async def update_session(session_id: str, request: UpdateSessionRequest):
+        """
+        Update session attributes.
+
+        Update user_id, status, metadata, or collection_name.
+        """
+        try:
+            update_kwargs = {}
+            if request.user_id is not None:
+                update_kwargs["user_id"] = request.user_id
+            if request.status is not None:
+                update_kwargs["status"] = request.status.value
+            if request.metadata is not None:
+                update_kwargs["metadata"] = request.metadata
+            if request.collection_name is not None:
+                update_kwargs["collection_name"] = request.collection_name
+
+            session = session_manager.update_session(session_id, **update_kwargs)
+
+            if session is None:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Session not found: {session_id}",
+                )
+
+            session_dict = session.to_dict()
+            return Session(**session_dict)
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error("Error updating session", session_id=session_id, exc_info=e)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error updating session: {str(e)}",
+            )
+
+    @app.delete(
+        "/sessions/{session_id}",
+        response_model=DeleteDocumentResponse,
+        tags=["Sessions"],
+    )
+    async def delete_session(session_id: str):
+        """
+        Delete a session.
+
+        Permanently removes the session and its conversation history.
+        """
+        try:
+            success = session_manager.delete_session(session_id)
+
+            if not success:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Session not found: {session_id}",
+                )
+
+            logger.info("Session deleted via API", session_id=session_id)
+
+            return DeleteDocumentResponse(
+                success=True,
+                message=f"Session {session_id} deleted successfully",
+            )
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error("Error deleting session", session_id=session_id, exc_info=e)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error deleting session: {str(e)}",
+            )
+
+    @app.get(
+        "/sessions/stats",
+        response_model=SessionStatsResponse,
+        tags=["Sessions"],
+    )
+    async def get_session_stats():
+        """
+        Get session statistics.
+
+        Returns counts of total, active, inactive, and expired sessions.
+        """
+        try:
+            stats = session_manager.get_stats()
+            return SessionStatsResponse(**stats)
+        except Exception as e:
+            logger.error("Error getting session stats", exc_info=e)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error getting session stats: {str(e)}",
+            )
+
+    @app.post(
+        "/sessions/{session_id}/messages",
+        response_model=Session,
+        tags=["Sessions"],
+    )
+    async def add_message_to_session(session_id: str, request: AddMessageRequest):
+        """
+        Add a message to session conversation history.
+
+        Stores user or assistant messages in the session.
+        """
+        try:
+            session = session_manager.get_session(session_id)
+
+            if session is None:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Session not found: {session_id}",
+                )
+
+            session.add_message(
+                role=request.role,
+                content=request.content,
+                metadata=request.metadata,
+            )
+
+            # Persist the updated session
+            session_manager._save_sessions()
+
+            session_dict = session.to_dict()
+            return Session(**session_dict)
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error("Error adding message to session", session_id=session_id, exc_info=e)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error adding message: {str(e)}",
+            )
+
+    # Diagram Generation Endpoints
+    @app.post(
+        "/diagrams/sequence",
+        response_model=DiagramResponse,
+        tags=["Diagrams"],
+    )
+    async def generate_sequence_diagram(request: GenerateSequenceDiagramRequest):
+        """
+        Generate a sequence diagram from an API endpoint.
+
+        Creates a Mermaid sequence diagram showing the request/response flow.
+        """
+        try:
+            # Get the endpoint document
+            doc = vector_store.get_document(request.endpoint_id)
+
+            if not doc:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Endpoint document not found: {request.endpoint_id}",
+                )
+
+            # Parse endpoint to create diagram
+            # Note: This is a simplified version - full implementation would parse the document
+            from src.diagrams.mermaid_generator import SequenceDiagram
+
+            diagram = SequenceDiagram(
+                title=doc["metadata"].get("endpoint", "API Endpoint"),
+                participants=["Client", "API", "Backend"],
+            )
+
+            # Build basic sequence
+            diagram.interactions.append({
+                "from": "Client",
+                "to": "API",
+                "arrow": "->>",
+                "message": f"{doc['metadata'].get('method', 'GET')} {doc['metadata'].get('endpoint', '/')}",
+            })
+
+            diagram.interactions.append({
+                "from": "API",
+                "to": "Backend",
+                "arrow": "->>",
+                "message": "Process request",
+            })
+
+            diagram.interactions.append({
+                "from": "Backend",
+                "to": "API",
+                "arrow": "-->>",
+                "message": "200 OK",
+            })
+
+            diagram.interactions.append({
+                "from": "API",
+                "to": "Client",
+                "arrow": "-->>",
+                "message": "Response",
+            })
+
+            mermaid_code = diagram.to_mermaid()
+
+            logger.info("Sequence diagram generated", endpoint_id=request.endpoint_id)
+
+            return DiagramResponse(
+                diagram_type=DiagramType.SEQUENCE,
+                mermaid_code=mermaid_code,
+                title=diagram.title,
+            )
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error("Error generating sequence diagram", exc_info=e)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error generating diagram: {str(e)}",
+            )
+
+    @app.post(
+        "/diagrams/auth-flow",
+        response_model=DiagramResponse,
+        tags=["Diagrams"],
+    )
+    async def generate_auth_flow_diagram(request: GenerateAuthFlowRequest):
+        """
+        Generate an authentication flow diagram.
+
+        Creates a flowchart showing the authentication process.
+        """
+        try:
+            diagram = mermaid_generator.generate_auth_flow(
+                auth_type=request.auth_type,
+                endpoints=request.endpoints,
+            )
+
+            mermaid_code = diagram.to_mermaid()
+
+            logger.info("Auth flow diagram generated", auth_type=request.auth_type)
+
+            return DiagramResponse(
+                diagram_type=DiagramType.FLOWCHART,
+                mermaid_code=mermaid_code,
+                title=diagram.title,
+            )
+        except Exception as e:
+            logger.error("Error generating auth flow diagram", exc_info=e)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error generating diagram: {str(e)}",
             )
 
     return app
