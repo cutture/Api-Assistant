@@ -1222,7 +1222,7 @@ def create_app(
 
             # Parse GraphQL schema
             parser = GraphQLParser()
-            schema = parser.parse_schema(request.schema_content)
+            schema = parser.parse(request.schema_content)
 
             # Generate ER diagram
             include_set = set(request.include_types) if request.include_types else None
