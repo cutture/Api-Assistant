@@ -227,23 +227,6 @@ export default function SessionsPage() {
                       />
                     </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-ttl">TTL (minutes)</Label>
-                      <Input
-                        id="edit-ttl"
-                        type="number"
-                        min={1}
-                        max={10080}
-                        value={editFormData.ttl_minutes}
-                        onChange={(e) =>
-                          setEditFormData({
-                            ...editFormData,
-                            ttl_minutes: parseInt(e.target.value) || 60,
-                          })
-                        }
-                      />
-                    </div>
-
                     <div className="space-y-3">
                       <Label>Settings</Label>
                       <div className="flex items-center space-x-2">
