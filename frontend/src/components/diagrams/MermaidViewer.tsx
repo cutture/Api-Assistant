@@ -4,7 +4,7 @@
 
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import mermaid from "mermaid";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,20 +18,59 @@ export interface MermaidViewerProps {
 
 export function MermaidViewer({ code, title }: MermaidViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const [isRendering, setIsRendering] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
-    mermaid.initialize({
-      startOnLoad: true,
-      theme: "default",
-      securityLevel: "loose",
-    });
+    const renderDiagram = async () => {
+      if (!containerRef.current || !code) return;
 
-    if (containerRef.current) {
-      containerRef.current.innerHTML = code;
-      mermaid.contentLoaded();
-    }
-  }, [code]);
+      try {
+        setIsRendering(true);
+
+        // Initialize Mermaid
+        mermaid.initialize({
+          startOnLoad: false,
+          theme: "default",
+          securityLevel: "loose",
+          fontFamily: "arial, sans-serif",
+        });
+
+        // Clear previous content
+        containerRef.current.innerHTML = "";
+
+        // Generate a unique ID for this diagram
+        const id = `mermaid-${Date.now()}`;
+
+        // Render the diagram
+        const { svg } = await mermaid.render(id, code);
+
+        // Insert the rendered SVG
+        if (containerRef.current) {
+          containerRef.current.innerHTML = svg;
+        }
+      } catch (error: any) {
+        console.error("Mermaid rendering error:", error);
+        if (containerRef.current) {
+          containerRef.current.innerHTML = `
+            <div class="text-destructive p-4">
+              <p class="font-semibold">Failed to render diagram</p>
+              <p class="text-sm mt-1">${error.message || "Invalid Mermaid syntax"}</p>
+            </div>
+          `;
+        }
+        toast({
+          title: "Rendering failed",
+          description: error.message || "Failed to render diagram",
+          variant: "destructive",
+        });
+      } finally {
+        setIsRendering(false);
+      }
+    };
+
+    renderDiagram();
+  }, [code, toast]);
 
   const handleCopyCode = () => {
     navigator.clipboard.writeText(code);
@@ -48,7 +87,7 @@ export function MermaidViewer({ code, title }: MermaidViewerProps) {
       if (!svgElement) {
         toast({
           title: "Error",
-          description: "No diagram found to download",
+          description: "No diagram found to download. Please wait for the diagram to render.",
           variant: "destructive",
         });
         return;
@@ -63,7 +102,7 @@ export function MermaidViewer({ code, title }: MermaidViewerProps) {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${title || "diagram"}.svg`;
+      a.download = `${title?.replace(/\s+/g, "-") || "diagram"}.svg`;
       a.click();
       URL.revokeObjectURL(url);
 
@@ -91,7 +130,12 @@ export function MermaidViewer({ code, title }: MermaidViewerProps) {
                 <Copy className="h-4 w-4 mr-2" />
                 Copy Code
               </Button>
-              <Button variant="outline" size="sm" onClick={handleDownloadSVG}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDownloadSVG}
+                disabled={isRendering}
+              >
                 <Download className="h-4 w-4 mr-2" />
                 Download SVG
               </Button>
@@ -102,8 +146,14 @@ export function MermaidViewer({ code, title }: MermaidViewerProps) {
       <CardContent>
         <div
           ref={containerRef}
-          className="mermaid flex justify-center items-center p-4 bg-background rounded-md"
-        />
+          className="mermaid flex justify-center items-center p-4 bg-background rounded-md min-h-[200px]"
+        >
+          {isRendering && (
+            <div className="text-muted-foreground">
+              Rendering diagram...
+            </div>
+          )}
+        </div>
       </CardContent>
     </Card>
   );
