@@ -86,6 +86,13 @@ export function SessionList({ onSelectSession }: SessionListProps) {
             >
               Inactive
             </Button>
+            <Button
+              variant={selectedStatus === SessionStatus.EXPIRED ? "default" : "outline"}
+              size="sm"
+              onClick={() => setSelectedStatus(SessionStatus.EXPIRED)}
+            >
+              Expired
+            </Button>
           </div>
         </div>
       </CardHeader>

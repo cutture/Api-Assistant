@@ -8,12 +8,43 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { ChatInterface } from "@/components/chat/ChatInterface";
 import { useToast } from "@/hooks/use-toast";
 import { sendChatMessage, ChatMessage } from "@/lib/api/chat";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useCreateSession } from "@/hooks/useSessions";
 
 export default function ChatPage() {
   const { toast } = useToast();
   const [conversationHistory, setConversationHistory] = useState<ChatMessage[]>([]);
-  const [sessionId] = useState<string>(() => `chat-${Date.now()}`);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const { mutate: createSession } = useCreateSession();
+
+  // Create session on mount
+  useEffect(() => {
+    createSession(
+      {
+        ttl_minutes: 1440, // 24 hours
+        settings: {
+          default_search_mode: "hybrid",
+          default_n_results: 10,
+          use_reranking: false,
+          use_query_expansion: true,
+          use_diversification: false,
+          show_scores: true,
+          show_metadata: true,
+          max_content_length: 500,
+          custom_metadata: {},
+        },
+      },
+      {
+        onSuccess: (data) => {
+          setSessionId(data?.session_id || null);
+        },
+        onError: (error: any) => {
+          console.error("Failed to create session:", error);
+          // Continue without session if creation fails
+        },
+      }
+    );
+  }, [createSession]);
 
   const handleSendMessage = async (message: string): Promise<string> => {
     try {
@@ -26,7 +57,7 @@ export default function ChatPage() {
       // Send chat request with LLM
       const response = await sendChatMessage({
         message,
-        session_id: sessionId,
+        session_id: sessionId || undefined,
         conversation_history: conversationHistory,
         enable_url_scraping: true,
         enable_auto_indexing: true,
