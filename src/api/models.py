@@ -99,8 +99,10 @@ class AddDocumentsRequest(BaseModel):
 class AddDocumentsResponse(BaseModel):
     """Response after adding documents."""
 
-    document_ids: List[str] = Field(..., description="IDs of added documents")
-    count: int = Field(..., description="Number of documents added")
+    document_ids: List[str] = Field(..., description="IDs of all documents (new + skipped)")
+    count: int = Field(..., description="Total number of documents processed")
+    new_count: int = Field(..., description="Number of new documents added")
+    skipped_count: int = Field(..., description="Number of duplicate documents skipped")
 
 
 class DeleteDocumentResponse(BaseModel):

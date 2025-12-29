@@ -99,10 +99,10 @@ export interface DocumentUploadRequest {
 }
 
 export interface DocumentUploadResponse {
-  success: boolean;
-  message: string;
-  document_count: number;
-  documents?: Document[];
+  document_ids: string[];
+  count: number;
+  new_count: number;
+  skipped_count: number;
 }
 
 // Session Types

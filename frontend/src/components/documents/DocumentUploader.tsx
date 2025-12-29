@@ -62,9 +62,17 @@ export function DocumentUploader() {
       { files: selectedFiles, format },
       {
         onSuccess: (data) => {
+          const newCount = data?.new_count || 0;
+          const skippedCount = data?.skipped_count || 0;
+
+          let description = `Successfully indexed ${newCount} new document${newCount !== 1 ? 's' : ''}`;
+          if (skippedCount > 0) {
+            description += ` (${skippedCount} duplicate${skippedCount !== 1 ? 's' : ''} skipped)`;
+          }
+
           toast({
             title: "Upload successful",
-            description: `Successfully indexed ${data?.document_count || 0} documents`,
+            description,
           });
           setSelectedFiles([]);
           setFormat(undefined);

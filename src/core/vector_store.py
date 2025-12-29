@@ -199,7 +199,7 @@ class VectorStore:
         self,
         documents: list[dict[str, Any]],
         batch_size: int = 100,
-    ) -> list[str]:
+    ) -> dict[str, Any]:
         """
         Add multiple documents to the vector store with performance monitoring.
 
@@ -208,10 +208,10 @@ class VectorStore:
             batch_size: Number of documents to process at once.
 
         Returns:
-            List of document IDs.
+            Dictionary with document_ids (all IDs), new_count, and skipped_count.
         """
         if not documents:
-            return []
+            return {"document_ids": [], "new_count": 0, "skipped_count": 0}
 
         logger.info("Adding documents to vector store", count=len(documents))
 
@@ -239,7 +239,11 @@ class VectorStore:
 
         if not new_indices:
             logger.info("All documents already exist, skipping")
-            return doc_ids
+            return {
+                "document_ids": doc_ids,
+                "new_count": 0,
+                "skipped_count": len(doc_ids),
+            }
 
         # Add only new documents
         new_ids = [doc_ids[i] for i in new_indices]
@@ -267,7 +271,11 @@ class VectorStore:
         if self.enable_hybrid_search:
             self._rebuild_bm25_index()
 
-        return doc_ids
+        return {
+            "document_ids": doc_ids,
+            "new_count": len(new_ids),
+            "skipped_count": len(doc_ids) - len(new_ids),
+        }
 
     @monitor_performance("vector_store_search")
     def search(
@@ -765,6 +773,32 @@ class VectorStore:
                 "metadata": result["metadatas"][0],
             }
         return None
+
+    def get_all_documents(self, limit: Optional[int] = None) -> list[dict[str, Any]]:
+        """
+        Get all documents from the collection.
+
+        Args:
+            limit: Maximum number of documents to return (None for all).
+
+        Returns:
+            List of documents with id, content, and metadata.
+        """
+        result = self.collection.get(
+            limit=limit,
+            include=["documents", "metadatas"]
+        )
+
+        documents = []
+        for i in range(len(result["ids"])):
+            documents.append({
+                "id": result["ids"][i],
+                "content": result["documents"][i],
+                "metadata": result["metadatas"][i],
+            })
+
+        logger.debug("Retrieved documents", count=len(documents))
+        return documents
 
     def delete_document(self, doc_id: str) -> bool:
         """

@@ -275,6 +275,8 @@ def create_app(
 
             handler = UnifiedFormatHandler()
             all_document_ids = []
+            total_new_count = 0
+            total_skipped_count = 0
             stats = []
 
             for file in files:
@@ -309,14 +311,17 @@ def create_app(
                         for doc in result["documents"]
                     ]
 
-                    doc_ids = vector_store.add_documents(docs)
-                    all_document_ids.extend(doc_ids)
+                    add_result = vector_store.add_documents(docs)
+                    all_document_ids.extend(add_result["document_ids"])
+                    total_new_count += add_result["new_count"]
+                    total_skipped_count += add_result["skipped_count"]
 
                     # Track stats
                     stats.append({
                         "filename": file.filename,
                         "format": result["format"],
-                        "documents_added": len(doc_ids),
+                        "documents_added": add_result["new_count"],
+                        "documents_skipped": add_result["skipped_count"],
                         "stats": result.get("stats", {}),
                     })
 
@@ -324,7 +329,8 @@ def create_app(
                         "File uploaded and indexed",
                         filename=file.filename,
                         format=result["format"],
-                        documents=len(doc_ids),
+                        new_documents=add_result["new_count"],
+                        skipped_documents=add_result["skipped_count"],
                     )
 
                 except ValueError as e:
@@ -341,6 +347,8 @@ def create_app(
             return AddDocumentsResponse(
                 document_ids=all_document_ids,
                 count=len(all_document_ids),
+                new_count=total_new_count,
+                skipped_count=total_skipped_count,
             )
 
         except HTTPException:
@@ -374,13 +382,20 @@ def create_app(
                 for doc in request.documents
             ]
 
-            doc_ids = vector_store.add_documents(docs)
+            add_result = vector_store.add_documents(docs)
 
-            logger.info("Documents added", count=len(doc_ids))
+            logger.info(
+                "Documents added",
+                total=len(add_result["document_ids"]),
+                new=add_result["new_count"],
+                skipped=add_result["skipped_count"],
+            )
 
             return AddDocumentsResponse(
-                document_ids=doc_ids,
-                count=len(doc_ids),
+                document_ids=add_result["document_ids"],
+                count=len(add_result["document_ids"]),
+                new_count=add_result["new_count"],
+                skipped_count=add_result["skipped_count"],
             )
         except Exception as e:
             logger.error("Error adding documents", exc_info=e)
@@ -421,6 +436,35 @@ def create_app(
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Error getting document: {str(e)}",
+            )
+
+    @app.get(
+        "/export/documents",
+        response_model=List[DocumentResponse],
+        tags=["Documents"],
+    )
+    async def export_documents(limit: Optional[int] = None):
+        """
+        Export documents from the collection.
+
+        Returns list of all documents with optional limit.
+        """
+        try:
+            documents = vector_store.get_all_documents(limit=limit)
+
+            return [
+                DocumentResponse(
+                    id=doc["id"],
+                    content=doc["content"],
+                    metadata=doc["metadata"],
+                )
+                for doc in documents
+            ]
+        except Exception as e:
+            logger.error("Error exporting documents", exc_info=e)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error exporting documents: {str(e)}",
             )
 
     @app.delete(
