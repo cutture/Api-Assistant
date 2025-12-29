@@ -348,10 +348,11 @@ class MermaidGenerator:
                 if field.name == "id" or field.name.endswith("Id"):
                     key = "PK" if field.name == "id" else "FK"
 
-                # Get base type
+                # Get base type - Mermaid ER doesn't support brackets at start
+                # Use suffix notation instead: Type[] for arrays
                 field_type = field.type
                 if field.is_list:
-                    field_type = f"[{field_type}]"
+                    field_type = f"{field_type}[]"  # Array notation at end
 
                 attributes.append({
                     "type": field_type,
