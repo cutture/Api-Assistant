@@ -132,7 +132,7 @@ export function DocumentList() {
             <div>
               <CardTitle>Document Library</CardTitle>
               <CardDescription>
-                {isLoading ? "Loading..." : `${stats?.total_documents || 0} documents indexed`}
+                {isLoading ? "Loading..." : `${stats?.collection?.total_documents || 0} documents indexed`}
               </CardDescription>
             </div>
             <Button onClick={loadDocuments} disabled={loadingDocs}>
@@ -206,7 +206,11 @@ export function DocumentList() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center space-x-2 mb-1">
                         <p className="text-sm font-medium truncate">
-                          {doc.metadata?.endpoint || doc.metadata?.path || "Untitled"}
+                          {doc.metadata?.endpoint ||
+                           doc.metadata?.path ||
+                           doc.metadata?.api_title ||
+                           doc.metadata?.source_file ||
+                           "Untitled"}
                         </p>
                         {doc.metadata?.method && (
                           <Badge variant="outline" className="text-xs">
@@ -218,10 +222,20 @@ export function DocumentList() {
                             {doc.metadata.source}
                           </Badge>
                         )}
+                        {doc.metadata?.content_type === "api_summary" && (
+                          <Badge variant="default" className="text-xs">
+                            Summary
+                          </Badge>
+                        )}
                       </div>
                       {doc.metadata?.api_name && (
                         <p className="text-xs text-muted-foreground">
                           {doc.metadata.api_name}
+                        </p>
+                      )}
+                      {doc.metadata?.api_title && doc.metadata?.path && (
+                        <p className="text-xs text-muted-foreground">
+                          {doc.metadata.api_title}
                         </p>
                       )}
                     </div>

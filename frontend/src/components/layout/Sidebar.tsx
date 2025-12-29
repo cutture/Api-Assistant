@@ -25,32 +25,13 @@ export function Sidebar() {
           </CardHeader>
           <CardContent className="space-y-3">
             {isLoading ? (
-              <>
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-full" />
-              </>
+              <Skeleton className="h-10 w-full" />
             ) : (
               <>
                 <StatItem
                   icon={FileText}
                   label="Total Documents"
-                  value={stats?.total_documents || 0}
-                />
-                <StatItem
-                  icon={Layers}
-                  label="OpenAPI"
-                  value={stats?.sources?.openapi || 0}
-                />
-                <StatItem
-                  icon={Layers}
-                  label="GraphQL"
-                  value={stats?.sources?.graphql || 0}
-                />
-                <StatItem
-                  icon={Layers}
-                  label="Postman"
-                  value={stats?.sources?.postman || 0}
+                  value={stats?.collection?.total_documents || 0}
                 />
               </>
             )}

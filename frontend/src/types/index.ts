@@ -48,9 +48,11 @@ export interface Filter {
 }
 
 export interface SearchResult {
-  document: Document;
+  id: string;
+  content: string;
+  metadata: DocumentMetadata;
   score: number;
-  rank?: number;
+  method?: string;
 }
 
 export interface SearchResponse {
@@ -87,9 +89,12 @@ export interface FacetedSearchResponse extends SearchResponse {
 // Collection Types
 export interface CollectionStats {
   total_documents: number;
-  sources: Record<string, number>;
-  methods: Record<string, number>;
-  apis: string[];
+  collection_name: string;
+}
+
+export interface StatsResponse {
+  collection: CollectionStats;
+  features: Record<string, boolean>;
 }
 
 // Document Upload Types

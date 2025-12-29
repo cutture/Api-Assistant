@@ -95,8 +95,7 @@ interface SearchResultCardProps {
 }
 
 function SearchResultCard({ result, rank }: SearchResultCardProps) {
-  const { document, score } = result;
-  const metadata = document.metadata;
+  const { id, content, metadata, score } = result;
 
   const getSourceIcon = (source: string) => {
     switch (source) {
@@ -111,7 +110,7 @@ function SearchResultCard({ result, rank }: SearchResultCardProps) {
     }
   };
 
-  const SourceIcon = getSourceIcon(metadata.source);
+  const SourceIcon = getSourceIcon(metadata?.source || "");
 
   return (
     <Card className="hover:shadow-md transition-shadow">
@@ -123,10 +122,12 @@ function SearchResultCard({ result, rank }: SearchResultCardProps) {
                 {rank}
               </span>
               <SourceIcon className="h-4 w-4 text-muted-foreground" />
-              <Badge variant="outline" className="text-xs">
-                {metadata.source}
-              </Badge>
-              {metadata.method && (
+              {metadata?.source && (
+                <Badge variant="outline" className="text-xs">
+                  {metadata.source}
+                </Badge>
+              )}
+              {metadata?.method && (
                 <Badge
                   variant={
                     metadata.method === "GET"
@@ -142,9 +143,9 @@ function SearchResultCard({ result, rank }: SearchResultCardProps) {
               )}
             </div>
             <CardTitle className="text-lg">
-              {metadata.endpoint || metadata.path || metadata.summary || "Untitled"}
+              {metadata?.endpoint || metadata?.path || metadata?.summary || "Untitled"}
             </CardTitle>
-            {metadata.api_name && (
+            {metadata?.api_name && (
               <CardDescription className="mt-1">
                 {metadata.api_name}
               </CardDescription>
@@ -159,13 +160,13 @@ function SearchResultCard({ result, rank }: SearchResultCardProps) {
       </CardHeader>
       <CardContent>
         <div className="space-y-2">
-          {metadata.description && (
+          {metadata?.description && (
             <p className="text-sm text-muted-foreground line-clamp-2">
               {metadata.description}
             </p>
           )}
 
-          {metadata.tags && metadata.tags.length > 0 && (
+          {metadata?.tags && metadata.tags.length > 0 && (
             <div className="flex flex-wrap gap-1 mt-2">
               {metadata.tags.slice(0, 5).map((tag, i) => (
                 <Badge key={i} variant="secondary" className="text-xs">
@@ -181,14 +182,14 @@ function SearchResultCard({ result, rank }: SearchResultCardProps) {
           )}
 
           {/* Content Preview */}
-          {document.content && (
+          {content && (
             <details className="mt-3">
               <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground">
                 Show details
               </summary>
               <pre className="mt-2 p-3 bg-muted rounded-md text-xs overflow-x-auto">
-                {document.content.slice(0, 500)}
-                {document.content.length > 500 && "..."}
+                {content.slice(0, 500)}
+                {content.length > 500 && "..."}
               </pre>
             </details>
           )}

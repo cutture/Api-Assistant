@@ -44,63 +44,41 @@ export function StatsCard() {
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <StatItem
               icon={FileText}
               label="Total Documents"
-              value={stats?.total_documents || 0}
+              value={stats?.collection?.total_documents || 0}
               color="blue"
             />
             <StatItem
-              icon={Globe}
-              label="OpenAPI"
-              value={stats?.sources?.openapi || 0}
+              icon={Database}
+              label="Collection"
+              value={stats?.collection?.collection_name || "default"}
               color="green"
-            />
-            <StatItem
-              icon={Code}
-              label="GraphQL"
-              value={stats?.sources?.graphql || 0}
-              color="purple"
-            />
-            <StatItem
-              icon={FileText}
-              label="Postman"
-              value={stats?.sources?.postman || 0}
-              color="orange"
+              isText
             />
           </div>
         )}
 
-        {/* HTTP Methods Breakdown */}
-        {stats && stats.methods && Object.keys(stats.methods).length > 0 && (
+        {/* Features */}
+        {stats?.features && (
           <div className="mt-6 pt-6 border-t">
-            <h4 className="text-sm font-medium mb-3">HTTP Methods</h4>
-            <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
-              {Object.entries(stats.methods).map(([method, count]) => (
+            <h4 className="text-sm font-medium mb-3">Enabled Features</h4>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+              {Object.entries(stats.features).map(([feature, enabled]) => (
                 <div
-                  key={method}
-                  className="px-3 py-2 bg-muted rounded-md text-center"
+                  key={feature}
+                  className={`px-3 py-2 rounded-md text-center ${
+                    enabled ? "bg-green-100 dark:bg-green-900/20" : "bg-muted"
+                  }`}
                 >
-                  <div className="text-xs text-muted-foreground">{method}</div>
-                  <div className="text-lg font-semibold">{count}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* APIs List */}
-        {stats && stats.apis && stats.apis.length > 0 && (
-          <div className="mt-6 pt-6 border-t">
-            <h4 className="text-sm font-medium mb-3">Indexed APIs</h4>
-            <div className="flex flex-wrap gap-2">
-              {stats.apis.map((api, index) => (
-                <div
-                  key={index}
-                  className="px-3 py-1 bg-primary/10 text-primary rounded-full text-xs font-medium"
-                >
-                  {api}
+                  <div className="text-xs capitalize">
+                    {feature.replace(/_/g, " ")}
+                  </div>
+                  <div className="text-sm font-semibold">
+                    {enabled ? "✓" : "✗"}
+                  </div>
                 </div>
               ))}
             </div>
@@ -114,11 +92,12 @@ export function StatsCard() {
 interface StatItemProps {
   icon: React.ElementType;
   label: string;
-  value: number;
+  value: number | string;
   color: "blue" | "green" | "purple" | "orange";
+  isText?: boolean;
 }
 
-function StatItem({ icon: Icon, label, value, color }: StatItemProps) {
+function StatItem({ icon: Icon, label, value, color, isText = false }: StatItemProps) {
   const colorClasses = {
     blue: "bg-blue-100 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400",
     green: "bg-green-100 text-green-600 dark:bg-green-900/20 dark:text-green-400",
@@ -132,7 +111,7 @@ function StatItem({ icon: Icon, label, value, color }: StatItemProps) {
         <Icon className="h-4 w-4" />
       </div>
       <div>
-        <p className="text-2xl font-bold">{value}</p>
+        <p className={isText ? "text-lg font-bold truncate" : "text-2xl font-bold"}>{value}</p>
         <p className="text-xs text-muted-foreground">{label}</p>
       </div>
     </div>

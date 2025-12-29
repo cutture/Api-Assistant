@@ -5,7 +5,7 @@
 import apiClient, { apiRequest } from "./client";
 import {
   ApiResponse,
-  CollectionStats,
+  StatsResponse,
   Document,
   DocumentUploadResponse,
 } from "@/types";
@@ -13,8 +13,8 @@ import {
 /**
  * Get collection statistics
  */
-export async function getCollectionStats(): Promise<ApiResponse<CollectionStats>> {
-  return apiRequest<CollectionStats>({
+export async function getCollectionStats(): Promise<ApiResponse<StatsResponse>> {
+  return apiRequest<StatsResponse>({
     method: "GET",
     url: "/stats",
   });
