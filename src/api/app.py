@@ -572,7 +572,9 @@ def create_app(
             # Convert filter if provided
             filter_obj = None
             if request.filter:
+                logger.info("Filter received", filter=request.filter.model_dump())
                 filter_obj = convert_filter_spec_to_filter(request.filter)
+                logger.info("Filter converted", filter_obj=str(filter_obj))
 
             # Determine search parameters based on mode
             use_hybrid = request.mode in [SearchMode.HYBRID, SearchMode.RERANKED]
