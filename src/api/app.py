@@ -1039,6 +1039,7 @@ def create_app(
                 response=result["response"],
                 sources=sources,
                 scraped_urls=result["scraped_urls"],
+                failed_urls=result.get("failed_urls", []),
                 indexed_docs=result["indexed_docs"],
                 context_results=result["context_results"],
                 session_id=request.session_id,

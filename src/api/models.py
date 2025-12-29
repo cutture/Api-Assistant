@@ -464,7 +464,11 @@ class ChatResponse(BaseModel):
     )
     scraped_urls: List[str] = Field(
         default_factory=list,
-        description="URLs that were scraped",
+        description="URLs that were successfully scraped",
+    )
+    failed_urls: List[str] = Field(
+        default_factory=list,
+        description="URLs that failed to scrape (network/DNS errors)",
     )
     indexed_docs: int = Field(0, description="Number of documents indexed")
     context_results: int = Field(0, description="Number of context results used")

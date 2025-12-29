@@ -101,13 +101,27 @@ class ChatService:
             # Step 1: Extract and scrape URLs
             scraped_content = []
             indexed_count = 0
+            extracted_urls = []
+            failed_urls = []
 
             if self.enable_url_scraping:
-                urls = self.url_scraper.extract_urls(user_message)
+                extracted_urls = self.url_scraper.extract_urls(user_message)
 
-                if urls:
-                    logger.info("chat_extracting_urls", url_count=len(urls))
-                    scraped_content = self.url_scraper.scrape_urls(urls)
+                if extracted_urls:
+                    logger.info("chat_extracting_urls", url_count=len(extracted_urls))
+                    scraped_content = self.url_scraper.scrape_urls(extracted_urls)
+
+                    # Track failed URLs
+                    scraped_urls = {sc["url"] for sc in scraped_content}
+                    failed_urls = [url for url in extracted_urls if url not in scraped_urls]
+
+                    if failed_urls:
+                        logger.warning(
+                            "chat_url_scraping_partial_failure",
+                            failed_count=len(failed_urls),
+                            total_urls=len(extracted_urls),
+                            failed_urls=failed_urls,
+                        )
 
                     # Step 2: Dynamically index scraped content
                     if self.enable_auto_indexing and scraped_content:
@@ -168,10 +182,15 @@ class ChatService:
             # Step 6: Format sources
             sources = self._format_sources(search_results, scraped_content)
 
+            # Add note about failed URLs if any
+            if failed_urls:
+                response_text += f"\n\n**Note:** Unable to scrape {len(failed_urls)} URL(s) due to network/DNS errors. This may be due to connectivity issues or firewall restrictions. The response is based on {len(scraped_content)} successfully scraped URLs and existing indexed content."
+
             return {
                 "response": response_text,
                 "sources": sources,
                 "scraped_urls": [c["url"] for c in scraped_content],
+                "failed_urls": failed_urls,
                 "indexed_docs": indexed_count,
                 "context_results": len(search_results),
             }
