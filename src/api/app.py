@@ -13,6 +13,7 @@ Date: 2025-12-27
 """
 
 import structlog
+from typing import Optional
 from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
