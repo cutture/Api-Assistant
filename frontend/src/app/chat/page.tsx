@@ -18,8 +18,7 @@ export default function ChatPage() {
       const response = await search({
         query: message,
         n_results: 3,
-        use_hybrid: true,
-        use_reranking: true,
+        mode: "reranked",
         use_query_expansion: true,
       });
 
@@ -38,7 +37,7 @@ export default function ChatPage() {
       let responseText = "Based on your indexed APIs, here's what I found:\n\n";
 
       results.forEach((result, index) => {
-        const metadata = result.document.metadata;
+        const metadata = result.metadata;
         responseText += `### ${index + 1}. ${metadata.endpoint || metadata.path || "Endpoint"}\n`;
 
         if (metadata.method) {
@@ -53,8 +52,8 @@ export default function ChatPage() {
           responseText += `**Description:** ${metadata.description}\n`;
         }
 
-        if (result.document.content) {
-          responseText += `\n\`\`\`json\n${result.document.content.slice(0, 300)}\n\`\`\`\n`;
+        if (result.content) {
+          responseText += `\n\`\`\`json\n${result.content.slice(0, 300)}\n\`\`\`\n`;
         }
 
         responseText += `\n**Relevance Score:** ${(result.score * 100).toFixed(1)}%\n\n`;
