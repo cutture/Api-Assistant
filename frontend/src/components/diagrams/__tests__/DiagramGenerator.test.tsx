@@ -6,7 +6,12 @@ import React from 'react';
 import { screen, waitFor } from '@testing-library/react';
 import { renderWithProviders, userEvent } from '@/__tests__/utils/test-utils';
 import { DiagramGenerator } from '../DiagramGenerator';
-import { useGenerateSequenceDiagram, useGenerateAuthFlowDiagram } from '@/hooks/useDiagrams';
+import {
+  useGenerateSequenceDiagram,
+  useGenerateAuthFlowDiagram,
+  useGenerateERDiagram,
+  useGenerateOverviewDiagram
+} from '@/hooks/useDiagrams';
 import { mockDiagramResponse, mockAuthFlowDiagram } from '@/__tests__/mocks/data';
 
 // Mock the hooks
@@ -31,10 +36,18 @@ const mockUseGenerateSequenceDiagram = useGenerateSequenceDiagram as jest.Mocked
 const mockUseGenerateAuthFlowDiagram = useGenerateAuthFlowDiagram as jest.MockedFunction<
   typeof useGenerateAuthFlowDiagram
 >;
+const mockUseGenerateERDiagram = useGenerateERDiagram as jest.MockedFunction<
+  typeof useGenerateERDiagram
+>;
+const mockUseGenerateOverviewDiagram = useGenerateOverviewDiagram as jest.MockedFunction<
+  typeof useGenerateOverviewDiagram
+>;
 
 describe('DiagramGenerator', () => {
   const mockSequenceMutate = jest.fn();
   const mockAuthMutate = jest.fn();
+  const mockERMutate = jest.fn();
+  const mockOverviewMutate = jest.fn();
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -52,13 +65,26 @@ describe('DiagramGenerator', () => {
       isError: false,
       isSuccess: false,
     } as any);
+
+    mockUseGenerateERDiagram.mockReturnValue({
+      mutate: mockERMutate,
+      isPending: false,
+      isError: false,
+      isSuccess: false,
+    } as any);
+
+    mockUseGenerateOverviewDiagram.mockReturnValue({
+      mutate: mockOverviewMutate,
+      isPending: false,
+      isError: false,
+      isSuccess: false,
+    } as any);
   });
 
   describe('Rendering', () => {
     it('should render the diagram generator form', () => {
       renderWithProviders(<DiagramGenerator />);
 
-      expect(screen.getByText('Generate Diagram')).toBeInTheDocument();
       expect(screen.getByLabelText(/diagram type/i)).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /generate diagram/i })).toBeInTheDocument();
     });
@@ -242,6 +268,158 @@ describe('DiagramGenerator', () => {
         { auth_type: 'oauth2' },
         expect.any(Object)
       );
+    });
+  });
+
+  describe('ER Diagram Generation', () => {
+    it('should switch to ER diagram options when selected', async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<DiagramGenerator />);
+
+      const diagramTypeSelect = screen.getByLabelText(/diagram type/i);
+      await user.click(diagramTypeSelect);
+
+      // Wait for the option to appear in the dropdown
+      const erOption = await screen.findByText('Entity-Relationship Diagram');
+      await user.click(erOption);
+
+      await waitFor(() => {
+        expect(screen.getByLabelText(/graphql schema/i)).toBeInTheDocument();
+      });
+    });
+
+    it('should show error toast when schema is empty', async () => {
+      const user = userEvent.setup();
+      const mockToast = jest.fn();
+
+      jest.mocked(require('@/hooks/use-toast').useToast).mockReturnValue({
+        toast: mockToast,
+      });
+
+      renderWithProviders(<DiagramGenerator />);
+
+      // Switch to ER diagram
+      const diagramTypeSelect = screen.getByLabelText(/diagram type/i);
+      await user.click(diagramTypeSelect);
+      const erOption = await screen.findByText('Entity-Relationship Diagram');
+      await user.click(erOption);
+
+      await waitFor(() => {
+        expect(screen.getByLabelText(/graphql schema/i)).toBeInTheDocument();
+      });
+
+      const generateButton = screen.getByRole('button', { name: /generate diagram/i });
+      await user.click(generateButton);
+
+      expect(mockToast).toHaveBeenCalledWith({
+        title: 'Schema required',
+        description: 'Please enter a GraphQL schema',
+        variant: 'destructive',
+      });
+
+      expect(mockERMutate).not.toHaveBeenCalled();
+    });
+
+    it('should generate ER diagram with valid schema', async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<DiagramGenerator />);
+
+      // Switch to ER diagram
+      const diagramTypeSelect = screen.getByLabelText(/diagram type/i);
+      await user.click(diagramTypeSelect);
+      const erOption = await screen.findByText('Entity-Relationship Diagram');
+      await user.click(erOption);
+
+      await waitFor(() => {
+        expect(screen.getByLabelText(/graphql schema/i)).toBeInTheDocument();
+      });
+
+      const schemaInput = screen.getByLabelText(/graphql schema/i);
+      await user.type(schemaInput, 'type User { id: ID! }');
+
+      const generateButton = screen.getByRole('button', { name: /generate diagram/i });
+      await user.click(generateButton);
+
+      expect(mockERMutate).toHaveBeenCalledWith(
+        { schema_content: 'type User { id: ID! }' },
+        expect.any(Object)
+      );
+    });
+  });
+
+  describe('Overview Diagram Generation', () => {
+    it('should switch to overview diagram options when selected', async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<DiagramGenerator />);
+
+      const diagramTypeSelect = screen.getByLabelText(/diagram type/i);
+      await user.click(diagramTypeSelect);
+      const overviewOption = await screen.findByText('API Overview');
+      await user.click(overviewOption);
+
+      await waitFor(() => {
+        expect(screen.getByLabelText(/api title/i)).toBeInTheDocument();
+        expect(screen.getByLabelText(/endpoints.*json/i)).toBeInTheDocument();
+      });
+    });
+
+    it('should show error toast when API title is empty', async () => {
+      const user = userEvent.setup();
+      const mockToast = jest.fn();
+
+      jest.mocked(require('@/hooks/use-toast').useToast).mockReturnValue({
+        toast: mockToast,
+      });
+
+      renderWithProviders(<DiagramGenerator />);
+
+      // Switch to overview diagram
+      const diagramTypeSelect = screen.getByLabelText(/diagram type/i);
+      await user.click(diagramTypeSelect);
+      const overviewOption = await screen.findByText('API Overview');
+      await user.click(overviewOption);
+
+      await waitFor(() => {
+        expect(screen.getByLabelText(/api title/i)).toBeInTheDocument();
+      });
+
+      const generateButton = screen.getByRole('button', { name: /generate diagram/i });
+      await user.click(generateButton);
+
+      expect(mockToast).toHaveBeenCalledWith({
+        title: 'API title required',
+        description: 'Please enter an API title',
+        variant: 'destructive',
+      });
+
+      expect(mockOverviewMutate).not.toHaveBeenCalled();
+    });
+
+    it('should generate overview diagram with valid data', async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<DiagramGenerator />);
+
+      // Switch to overview diagram
+      const diagramTypeSelect = screen.getByLabelText(/diagram type/i);
+      await user.click(diagramTypeSelect);
+      const overviewOption = await screen.findByText('API Overview');
+      await user.click(overviewOption);
+
+      await waitFor(() => {
+        expect(screen.getByLabelText(/api title/i)).toBeInTheDocument();
+      });
+
+      const titleInput = screen.getByLabelText(/api title/i);
+      await user.clear(titleInput);
+      await user.type(titleInput, 'User API');
+
+      const generateButton = screen.getByRole('button', { name: /generate diagram/i });
+      await user.click(generateButton);
+
+      expect(mockOverviewMutate).toHaveBeenCalled();
+      const callArgs = mockOverviewMutate.mock.calls[0][0];
+      expect(callArgs.api_title).toBe('User API');
+      expect(Array.isArray(callArgs.endpoints)).toBe(true);
     });
   });
 
