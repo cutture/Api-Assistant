@@ -771,6 +771,27 @@ def create_app(
             )
 
     @app.get(
+        "/sessions/stats",
+        response_model=SessionStatsResponse,
+        tags=["Sessions"],
+    )
+    async def get_session_stats():
+        """
+        Get session statistics.
+
+        Returns counts of total, active, inactive, and expired sessions.
+        """
+        try:
+            stats = session_manager.get_stats()
+            return SessionStatsResponse(**stats)
+        except Exception as e:
+            logger.error("Error getting session stats", exc_info=e)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error getting session stats: {str(e)}",
+            )
+
+    @app.get(
         "/sessions/{session_id}",
         response_model=Session,
         tags=["Sessions"],
@@ -914,27 +935,6 @@ def create_app(
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Error deleting session: {str(e)}",
-            )
-
-    @app.get(
-        "/sessions/stats",
-        response_model=SessionStatsResponse,
-        tags=["Sessions"],
-    )
-    async def get_session_stats():
-        """
-        Get session statistics.
-
-        Returns counts of total, active, inactive, and expired sessions.
-        """
-        try:
-            stats = session_manager.get_stats()
-            return SessionStatsResponse(**stats)
-        except Exception as e:
-            logger.error("Error getting session stats", exc_info=e)
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Error getting session stats: {str(e)}",
             )
 
     @app.post(
