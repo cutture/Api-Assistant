@@ -138,6 +138,15 @@ class FlowDiagram:
             label = node_data.get("label", node_id)
             shape = node_data.get("shape", "rectangle")
 
+            # Escape special characters in labels by wrapping in quotes if needed
+            # Check if label contains special characters that need quoting
+            special_chars = ['(', ')', '[', ']', '{', '}', '#', ':', ';', '|', '&']
+            needs_quotes = any(char in label for char in special_chars)
+
+            if needs_quotes:
+                # Use double quotes and escape any quotes in the label
+                label = f'"{label.replace(chr(34), chr(34) + chr(34))}"'
+
             # Different shapes
             if shape == "rectangle":
                 lines.append(f"    {node_id}[{label}]")
