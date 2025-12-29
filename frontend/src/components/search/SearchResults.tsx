@@ -7,8 +7,11 @@
 import { SearchResult } from "@/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { FileText, Globe, Code, AlertCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { FileText, Globe, Code, AlertCircle, Copy, Check } from "lucide-react";
 import { useSearchStore } from "@/lib/stores/searchStore";
+import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 export function SearchResults() {
   const { results, isSearching, searchError, searchTime, query } = useSearchStore();
@@ -96,6 +99,8 @@ interface SearchResultCardProps {
 
 function SearchResultCard({ result, rank }: SearchResultCardProps) {
   const { id, content, metadata, score } = result;
+  const [copied, setCopied] = useState(false);
+  const { toast } = useToast();
 
   const getSourceIcon = (source: string) => {
     switch (source) {
@@ -118,6 +123,16 @@ function SearchResultCard({ result, rank }: SearchResultCardProps) {
         ? metadata.tags
         : metadata.tags.split(',').filter(t => t.trim()))
     : [];
+
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(id);
+    setCopied(true);
+    toast({
+      title: "Document ID copied",
+      description: "Use this ID to generate sequence diagrams",
+    });
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   return (
     <Card className="hover:shadow-md transition-shadow">
@@ -200,6 +215,38 @@ function SearchResultCard({ result, rank }: SearchResultCardProps) {
               </pre>
             </details>
           )}
+
+          {/* Document ID */}
+          <div className="mt-3 pt-3 border-t">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex-1 min-w-0">
+                <label className="text-xs text-muted-foreground font-medium">
+                  Document ID
+                </label>
+                <p className="text-xs font-mono text-muted-foreground mt-1 truncate">
+                  {id}
+                </p>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={copyToClipboard}
+                className="shrink-0"
+              >
+                {copied ? (
+                  <>
+                    <Check className="h-3 w-3 mr-1" />
+                    Copied
+                  </>
+                ) : (
+                  <>
+                    <Copy className="h-3 w-3 mr-1" />
+                    Copy ID
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
         </div>
       </CardContent>
     </Card>
