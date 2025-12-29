@@ -95,9 +95,25 @@ An AI-powered assistant that helps developers understand, document, and generate
   - Session defaults (TTL, auto-cleanup)
 - **Complete Diagram UI**: All 4 diagram types with dedicated input forms
 - **Session Management**: Create, update, delete, and filter user sessions
+  - **Session Update UI**: Inline editing of session metadata, TTL, and settings
+  - **Edit/Save/Cancel**: Full session modification with validation
 - **Chat Interface**: AI-powered conversations with source citations
 - **Search Interface**: Advanced search with filters and result display
 - **Document Management**: Upload and manage API specifications
+- **🌙 Dark Mode Support**: Light/Dark/System themes with live switching
+  - Theme persistence via localStorage
+  - System preference detection with auto-updates
+  - Seamless theme toggle in Settings page
+- **🔒 Authentication & Authorization**: Production-ready auth system
+  - Login page with email/password authentication
+  - Guest mode for local testing (no auth required)
+  - Protected routes with automatic redirect
+  - User menu with logout functionality
+  - localStorage session persistence
+- **🔄 Request Retry Logic**: Automatic retry with exponential backoff
+  - Auto-retry on 408, 429, 500, 502, 503, 504 errors
+  - 3 retries max with 1s → 2s → 4s delays
+  - Improved resilience against transient failures
 - **Production Ready**: Docker deployment, health checks, CI/CD pipelines
 
 ### 🧪 **Comprehensive Testing (v1.0.0 Latest!)**
@@ -125,7 +141,9 @@ An AI-powered assistant that helps developers understand, document, and generate
 - **UI Library**: React 19.2.3 with TypeScript 5.x
 - **State Management**: React Query 5.90.12 (server) + Zustand 5.0.9 (UI)
 - **Components**: Radix UI primitives with Tailwind CSS 3.4.19
-- **HTTP Client**: Axios 1.13.2 with interceptors
+- **HTTP Client**: Axios 1.13.2 with interceptors + retry logic
+- **Authentication**: Custom AuthContext with localStorage persistence
+- **Theming**: ThemeProvider with light/dark/system mode support
 - **Diagrams**: Mermaid 11.12.2 with react-mermaid2
 - **Testing**: Jest 30.2.0, React Testing Library 16.3.1, Playwright 1.57.0
 - **DevOps**: Docker multi-stage builds, GitHub Actions CI/CD

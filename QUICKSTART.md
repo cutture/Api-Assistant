@@ -51,6 +51,20 @@ Access:
 
 ## First Steps
 
+### 🔐 Login / Guest Access
+
+When you first access http://localhost:3000, you'll see the login page:
+
+1. **For Local Testing (Recommended)**: Click "Continue as Guest"
+   - Full access to all features without authentication
+   - Perfect for development and testing
+
+2. **For Production**: Sign in with email and password
+   - User session persistence
+   - Logout available in navbar
+
+### 📚 Using the Application
+
 1. **Upload API Documentation**
    - Navigate to http://localhost:3000
    - Click "Documents" → "Upload"
@@ -66,10 +80,12 @@ Access:
    - Ask questions about your APIs
    - Get code examples and integration help
 
-4. **Create Sessions**
+4. **Manage Sessions**
    - Navigate to "Sessions"
    - Create a new session to track conversations
-   - Customize search settings per session
+   - **Edit Sessions**: Click "View" on any session, then click "Edit" button
+   - Update user ID, TTL, re-ranking, and query expansion settings
+   - Save changes with inline form
 
 5. **Generate Diagrams**
    - Visit "Diagrams" tab
@@ -82,7 +98,10 @@ Access:
    - Navigate to "Settings" tab
    - **LLM Provider**: Choose Ollama (local) or Groq (cloud)
    - **Search Defaults**: Set default mode, re-ranking, query expansion, diversification
-   - **UI Preferences**: Configure theme, scores display, metadata visibility
+   - **UI Preferences**:
+     - **Theme**: Select Light, Dark, or System (auto-detect)
+     - Theme changes apply instantly
+     - Scores display, metadata visibility
    - **Session Defaults**: Set TTL and auto-cleanup preferences
    - All settings auto-save to localStorage
 
