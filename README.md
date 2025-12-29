@@ -63,11 +63,12 @@ An AI-powered assistant that helps developers understand, document, and generate
 - **Shell Completion**: Auto-completion for commands
 
 ### 📊 **Diagram Generation (v1.0.0 New!)**
-- **Sequence Diagrams**: API request/response flows
-- **ER Diagrams**: GraphQL schema visualization
-- **Flow Diagrams**: Authentication flows (OAuth2, Bearer, API Key)
-- **API Overview**: High-level API structure diagrams
-- **Mermaid Format**: GitHub-compatible diagram export
+- **Sequence Diagrams**: API request/response flows with participants and interactions
+- **Authentication Flow**: OAuth2, Bearer, API Key, and Basic auth visualizations
+- **ER Diagrams**: GraphQL schema entity-relationship visualization
+- **API Overview**: High-level API structure and endpoint groupings
+- **All 4 Types Exposed**: Complete frontend UI for all diagram generation
+- **Mermaid Format**: GitHub-compatible diagram export with live preview
 
 ### 🔄 **Multi-Format Support (v1.0.0 New!)**
 - **OpenAPI 3.0+**: Full YAML and JSON support
@@ -84,15 +85,50 @@ An AI-powered assistant that helps developers understand, document, and generate
 - **Rate Limiting**: Token bucket per-user limits
 - **API Key Auth**: Secure API access
 
+### 🎨 **Modern Web Frontend (v1.0.0 Latest!)**
+- **Next.js 16 + React 19**: Modern App Router architecture
+- **TypeScript Throughout**: Full type safety across the stack
+- **Comprehensive Settings Page**: Configure all application preferences
+  - LLM Provider selection (Ollama/Groq) with dynamic configuration
+  - Search defaults (mode, re-ranking, query expansion, diversification)
+  - UI preferences (theme, scores, metadata display)
+  - Session defaults (TTL, auto-cleanup)
+- **Complete Diagram UI**: All 4 diagram types with dedicated input forms
+- **Session Management**: Create, update, delete, and filter user sessions
+- **Chat Interface**: AI-powered conversations with source citations
+- **Search Interface**: Advanced search with filters and result display
+- **Document Management**: Upload and manage API specifications
+- **Production Ready**: Docker deployment, health checks, CI/CD pipelines
+
+### 🧪 **Comprehensive Testing (v1.0.0 Latest!)**
+- **Backend Tests**: 831 tests with 99.9% pass rate
+- **Frontend Unit Tests**: Component testing with Jest + React Testing Library
+- **Integration Tests**: API client testing with MSW (Mock Service Worker)
+- **E2E Tests**: 7 complete user flow tests with Playwright
+  - Sessions, Diagrams, Navigation (existing)
+  - Document Upload, Chat, Search, Error Scenarios (new)
+- **Test Coverage**: 931+ total tests across backend and frontend
+
 ## 🛠️ Tech Stack
 
-- **UI**: Streamlit with real-time agent status
-- **LLM**: Ollama (DeepSeek Coder) / Groq (Llama 3.3 70B, DeepSeek R1)
-- **Embeddings**: Sentence Transformers (all-MiniLM-L6-v2)
+### Backend
+- **Framework**: FastAPI with async/await support
+- **Agent System**: LangGraph StateGraph for multi-agent orchestration
 - **Vector DB**: ChromaDB with persistent storage
-- **Agent Framework**: LangGraph StateGraph
+- **Embeddings**: Sentence Transformers (all-MiniLM-L6-v2)
+- **LLM Providers**: Ollama (local) / Groq (cloud)
 - **Monitoring**: Langfuse integration
 - **API Parsing**: Prance + OpenAPI Spec Validator
+
+### Frontend
+- **Framework**: Next.js 16.1.1 with App Router
+- **UI Library**: React 19.2.3 with TypeScript 5.x
+- **State Management**: React Query 5.90.12 (server) + Zustand 5.0.9 (UI)
+- **Components**: Radix UI primitives with Tailwind CSS 3.4.19
+- **HTTP Client**: Axios 1.13.2 with interceptors
+- **Diagrams**: Mermaid 11.12.2 with react-mermaid2
+- **Testing**: Jest 30.2.0, React Testing Library 16.3.1, Playwright 1.57.0
+- **DevOps**: Docker multi-stage builds, GitHub Actions CI/CD
 
 ## 📋 Prerequisites
 
@@ -206,45 +242,75 @@ Watch the agents work in real-time:
 
 ```
 api-assistant/
-├── src/
-│   ├── app.py                # Main Streamlit application
-│   ├── main.py               # Response generation logic
-│   ├── config.py             # Configuration management
+├── src/                      # Backend source code
+│   ├── api/                  # FastAPI REST API
+│   │   ├── app.py            # Main FastAPI application
+│   │   └── models.py         # Pydantic request/response models
 │   ├── agents/               # Multi-agent system
 │   │   ├── supervisor.py     # LangGraph orchestrator
 │   │   ├── query_analyzer.py # Intent classifier
 │   │   ├── rag_agent.py      # RAG pipeline
 │   │   ├── code_agent.py     # Code generator
-│   │   ├── doc_analyzer.py   # Doc quality checker
 │   │   └── state.py          # Agent state management
 │   ├── core/                 # Core services
+│   │   ├── vector_store.py   # Advanced search (hybrid, re-ranking)
 │   │   ├── llm_client.py     # LLM abstraction (Ollama/Groq)
 │   │   ├── embeddings.py     # Embedding service
-│   │   └── monitoring.py     # Langfuse integration
-│   ├── services/             # Business logic
-│   │   ├── vector_store.py   # ChromaDB operations
-│   │   └── openapi_parser.py # API spec parsing
-│   ├── templates/            # Code generation templates
-│   │   └── code_templates.py
-│   └── ui/                   # UI components
-│       ├── chat.py           # Chat interface with agent display
-│       └── sidebar.py        # Sidebar controls
-├── tests/                    # 458 comprehensive tests
-│   ├── test_agents/          # Agent tests (200 tests)
-│   ├── test_core/            # Core functionality (31 tests)
-│   ├── test_e2e/             # End-to-end tests (21 tests)
-│   ├── test_ui/              # UI component tests (19 tests)
-│   ├── validate_tests.py     # Test structure validator
-│   └── README.md             # Testing documentation
+│   │   └── filters.py        # Advanced filtering system
+│   ├── parsers/              # Multi-format parsers
+│   │   ├── openapi_parser.py # OpenAPI 3.0+ parser
+│   │   ├── graphql_parser.py # GraphQL schema parser
+│   │   └── postman_parser.py # Postman collection parser
+│   ├── diagrams/             # Diagram generation
+│   │   └── mermaid_generator.py # Mermaid diagram generator
+│   ├── sessions/             # Session management
+│   │   └── session_manager.py # Multi-user session handling
+│   └── cli/                  # CLI tool (30+ commands)
+│       └── main.py           # Typer CLI application
+├── frontend/                 # Next.js frontend application
+│   ├── src/
+│   │   ├── app/              # Next.js App Router pages
+│   │   │   ├── page.tsx      # Home page
+│   │   │   ├── search/       # Search interface
+│   │   │   ├── chat/         # AI chat interface
+│   │   │   ├── sessions/     # Session management
+│   │   │   ├── diagrams/     # Diagram generation (4 types)
+│   │   │   ├── documents/    # Document upload
+│   │   │   └── settings/     # Settings page (NEW)
+│   │   ├── components/       # React components
+│   │   │   ├── sessions/     # Session components
+│   │   │   ├── diagrams/     # Diagram components
+│   │   │   ├── ui/           # Radix UI components
+│   │   │   └── layout/       # Layout components
+│   │   ├── hooks/            # React Query hooks
+│   │   ├── lib/              # API clients and utilities
+│   │   ├── stores/           # Zustand state management (NEW)
+│   │   └── types/            # TypeScript type definitions
+│   ├── e2e/                  # E2E tests with Playwright (NEW)
+│   │   ├── sessions.spec.ts
+│   │   ├── diagrams.spec.ts
+│   │   ├── navigation.spec.ts
+│   │   ├── document-upload.spec.ts (NEW)
+│   │   ├── chat.spec.ts (NEW)
+│   │   ├── search.spec.ts (NEW)
+│   │   └── error-scenarios.spec.ts (NEW)
+│   └── __tests__/            # Unit & integration tests
+├── tests/                    # Backend tests (831 tests, 99.9% pass)
+│   ├── test_agents/          # Agent tests
+│   ├── test_core/            # Core functionality
+│   ├── test_api/             # REST API tests
+│   ├── test_parsers/         # Parser tests
+│   └── test_diagrams/        # Diagram tests
 ├── docs/                     # Documentation
-│   ├── LLM_PROVIDER_GUIDE.md # LLM provider switching guide
-│   ├── MONITORING_GUIDE.md   # Monitoring & observability
-│   ├── AGENT_ARCHITECTURE.md # Multi-agent system design
-│   └── *.md                  # Additional guides
-├── scripts/                  # Deployment & operations
-│   ├── deployment/           # Cloud deployment scripts
-│   ├── backup/               # Backup & restore scripts
-│   └── monitoring/           # Monitoring & health checks
+│   ├── ARCHITECTURAL_REVIEW.md # Comprehensive architecture analysis
+│   ├── LLM_PROVIDER_GUIDE.md   # LLM provider switching guide
+│   ├── AGENT_ARCHITECTURE.md   # Multi-agent system design
+│   └── Week_*/                 # Weekly development guides
+├── scripts/                  # Deployment scripts
+│   ├── deploy.sh             # Multi-environment deployment
+│   ├── local-dev.sh          # Local development setup
+│   ├── health-check.sh       # Health monitoring
+│   └── verify-production.sh  # Production readiness checks
 ├── data/
 │   └── chroma_db/            # Vector database storage
 ├── requirements.txt          # Python dependencies

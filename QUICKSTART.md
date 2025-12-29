@@ -73,12 +73,32 @@ Access:
 
 5. **Generate Diagrams**
    - Visit "Diagrams" tab
-   - Generate sequence diagrams from endpoints
-   - Create authentication flow diagrams
+   - **Sequence Diagrams**: Generate from endpoint document IDs
+   - **Authentication Flows**: OAuth2, Bearer Token, API Key, Basic Auth
+   - **ER Diagrams**: Paste GraphQL schema for entity-relationship visualization
+   - **API Overview**: Generate API structure diagrams from endpoint collections
+
+6. **Configure Settings**
+   - Navigate to "Settings" tab
+   - **LLM Provider**: Choose Ollama (local) or Groq (cloud)
+   - **Search Defaults**: Set default mode, re-ranking, query expansion, diversification
+   - **UI Preferences**: Configure theme, scores display, metadata visibility
+   - **Session Defaults**: Set TTL and auto-cleanup preferences
+   - All settings auto-save to localStorage
 
 ## Configuration
 
-### LLM Provider
+### LLM Provider (via Settings Page or Environment)
+
+You can configure the LLM provider either through the **Settings page** in the UI or via environment variables.
+
+**Settings Page (Recommended for Development):**
+1. Navigate to http://localhost:3000/settings
+2. Select "Ollama (Local)" or "Groq (Cloud)"
+3. Enter Ollama base URL or Groq API key
+4. Settings are saved automatically
+
+**Environment Variables (Recommended for Production):**
 
 Choose between local (Ollama) or cloud (Groq):
 
