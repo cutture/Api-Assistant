@@ -443,13 +443,23 @@ class SessionManager:
             List of matching sessions
         """
         with self.lock:
+            # Update session statuses based on expiration before filtering
+            for session in self.sessions.values():
+                if session.is_expired() and session.status != SessionStatus.EXPIRED:
+                    session.status = SessionStatus.EXPIRED
+
             sessions = list(self.sessions.values())
 
             if user_id is not None:
                 sessions = [s for s in sessions if s.user_id == user_id]
 
             if status is not None:
-                sessions = [s for s in sessions if s.status == status]
+                # For filtering, also consider expired sessions when filtering by status
+                if status == SessionStatus.EXPIRED:
+                    sessions = [s for s in sessions if s.is_expired()]
+                else:
+                    # For ACTIVE and INACTIVE, only include non-expired sessions
+                    sessions = [s for s in sessions if s.status == status and not s.is_expired()]
 
             return sessions
 
