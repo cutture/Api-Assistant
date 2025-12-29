@@ -27,13 +27,16 @@ export interface DocumentMetadata {
 }
 
 // Search Types
+export type SearchMode = "vector" | "hybrid" | "reranked";
+
 export interface SearchRequest {
   query: string;
   n_results?: number;
-  use_hybrid?: boolean;
-  use_reranking?: boolean;
-  use_query_expansion?: boolean;
+  mode?: SearchMode;
   filter?: SearchFilters;
+  use_query_expansion?: boolean;
+  use_diversification?: boolean;
+  diversification_lambda?: number;
 }
 
 export interface SearchFilters {

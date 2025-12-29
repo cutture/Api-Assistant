@@ -3,13 +3,12 @@
  */
 
 import { create } from "zustand";
-import { SearchRequest, SearchResult } from "@/types";
+import { SearchRequest, SearchResult, SearchMode } from "@/types";
 
 interface SearchState {
   // Search configuration
   query: string;
-  useHybrid: boolean;
-  useReranking: boolean;
+  mode: SearchMode;
   useQueryExpansion: boolean;
   resultsLimit: number;
 
@@ -21,8 +20,7 @@ interface SearchState {
 
   // Actions
   setQuery: (query: string) => void;
-  setUseHybrid: (use: boolean) => void;
-  setUseReranking: (use: boolean) => void;
+  setMode: (mode: SearchMode) => void;
   setUseQueryExpansion: (use: boolean) => void;
   setResultsLimit: (limit: number) => void;
   setResults: (results: SearchResult[]) => void;
@@ -34,8 +32,7 @@ interface SearchState {
 
 const initialState = {
   query: "",
-  useHybrid: false,
-  useReranking: false,
+  mode: "hybrid" as SearchMode,
   useQueryExpansion: false,
   resultsLimit: 10,
   results: [],
@@ -48,8 +45,7 @@ export const useSearchStore = create<SearchState>((set) => ({
   ...initialState,
 
   setQuery: (query) => set({ query }),
-  setUseHybrid: (useHybrid) => set({ useHybrid }),
-  setUseReranking: (useReranking) => set({ useReranking }),
+  setMode: (mode) => set({ mode }),
   setUseQueryExpansion: (useQueryExpansion) => set({ useQueryExpansion }),
   setResultsLimit: (resultsLimit) => set({ resultsLimit }),
   setResults: (results) => set({ results }),

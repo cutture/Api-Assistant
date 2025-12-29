@@ -23,10 +23,11 @@ export async function search(
     data: {
       query: request.query,
       n_results: request.n_results || 5,
-      use_hybrid: request.use_hybrid ?? false,
-      use_reranking: request.use_reranking ?? false,
-      use_query_expansion: request.use_query_expansion ?? false,
+      mode: request.mode || "hybrid",
       filter: request.filter,
+      use_query_expansion: request.use_query_expansion ?? false,
+      use_diversification: request.use_diversification ?? false,
+      diversification_lambda: request.diversification_lambda ?? 0.5,
     },
   });
 }
@@ -43,9 +44,6 @@ export async function facetedSearch(
     data: {
       query: request.query,
       n_results: request.n_results || 5,
-      use_hybrid: request.use_hybrid ?? false,
-      use_reranking: request.use_reranking ?? false,
-      use_query_expansion: request.use_query_expansion ?? false,
       facet_fields: request.facet_fields,
       filter: request.filter,
     },
@@ -66,9 +64,7 @@ export async function quickSearch(
   const request: SearchRequest = {
     query,
     n_results: options?.limit || 10,
-    use_hybrid: false,
-    use_reranking: false,
-    use_query_expansion: false,
+    mode: "vector",
   };
 
   // Add simple filters if provided
@@ -115,8 +111,7 @@ export async function advancedSearch(
   return search({
     query,
     n_results: options?.limit || 10,
-    use_hybrid: true,
-    use_reranking: true,
+    mode: "reranked",
     use_query_expansion: true,
     filter: options?.filter,
   });

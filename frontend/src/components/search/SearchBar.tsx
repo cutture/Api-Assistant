@@ -22,10 +22,8 @@ export function SearchBar({ onSearch, isSearching }: SearchBarProps) {
   const {
     query,
     setQuery,
-    useHybrid,
-    setUseHybrid,
-    useReranking,
-    setUseReranking,
+    mode,
+    setMode,
     useQueryExpansion,
     setUseQueryExpansion,
     resultsLimit,
@@ -80,22 +78,26 @@ export function SearchBar({ onSearch, isSearching }: SearchBarProps) {
             <Label className="text-sm font-medium mb-3 block">
               Search Options
             </Label>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {/* Hybrid Search */}
-              <OptionToggle
-                label="Hybrid Search"
-                description="Combine vector and BM25 search"
-                checked={useHybrid}
-                onChange={setUseHybrid}
-              />
-
-              {/* Reranking */}
-              <OptionToggle
-                label="Re-ranking"
-                description="Use cross-encoder for better relevance"
-                checked={useReranking}
-                onChange={setUseReranking}
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* Search Mode */}
+              <div className="flex flex-col space-y-2">
+                <Label htmlFor="mode" className="text-sm font-medium">
+                  Search Mode
+                </Label>
+                <select
+                  id="mode"
+                  value={mode}
+                  onChange={(e) => setMode(e.target.value as any)}
+                  className={cn(
+                    "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors",
+                    "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  )}
+                >
+                  <option value="vector">Vector (Fast)</option>
+                  <option value="hybrid">Hybrid (BM25 + Vector)</option>
+                  <option value="reranked">Reranked (Best Quality)</option>
+                </select>
+              </div>
 
               {/* Query Expansion */}
               <OptionToggle

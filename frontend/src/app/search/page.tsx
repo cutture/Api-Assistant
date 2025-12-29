@@ -19,7 +19,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 export default function SearchPage() {
   const { mutate: search } = useSearch();
   const { mutate: facetedSearch } = useFacetedSearch();
-  const { useHybrid, useReranking, useQueryExpansion, resultsLimit } = useSearchStore();
+  const { mode, useQueryExpansion, resultsLimit } = useSearchStore();
   const [simpleFilters, setSimpleFilters] = useState<Filter[]>([]);
   const [advancedFilters, setAdvancedFilters] = useState<SearchFilters | null>(null);
   const [facets, setFacets] = useState<any[]>([]);
@@ -32,8 +32,7 @@ export default function SearchPage() {
     const request: SearchRequest = {
       query,
       n_results: resultsLimit,
-      use_hybrid: useHybrid,
-      use_reranking: useReranking,
+      mode: mode,
       use_query_expansion: useQueryExpansion,
     };
 
