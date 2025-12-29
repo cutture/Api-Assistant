@@ -401,3 +401,72 @@ class DiagramResponse(BaseModel):
     diagram_type: DiagramType = Field(..., description="Type of diagram")
     mermaid_code: str = Field(..., description="Mermaid diagram code")
     title: Optional[str] = Field(None, description="Diagram title")
+
+
+# Chat Models
+class ChatMessageRole(str, Enum):
+    """Chat message roles."""
+
+    USER = "user"
+    ASSISTANT = "assistant"
+    SYSTEM = "system"
+
+
+class ChatMessage(BaseModel):
+    """A single chat message."""
+
+    role: ChatMessageRole = Field(..., description="Message role")
+    content: str = Field(..., description="Message content")
+    timestamp: Optional[str] = Field(None, description="ISO timestamp")
+
+
+class ChatSource(BaseModel):
+    """Source reference in chat response."""
+
+    type: str = Field(..., description="Source type (scraped_url, indexed_doc)")
+    title: str = Field(..., description="Source title")
+    url: Optional[str] = Field(None, description="Source URL")
+    api_name: Optional[str] = Field(None, description="API name")
+    method: Optional[str] = Field(None, description="HTTP method")
+    score: float = Field(..., description="Relevance score")
+
+
+class ChatRequest(BaseModel):
+    """Request for AI chat generation."""
+
+    message: str = Field(..., description="User message", min_length=1)
+    session_id: Optional[str] = Field(None, description="Session ID for history")
+    conversation_history: Optional[List[ChatMessage]] = Field(
+        default_factory=list,
+        description="Previous conversation messages (optional)",
+    )
+    enable_url_scraping: bool = Field(
+        True,
+        description="Enable automatic URL extraction and scraping",
+    )
+    enable_auto_indexing: bool = Field(
+        True,
+        description="Enable automatic indexing of scraped content",
+    )
+    agent_type: str = Field(
+        "general",
+        description="LLM agent type (general, code, reasoning)",
+    )
+
+
+class ChatResponse(BaseModel):
+    """Response from AI chat generation."""
+
+    response: str = Field(..., description="AI-generated response")
+    sources: List[ChatSource] = Field(
+        default_factory=list,
+        description="Sources used for context",
+    )
+    scraped_urls: List[str] = Field(
+        default_factory=list,
+        description="URLs that were scraped",
+    )
+    indexed_docs: int = Field(0, description="Number of documents indexed")
+    context_results: int = Field(0, description="Number of context results used")
+    session_id: Optional[str] = Field(None, description="Session ID")
+    timestamp: str = Field(..., description="Response timestamp")

@@ -24,6 +24,10 @@ from src.api.models import (
     AddMessageRequest,
     BulkDeleteRequest,
     BulkDeleteResponse,
+    ChatMessage,
+    ChatRequest,
+    ChatResponse,
+    ChatSource,
     CollectionStats,
     ConversationMessage,
     CreateSessionRequest,
@@ -971,6 +975,123 @@ def create_app(
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Error adding message: {str(e)}",
+            )
+
+    # AI Chat Endpoint
+    @app.post(
+        "/chat",
+        response_model=ChatResponse,
+        tags=["Chat"],
+    )
+    async def chat_generate(request: ChatRequest):
+        """
+        Generate AI-powered chat response with dynamic URL fetching and indexing.
+
+        This endpoint:
+        - Extracts URLs from the user message and scrapes their content
+        - Dynamically indexes scraped content into the vector store
+        - Searches for relevant context from existing documents
+        - Generates intelligent responses using LLM (Groq/Ollama)
+        - Supports code generation and API documentation assistance
+        - Maintains conversation history if session_id provided
+
+        Example:
+            POST /chat
+            {
+                "message": "I want to use the JSONPlaceholder API (https://jsonplaceholder.typicode.com). Write a Python script to fetch all users.",
+                "session_id": "abc123",
+                "agent_type": "code"
+            }
+        """
+        try:
+            from datetime import datetime, timezone
+            from src.services.chat_service import get_chat_service
+
+            logger.info("chat_request_received", message_length=len(request.message))
+
+            # Get chat service
+            chat_service = get_chat_service(
+                agent_type=request.agent_type,
+                enable_url_scraping=request.enable_url_scraping,
+                enable_auto_indexing=request.enable_auto_indexing,
+            )
+
+            # Convert conversation history to dict format
+            history_dicts = None
+            if request.conversation_history:
+                history_dicts = [
+                    {"role": msg.role.value, "content": msg.content}
+                    for msg in request.conversation_history
+                ]
+
+            # Generate response
+            result = await chat_service.generate_response(
+                user_message=request.message,
+                conversation_history=history_dicts,
+                session_id=request.session_id,
+            )
+
+            # Convert sources to ChatSource models
+            sources = [ChatSource(**source) for source in result["sources"]]
+
+            # Build response
+            response = ChatResponse(
+                response=result["response"],
+                sources=sources,
+                scraped_urls=result["scraped_urls"],
+                indexed_docs=result["indexed_docs"],
+                context_results=result["context_results"],
+                session_id=request.session_id,
+                timestamp=datetime.now(timezone.utc).isoformat(),
+            )
+
+            # If session provided, add messages to session history
+            if request.session_id:
+                try:
+                    session = session_manager.get_session(request.session_id)
+                    if session:
+                        # Add user message
+                        session.add_message(
+                            role="user",
+                            content=request.message,
+                            metadata={
+                                "scraped_urls": result["scraped_urls"],
+                                "indexed_docs": result["indexed_docs"],
+                            },
+                        )
+                        # Add assistant response
+                        session.add_message(
+                            role="assistant",
+                            content=result["response"],
+                            metadata={
+                                "context_results": result["context_results"],
+                                "sources_count": len(sources),
+                            },
+                        )
+                        session_manager._save_sessions()
+                        logger.info("chat_history_saved", session_id=request.session_id)
+                except Exception as e:
+                    logger.warning(
+                        "chat_history_save_failed",
+                        session_id=request.session_id,
+                        error=str(e),
+                    )
+                    # Don't fail the request if history save fails
+
+            logger.info(
+                "chat_response_generated",
+                scraped_urls=len(result["scraped_urls"]),
+                indexed_docs=result["indexed_docs"],
+                context_results=result["context_results"],
+            )
+
+            return response
+
+        except Exception as e:
+            logger.error("chat_generation_failed", error=str(e), exc_info=e)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Chat generation failed: {str(e)}",
             )
 
     # Diagram Generation Endpoints

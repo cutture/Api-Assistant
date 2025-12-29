@@ -1,5 +1,5 @@
 /**
- * Chat page - Interactive chat interface
+ * Chat page - AI-powered chat interface with URL scraping and dynamic indexing
  */
 
 "use client";
@@ -7,63 +7,85 @@
 import { MainLayout } from "@/components/layout/MainLayout";
 import { ChatInterface } from "@/components/chat/ChatInterface";
 import { useToast } from "@/hooks/use-toast";
-import { search } from "@/lib/api/search";
+import { sendChatMessage, ChatMessage } from "@/lib/api/chat";
+import { useState } from "react";
 
 export default function ChatPage() {
   const { toast } = useToast();
+  const [conversationHistory, setConversationHistory] = useState<ChatMessage[]>([]);
+  const [sessionId] = useState<string>(() => `chat-${Date.now()}`);
 
   const handleSendMessage = async (message: string): Promise<string> => {
     try {
-      // Use advanced search to find relevant context
-      const response = await search({
-        query: message,
-        n_results: 3,
-        mode: "reranked",
-        use_query_expansion: true,
+      // Detect if user is asking for code generation
+      const codeKeywords = ["write", "generate", "create", "code", "script", "example", "show me"];
+      const askingForCode = codeKeywords.some(keyword =>
+        message.toLowerCase().includes(keyword)
+      );
+
+      // Send chat request with LLM
+      const response = await sendChatMessage({
+        message,
+        session_id: sessionId,
+        conversation_history: conversationHistory,
+        enable_url_scraping: true,
+        enable_auto_indexing: true,
+        agent_type: askingForCode ? "code" : "general",
       });
 
       if (response.error) {
         throw new Error(response.error);
       }
 
-      // Format response with relevant API information
-      const results = response.data?.results || [];
+      const chatResponse = response.data!;
 
-      if (results.length === 0) {
-        return "I couldn't find any relevant API documentation for your question. Please try rephrasing or ensure you have indexed API specifications.";
+      // Update conversation history
+      const newHistory: ChatMessage[] = [
+        ...conversationHistory,
+        { role: "user", content: message },
+        { role: "assistant", content: chatResponse.response },
+      ];
+      setConversationHistory(newHistory.slice(-20)); // Keep last 20 messages
+
+      // Format response with sources
+      let formattedResponse = chatResponse.response;
+
+      // Add metadata about scraped URLs and indexing
+      if (chatResponse.scraped_urls.length > 0) {
+        formattedResponse += `\n\n---\n**URLs Processed:** ${chatResponse.scraped_urls.length} URLs were scraped and indexed\n`;
+        chatResponse.scraped_urls.forEach((url, idx) => {
+          formattedResponse += `${idx + 1}. ${url}\n`;
+        });
       }
 
-      // Build response with top results
-      let responseText = "Based on your indexed APIs, here's what I found:\n\n";
+      // Add sources if available
+      if (chatResponse.sources.length > 0) {
+        formattedResponse += `\n\n---\n**Sources Used:**\n`;
+        chatResponse.sources.slice(0, 5).forEach((source, idx) => {
+          formattedResponse += `${idx + 1}. ${source.title}`;
+          if (source.method) {
+            formattedResponse += ` (${source.method})`;
+          }
+          if (source.url) {
+            formattedResponse += ` - ${source.url}`;
+          }
+          formattedResponse += `\n`;
+        });
+      }
 
-      results.forEach((result, index) => {
-        const metadata = result.metadata;
-        responseText += `### ${index + 1}. ${metadata.endpoint || metadata.path || "Endpoint"}\n`;
+      // Show info toast about scraping/indexing
+      if (chatResponse.scraped_urls.length > 0 || chatResponse.indexed_docs > 0) {
+        toast({
+          title: "Content Indexed",
+          description: `Scraped ${chatResponse.scraped_urls.length} URLs and indexed ${chatResponse.indexed_docs} documents`,
+        });
+      }
 
-        if (metadata.method) {
-          responseText += `**Method:** ${metadata.method}\n`;
-        }
-
-        if (metadata.api_name) {
-          responseText += `**API:** ${metadata.api_name}\n`;
-        }
-
-        if (metadata.description) {
-          responseText += `**Description:** ${metadata.description}\n`;
-        }
-
-        if (result.content) {
-          responseText += `\n\`\`\`json\n${result.content.slice(0, 300)}\n\`\`\`\n`;
-        }
-
-        responseText += `\n**Relevance Score:** ${(result.score * 100).toFixed(1)}%\n\n`;
-      });
-
-      return responseText;
+      return formattedResponse;
     } catch (error: any) {
       toast({
-        title: "Search Error",
-        description: error.message || "Failed to search APIs",
+        title: "Chat Error",
+        description: error.message || "Failed to generate response",
         variant: "destructive",
       });
       throw error;
@@ -74,9 +96,12 @@ export default function ChatPage() {
     <MainLayout showSidebar={false}>
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Chat Assistant</h1>
+          <h1 className="text-3xl font-bold tracking-tight">AI Chat Assistant</h1>
           <p className="text-muted-foreground mt-2">
-            Ask questions about your APIs and get instant answers
+            Ask questions, provide URLs to scrape, and get AI-powered answers with code examples
+          </p>
+          <p className="text-sm text-muted-foreground mt-1">
+            💡 Try: "I want to use the JSONPlaceholder API (https://jsonplaceholder.typicode.com). Write a Python script to fetch all users."
           </p>
         </div>
 
