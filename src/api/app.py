@@ -1070,7 +1070,17 @@ def create_app(
                             },
                         )
                         session_manager._save_sessions()
-                        logger.info("chat_history_saved", session_id=request.session_id)
+                        logger.info(
+                            "chat_history_saved",
+                            session_id=request.session_id,
+                            message_count=len(session.conversation_history),
+                        )
+                    else:
+                        logger.warning(
+                            "chat_session_not_found_or_expired",
+                            session_id=request.session_id,
+                            message="Session not found or expired - messages not saved",
+                        )
                 except Exception as e:
                     logger.warning(
                         "chat_history_save_failed",

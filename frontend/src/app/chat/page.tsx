@@ -8,7 +8,7 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { ChatInterface } from "@/components/chat/ChatInterface";
 import { useToast } from "@/hooks/use-toast";
 import { sendChatMessage, ChatMessage } from "@/lib/api/chat";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useCreateSession } from "@/hooks/useSessions";
 
 export default function ChatPage() {
@@ -16,17 +16,26 @@ export default function ChatPage() {
   const [conversationHistory, setConversationHistory] = useState<ChatMessage[]>([]);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const { mutate: createSession } = useCreateSession();
+  const sessionInitialized = useRef(false);
 
   // Create or restore session on mount
   useEffect(() => {
+    // Prevent double initialization in Strict Mode or re-renders
+    if (sessionInitialized.current) {
+      return;
+    }
+
     // Try to restore existing session from localStorage
     const storedSessionId = localStorage.getItem("chat_session_id");
 
     if (storedSessionId) {
       // Use existing session
+      console.log("Restoring session:", storedSessionId);
       setSessionId(storedSessionId);
+      sessionInitialized.current = true;
     } else {
-      // Create new session
+      // Create new session only once
+      console.log("Creating new session...");
       createSession(
         {
           ttl_minutes: 1440, // 24 hours
@@ -45,20 +54,23 @@ export default function ChatPage() {
         {
           onSuccess: (data) => {
             const newSessionId = data?.session_id || null;
+            console.log("Session created:", newSessionId);
             setSessionId(newSessionId);
             // Store in localStorage
             if (newSessionId) {
               localStorage.setItem("chat_session_id", newSessionId);
+              sessionInitialized.current = true;
             }
           },
           onError: (error: any) => {
             console.error("Failed to create session:", error);
-            // Continue without session if creation fails
+            sessionInitialized.current = true; // Mark as initialized even on error
           },
         }
       );
     }
-  }, [createSession]);
+    // Empty dependency array - only run once on mount
+  }, []);
 
   const handleSendMessage = async (message: string): Promise<string> => {
     try {
