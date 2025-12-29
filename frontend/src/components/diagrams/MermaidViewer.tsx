@@ -18,15 +18,18 @@ export interface MermaidViewerProps {
 
 export function MermaidViewer({ code, title }: MermaidViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const [svgContent, setSvgContent] = useState<string>("");
   const [isRendering, setIsRendering] = useState(false);
+  const [renderError, setRenderError] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
     const renderDiagram = async () => {
-      if (!containerRef.current || !code) return;
+      if (!code) return;
 
       try {
         setIsRendering(true);
+        setRenderError(null);
 
         // Initialize Mermaid
         mermaid.initialize({
@@ -36,29 +39,18 @@ export function MermaidViewer({ code, title }: MermaidViewerProps) {
           fontFamily: "arial, sans-serif",
         });
 
-        // Clear previous content
-        containerRef.current.innerHTML = "";
-
         // Generate a unique ID for this diagram
         const id = `mermaid-${Date.now()}`;
 
-        // Render the diagram
+        // Render the diagram to SVG string
         const { svg } = await mermaid.render(id, code);
 
-        // Insert the rendered SVG
-        if (containerRef.current) {
-          containerRef.current.innerHTML = svg;
-        }
+        // Store the SVG content in state (React will manage the DOM update)
+        setSvgContent(svg);
+
       } catch (error: any) {
         console.error("Mermaid rendering error:", error);
-        if (containerRef.current) {
-          containerRef.current.innerHTML = `
-            <div class="text-destructive p-4">
-              <p class="font-semibold">Failed to render diagram</p>
-              <p class="text-sm mt-1">${error.message || "Invalid Mermaid syntax"}</p>
-            </div>
-          `;
-        }
+        setRenderError(error.message || "Invalid Mermaid syntax");
         toast({
           title: "Rendering failed",
           description: error.message || "Failed to render diagram",
@@ -134,7 +126,7 @@ export function MermaidViewer({ code, title }: MermaidViewerProps) {
                 variant="outline"
                 size="sm"
                 onClick={handleDownloadSVG}
-                disabled={isRendering}
+                disabled={isRendering || !svgContent}
               >
                 <Download className="h-4 w-4 mr-2" />
                 Download SVG
@@ -152,6 +144,15 @@ export function MermaidViewer({ code, title }: MermaidViewerProps) {
             <div className="text-muted-foreground">
               Rendering diagram...
             </div>
+          )}
+          {renderError && !isRendering && (
+            <div className="text-destructive p-4">
+              <p className="font-semibold">Failed to render diagram</p>
+              <p className="text-sm mt-1">{renderError}</p>
+            </div>
+          )}
+          {svgContent && !isRendering && (
+            <div dangerouslySetInnerHTML={{ __html: svgContent }} />
           )}
         </div>
       </CardContent>
