@@ -266,9 +266,9 @@ export default function SessionsPage() {
                 {/* Conversation History */}
                 <div>
                   <p className="text-sm font-medium mb-2">
-                    Conversation History ({selectedSession.conversation_history.length} messages)
+                    Conversation History ({selectedSession.conversation_history?.length || 0} messages)
                   </p>
-                  {selectedSession.conversation_history.length > 0 ? (
+                  {selectedSession.conversation_history && selectedSession.conversation_history.length > 0 ? (
                     <div className="space-y-2 max-h-96 overflow-y-auto">
                       {selectedSession.conversation_history.map((msg, idx) => (
                         <div

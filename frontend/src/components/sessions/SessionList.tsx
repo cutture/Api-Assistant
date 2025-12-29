@@ -110,7 +110,7 @@ export function SessionList({ onSelectSession }: SessionListProps) {
                 <div className="flex-1 space-y-1">
                   <div className="flex items-center space-x-2">
                     <span className="font-medium font-mono text-sm">
-                      {session.session_id.substring(0, 8)}...
+                      {session.session_id ? session.session_id.substring(0, 8) : "unknown"}...
                     </span>
                     <Badge variant={getStatusBadgeVariant(session.status)}>
                       {session.status}
@@ -130,7 +130,7 @@ export function SessionList({ onSelectSession }: SessionListProps) {
                         {formatDistanceToNow(new Date(session.created_at), { addSuffix: true })}
                       </span>
                     </div>
-                    <span>{session.conversation_history.length} messages</span>
+                    <span>{session.conversation_history?.length || 0} messages</span>
                   </div>
                 </div>
 

@@ -43,9 +43,10 @@ export function SessionManager() {
       },
       {
         onSuccess: (data) => {
+          const sessionId = data?.session_id || "unknown";
           toast({
             title: "Session created",
-            description: `Session ID: ${data?.session_id.substring(0, 8)}...`,
+            description: `Session ID: ${sessionId.substring(0, 8)}...`,
           });
           // Reset form
           setUserId("");
