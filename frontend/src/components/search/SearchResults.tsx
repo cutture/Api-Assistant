@@ -112,6 +112,13 @@ function SearchResultCard({ result, rank }: SearchResultCardProps) {
 
   const SourceIcon = getSourceIcon(metadata?.source || "");
 
+  // Handle tags - backend stores as comma-separated string
+  const tags = metadata?.tags
+    ? (Array.isArray(metadata.tags)
+        ? metadata.tags
+        : metadata.tags.split(',').filter(t => t.trim()))
+    : [];
+
   return (
     <Card className="hover:shadow-md transition-shadow">
       <CardHeader className="pb-3">
@@ -166,16 +173,16 @@ function SearchResultCard({ result, rank }: SearchResultCardProps) {
             </p>
           )}
 
-          {metadata?.tags && metadata.tags.length > 0 && (
+          {tags.length > 0 && (
             <div className="flex flex-wrap gap-1 mt-2">
-              {metadata.tags.slice(0, 5).map((tag, i) => (
+              {tags.slice(0, 5).map((tag, i) => (
                 <Badge key={i} variant="secondary" className="text-xs">
                   {tag}
                 </Badge>
               ))}
-              {metadata.tags.length > 5 && (
+              {tags.length > 5 && (
                 <Badge variant="secondary" className="text-xs">
-                  +{metadata.tags.length - 5} more
+                  +{tags.length - 5} more
                 </Badge>
               )}
             </div>
