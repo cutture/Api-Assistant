@@ -14,11 +14,14 @@ import {
 } from '@/hooks/useDiagrams';
 import { mockDiagramResponse, mockAuthFlowDiagram } from '@/__tests__/mocks/data';
 
+// Create a mock toast function that can be controlled in tests
+const mockToast = jest.fn();
+
 // Mock the hooks
 jest.mock('@/hooks/useDiagrams');
 jest.mock('@/hooks/use-toast', () => ({
   useToast: () => ({
-    toast: jest.fn(),
+    toast: mockToast,
   }),
 }));
 jest.mock('../MermaidViewer', () => ({
@@ -167,11 +170,6 @@ describe('DiagramGenerator', () => {
 
     it('should show error toast when endpoint ID is empty', async () => {
       const user = userEvent.setup();
-      const mockToast = jest.fn();
-
-      jest.mocked(require('@/hooks/use-toast').useToast).mockReturnValue({
-        toast: mockToast,
-      });
 
       renderWithProviders(<DiagramGenerator />);
 
@@ -290,11 +288,6 @@ describe('DiagramGenerator', () => {
 
     it('should show error toast when schema is empty', async () => {
       const user = userEvent.setup();
-      const mockToast = jest.fn();
-
-      jest.mocked(require('@/hooks/use-toast').useToast).mockReturnValue({
-        toast: mockToast,
-      });
 
       renderWithProviders(<DiagramGenerator />);
 
@@ -335,7 +328,8 @@ describe('DiagramGenerator', () => {
       });
 
       const schemaInput = screen.getByLabelText(/graphql schema/i);
-      await user.type(schemaInput, 'type User { id: ID! }');
+      await user.click(schemaInput);
+      await user.paste('type User { id: ID! }');
 
       const generateButton = screen.getByRole('button', { name: /generate diagram/i });
       await user.click(generateButton);
@@ -365,11 +359,6 @@ describe('DiagramGenerator', () => {
 
     it('should show error toast when API title is empty', async () => {
       const user = userEvent.setup();
-      const mockToast = jest.fn();
-
-      jest.mocked(require('@/hooks/use-toast').useToast).mockReturnValue({
-        toast: mockToast,
-      });
 
       renderWithProviders(<DiagramGenerator />);
 

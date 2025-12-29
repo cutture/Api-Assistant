@@ -128,8 +128,8 @@ describe('SessionManager', () => {
       renderWithProviders(<SessionManager />);
 
       const ttlInput = screen.getByLabelText(/session ttl/i) as HTMLInputElement;
-      await user.clear(ttlInput);
-      await user.type(ttlInput, '120');
+      await user.tripleClick(ttlInput);
+      await user.keyboard('120');
 
       expect(ttlInput.value).toBe('120');
     });
@@ -167,8 +167,8 @@ describe('SessionManager', () => {
       await user.type(userIdInput, 'test-user');
 
       const ttlInput = screen.getByLabelText(/session ttl/i);
-      await user.clear(ttlInput);
-      await user.type(ttlInput, '90');
+      await user.tripleClick(ttlInput);
+      await user.keyboard('90');
 
       const rerankingCheckbox = screen.getByLabelText(/enable re-ranking/i);
       await user.click(rerankingCheckbox);
@@ -254,8 +254,8 @@ describe('SessionManager', () => {
       renderWithProviders(<SessionManager />);
 
       const ttlInput = screen.getByLabelText(/session ttl/i);
-      await user.clear(ttlInput);
-      await user.type(ttlInput, '150');
+      await user.tripleClick(ttlInput);
+      await user.keyboard('150');
 
       expect(screen.getByText(/2 hours 30 minutes/i)).toBeInTheDocument();
     });
