@@ -13,8 +13,8 @@ Date: 2025-12-27
 """
 
 import structlog
-from typing import Optional
-from fastapi import FastAPI, HTTPException, status
+from typing import List, Optional
+from fastapi import FastAPI, File, HTTPException, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
@@ -254,6 +254,104 @@ def create_app(
             )
 
     # Document Management Endpoints
+    @app.post(
+        "/documents/upload",
+        response_model=AddDocumentsResponse,
+        status_code=status.HTTP_201_CREATED,
+        tags=["Documents"],
+    )
+    async def upload_files(
+        files: List[UploadFile] = File(...),
+        format: Optional[str] = None,
+    ):
+        """
+        Upload and parse API specification files.
+
+        Accepts OpenAPI, GraphQL, or Postman collection files.
+        Automatically detects format and extracts documents.
+        """
+        try:
+            from src.parsers.format_handler import UnifiedFormatHandler, APIFormat
+
+            handler = UnifiedFormatHandler()
+            all_document_ids = []
+            stats = []
+
+            for file in files:
+                # Read file content
+                content = await file.read()
+                content_str = content.decode('utf-8')
+
+                # Parse with format hint if provided
+                format_hint = None
+                if format:
+                    format_map = {
+                        "openapi": APIFormat.OPENAPI,
+                        "graphql": APIFormat.GRAPHQL,
+                        "postman": APIFormat.POSTMAN,
+                    }
+                    format_hint = format_map.get(format.lower())
+
+                # Parse the file
+                try:
+                    result = handler.parse(
+                        content_str,
+                        format_hint=format_hint,
+                        source_file=file.filename or "unknown",
+                    )
+
+                    # Add documents to vector store
+                    docs = [
+                        {
+                            "content": doc["content"],
+                            "metadata": doc.get("metadata", {}),
+                        }
+                        for doc in result["documents"]
+                    ]
+
+                    doc_ids = vector_store.add_documents(docs)
+                    all_document_ids.extend(doc_ids)
+
+                    # Track stats
+                    stats.append({
+                        "filename": file.filename,
+                        "format": result["format"],
+                        "documents_added": len(doc_ids),
+                        "stats": result.get("stats", {}),
+                    })
+
+                    logger.info(
+                        "File uploaded and indexed",
+                        filename=file.filename,
+                        format=result["format"],
+                        documents=len(doc_ids),
+                    )
+
+                except ValueError as e:
+                    logger.error(
+                        "Failed to parse file",
+                        filename=file.filename,
+                        error=str(e),
+                    )
+                    raise HTTPException(
+                        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                        detail=f"Failed to parse {file.filename}: {str(e)}",
+                    )
+
+            return AddDocumentsResponse(
+                document_ids=all_document_ids,
+                count=len(all_document_ids),
+            )
+
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error("Error uploading files", exc_info=e)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error uploading files: {str(e)}",
+            )
+
     @app.post(
         "/documents",
         response_model=AddDocumentsResponse,

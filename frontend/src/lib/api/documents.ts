@@ -39,7 +39,7 @@ export async function uploadDocuments(
 
   try {
     const response = await apiClient.post<DocumentUploadResponse>(
-      "/documents",
+      "/documents/upload",
       formData,
       {
         headers: {
