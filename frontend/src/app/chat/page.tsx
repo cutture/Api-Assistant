@@ -17,33 +17,47 @@ export default function ChatPage() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const { mutate: createSession } = useCreateSession();
 
-  // Create session on mount
+  // Create or restore session on mount
   useEffect(() => {
-    createSession(
-      {
-        ttl_minutes: 1440, // 24 hours
-        settings: {
-          default_search_mode: "hybrid",
-          default_n_results: 10,
-          use_reranking: false,
-          use_query_expansion: true,
-          use_diversification: false,
-          show_scores: true,
-          show_metadata: true,
-          max_content_length: 500,
-          custom_metadata: {},
+    // Try to restore existing session from localStorage
+    const storedSessionId = localStorage.getItem("chat_session_id");
+
+    if (storedSessionId) {
+      // Use existing session
+      setSessionId(storedSessionId);
+    } else {
+      // Create new session
+      createSession(
+        {
+          ttl_minutes: 1440, // 24 hours
+          settings: {
+            default_search_mode: "hybrid",
+            default_n_results: 10,
+            use_reranking: false,
+            use_query_expansion: true,
+            use_diversification: false,
+            show_scores: true,
+            show_metadata: true,
+            max_content_length: 500,
+            custom_metadata: {},
+          },
         },
-      },
-      {
-        onSuccess: (data) => {
-          setSessionId(data?.session_id || null);
-        },
-        onError: (error: any) => {
-          console.error("Failed to create session:", error);
-          // Continue without session if creation fails
-        },
-      }
-    );
+        {
+          onSuccess: (data) => {
+            const newSessionId = data?.session_id || null;
+            setSessionId(newSessionId);
+            // Store in localStorage
+            if (newSessionId) {
+              localStorage.setItem("chat_session_id", newSessionId);
+            }
+          },
+          onError: (error: any) => {
+            console.error("Failed to create session:", error);
+            // Continue without session if creation fails
+          },
+        }
+      );
+    }
   }, [createSession]);
 
   const handleSendMessage = async (message: string): Promise<string> => {
