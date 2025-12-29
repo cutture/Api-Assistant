@@ -133,7 +133,7 @@ export function SessionManager() {
               <Checkbox
                 id="reranking"
                 checked={useReranking}
-                onCheckedChange={(checked) => setUseReranking(checked as boolean)}
+                onCheckedChange={(checked: boolean) => setUseReranking(checked)}
               />
               <label htmlFor="reranking" className="text-sm cursor-pointer">
                 Enable re-ranking by default
@@ -143,7 +143,7 @@ export function SessionManager() {
               <Checkbox
                 id="query-expansion"
                 checked={useQueryExpansion}
-                onCheckedChange={(checked) => setUseQueryExpansion(checked as boolean)}
+                onCheckedChange={(checked: boolean) => setUseQueryExpansion(checked)}
               />
               <label htmlFor="query-expansion" className="text-sm cursor-pointer">
                 Enable query expansion by default

@@ -151,6 +151,7 @@ class Session:
                 }
                 for msg in self.conversation_history
             ],
+            "message_count": len(self.conversation_history),
             "metadata": self.metadata,
             "collection_name": self.collection_name,
         }

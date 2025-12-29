@@ -23,7 +23,6 @@ export default function SessionsPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [editFormData, setEditFormData] = useState({
     user_id: "",
-    ttl_minutes: 60,
     use_reranking: false,
     use_query_expansion: false,
   });
@@ -40,7 +39,6 @@ export default function SessionsPage() {
     if (selectedSession) {
       setEditFormData({
         user_id: selectedSession.user_id || "",
-        ttl_minutes: selectedSession.ttl_minutes,
         use_reranking: selectedSession.settings.use_reranking,
         use_query_expansion: selectedSession.settings.use_query_expansion,
       });
@@ -60,7 +58,6 @@ export default function SessionsPage() {
         sessionId: selectedSessionId,
         updates: {
           user_id: editFormData.user_id || undefined,
-          ttl_minutes: editFormData.ttl_minutes,
           settings: {
             default_search_mode: selectedSession?.settings.default_search_mode || "hybrid",
             default_n_results: selectedSession?.settings.default_n_results || 10,
@@ -163,9 +160,13 @@ export default function SessionsPage() {
                         </p>
                       </div>
                       <div>
-                        <p className="text-sm font-medium">TTL (minutes)</p>
+                        <p className="text-sm font-medium">Expires</p>
                         <p className="text-sm text-muted-foreground">
-                          {selectedSession.ttl_minutes}
+                          {selectedSession.expires_at
+                            ? formatDistanceToNow(new Date(selectedSession.expires_at), {
+                                addSuffix: true,
+                              })
+                            : "Never"}
                         </p>
                       </div>
                       <div>
@@ -249,10 +250,10 @@ export default function SessionsPage() {
                         <Checkbox
                           id="edit-reranking"
                           checked={editFormData.use_reranking}
-                          onCheckedChange={(checked) =>
+                          onCheckedChange={(checked: boolean) =>
                             setEditFormData({
                               ...editFormData,
-                              use_reranking: checked as boolean,
+                              use_reranking: checked,
                             })
                           }
                         />
@@ -264,10 +265,10 @@ export default function SessionsPage() {
                         <Checkbox
                           id="edit-query-expansion"
                           checked={editFormData.use_query_expansion}
-                          onCheckedChange={(checked) =>
+                          onCheckedChange={(checked: boolean) =>
                             setEditFormData({
                               ...editFormData,
-                              use_query_expansion: checked as boolean,
+                              use_query_expansion: checked,
                             })
                           }
                         />

@@ -90,7 +90,7 @@ export default function SearchPage() {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Filters Sidebar */}
           <div className="lg:col-span-1 space-y-4">
-            <Tabs value={filterMode} onValueChange={(v) => setFilterMode(v as any)}>
+            <Tabs value={filterMode} onValueChange={(v: string) => setFilterMode(v as "simple" | "advanced")}>
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="simple">Simple</TabsTrigger>
                 <TabsTrigger value="advanced">Advanced</TabsTrigger>

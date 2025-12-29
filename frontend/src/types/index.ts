@@ -155,6 +155,7 @@ export interface CreateSessionRequest {
 export interface UpdateSessionRequest {
   user_id?: string;
   status?: SessionStatus;
+  settings?: UserSettings;
   metadata?: Record<string, any>;
   collection_name?: string;
 }
