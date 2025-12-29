@@ -3,12 +3,10 @@ LLM Client abstraction for interacting with language models.
 Supports Ollama (local) and Groq (cloud) providers with:
 - Circuit breaker protection
 - Retry with exponential backoff
-- Request timeouts
+- Request timeouts (via client-side HTTP timeout)
 - Comprehensive error handling
 """
 
-import signal
-from contextlib import contextmanager
 from typing import AsyncGenerator, Generator, Literal, Optional
 
 import structlog
@@ -31,55 +29,6 @@ from src.core.exceptions import (
 )
 
 logger = structlog.get_logger(__name__)
-
-
-# ============================================================================
-# Timeout handling
-# ============================================================================
-
-
-class TimeoutError(Exception):
-    """Raised when operation times out."""
-
-    pass
-
-
-@contextmanager
-def timeout(seconds: int):
-    """
-    Context manager for operation timeout.
-
-    Args:
-        seconds: Timeout in seconds
-
-    Raises:
-        LLMTimeoutError: If operation exceeds timeout
-
-    Example:
-        ```python
-        with timeout(30):
-            result = llm_client.generate(prompt)
-        ```
-    """
-
-    def timeout_handler(signum, frame):
-        raise TimeoutError(f"Operation timed out after {seconds} seconds")
-
-    # Set the signal handler and alarm
-    old_handler = signal.signal(signal.SIGALRM, timeout_handler)
-    signal.alarm(seconds)
-
-    try:
-        yield
-    except TimeoutError as e:
-        raise LLMTimeoutError(
-            f"LLM request timed out after {seconds} seconds",
-            details={"timeout_seconds": seconds},
-        )
-    finally:
-        # Disable the alarm and restore old handler
-        signal.alarm(0)
-        signal.signal(signal.SIGALRM, old_handler)
 
 
 # ============================================================================
@@ -273,12 +222,26 @@ class LLMClient:
 
         Raises:
             LLMTimeoutError: If request times out
+
+        Note:
+            Timeout is handled by the underlying HTTP clients (Groq/Ollama).
+            The timeout_seconds parameter is used for logging but actual timeout
+            enforcement relies on client-side HTTP timeout settings.
         """
-        with timeout(timeout_seconds):
+        try:
             if self.provider == "groq":
-                return self._generate_with_groq(messages, temperature, max_tokens)
+                return self._generate_with_groq(messages, temperature, max_tokens, timeout_seconds)
             else:
-                return self._generate_with_ollama(messages, temperature, max_tokens)
+                return self._generate_with_ollama(messages, temperature, max_tokens, timeout_seconds)
+        except Exception as e:
+            # Check if it's a timeout-related error
+            error_msg = str(e).lower()
+            if "timeout" in error_msg or "timed out" in error_msg:
+                raise LLMTimeoutError(
+                    f"LLM request timed out after {timeout_seconds} seconds: {str(e)}",
+                    details={"timeout_seconds": timeout_seconds},
+                ) from e
+            raise
 
     def generate_stream(
         self,
@@ -319,6 +282,7 @@ class LLMClient:
         messages: list[dict[str, str]],
         temperature: float = 0.7,
         max_tokens: int = 2048,
+        timeout_seconds: int = 120,
     ) -> str:
         """
         Chat with conversation history.
@@ -327,15 +291,16 @@ class LLMClient:
             messages: List of message dicts with 'role' and 'content'.
             temperature: Sampling temperature.
             max_tokens: Maximum tokens in response.
+            timeout_seconds: Request timeout in seconds.
 
         Returns:
             Assistant's response.
         """
         try:
             if self.provider == "groq":
-                return self._generate_with_groq(messages, temperature, max_tokens)
+                return self._generate_with_groq(messages, temperature, max_tokens, timeout_seconds)
             else:
-                return self._generate_with_ollama(messages, temperature, max_tokens)
+                return self._generate_with_ollama(messages, temperature, max_tokens, timeout_seconds)
 
         except Exception as e:
             logger.error("Chat failed", error=str(e), provider=self.provider)
@@ -373,6 +338,7 @@ class LLMClient:
         messages: list[dict[str, str]],
         temperature: float,
         max_tokens: int,
+        timeout_seconds: int = 120,
     ) -> str:
         """
         Generate using Ollama local API.
@@ -381,6 +347,7 @@ class LLMClient:
             messages: Conversation messages.
             temperature: Sampling temperature.
             max_tokens: Maximum tokens.
+            timeout_seconds: Request timeout in seconds.
 
         Returns:
             Generated response.
@@ -433,6 +400,7 @@ class LLMClient:
         messages: list[dict[str, str]],
         temperature: float,
         max_tokens: int,
+        timeout_seconds: int = 120,
     ) -> str:
         """
         Generate using Groq cloud API.
@@ -441,6 +409,7 @@ class LLMClient:
             messages: Conversation messages.
             temperature: Sampling temperature.
             max_tokens: Maximum tokens.
+            timeout_seconds: Request timeout in seconds.
 
         Returns:
             Generated response.
@@ -450,6 +419,7 @@ class LLMClient:
             messages=messages,
             temperature=temperature,
             max_tokens=max_tokens,
+            timeout=timeout_seconds,  # Groq client timeout
         )
         content = response.choices[0].message.content
         logger.debug("Groq response generated", response_length=len(content))
