@@ -38,10 +38,16 @@ export default function SearchPage() {
 
     // Add filters based on mode
     if (filterMode === "simple" && simpleFilters.length > 0) {
-      request.filter = {
-        operator: "and",
-        filters: simpleFilters,
-      };
+      if (simpleFilters.length === 1) {
+        // Single filter - send directly
+        request.filter = simpleFilters[0];
+      } else {
+        // Multiple filters - wrap in AND operator
+        request.filter = {
+          operator: "and",
+          filters: simpleFilters,
+        };
+      }
     } else if (filterMode === "advanced" && advancedFilters) {
       request.filter = advancedFilters;
     }
