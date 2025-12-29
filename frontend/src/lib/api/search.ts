@@ -26,7 +26,7 @@ export async function search(
       use_hybrid: request.use_hybrid ?? false,
       use_reranking: request.use_reranking ?? false,
       use_query_expansion: request.use_query_expansion ?? false,
-      filters: request.filters,
+      filter: request.filter,
     },
   });
 }
@@ -47,7 +47,7 @@ export async function facetedSearch(
       use_reranking: request.use_reranking ?? false,
       use_query_expansion: request.use_query_expansion ?? false,
       facet_fields: request.facet_fields,
-      filters: request.filters,
+      filter: request.filter,
     },
   });
 }
@@ -92,7 +92,7 @@ export async function quickSearch(
     }
 
     if (filters.length > 0) {
-      request.filters = {
+      request.filter = {
         operator: "and",
         filters,
       };
@@ -109,7 +109,7 @@ export async function advancedSearch(
   query: string,
   options?: {
     limit?: number;
-    filters?: SearchRequest["filters"];
+    filter?: SearchRequest["filter"];
   }
 ): Promise<ApiResponse<SearchResponse>> {
   return search({
@@ -118,6 +118,6 @@ export async function advancedSearch(
     use_hybrid: true,
     use_reranking: true,
     use_query_expansion: true,
-    filters: options?.filters,
+    filter: options?.filter,
   });
 }

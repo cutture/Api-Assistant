@@ -33,7 +33,7 @@ export interface SearchRequest {
   use_hybrid?: boolean;
   use_reranking?: boolean;
   use_query_expansion?: boolean;
-  filters?: SearchFilters;
+  filter?: SearchFilters;
 }
 
 export interface SearchFilters {

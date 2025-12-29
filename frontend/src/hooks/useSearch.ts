@@ -121,7 +121,7 @@ export function useAdvancedSearch() {
       options,
     }: {
       query: string;
-      options?: { limit?: number; filters?: SearchRequest["filters"] };
+      options?: { limit?: number; filter?: SearchRequest["filter"] };
     }) => {
       setIsSearching(true);
       setSearchError(null);

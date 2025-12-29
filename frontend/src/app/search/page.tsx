@@ -39,12 +39,12 @@ export default function SearchPage() {
 
     // Add filters based on mode
     if (filterMode === "simple" && simpleFilters.length > 0) {
-      request.filters = {
+      request.filter = {
         operator: "and",
         filters: simpleFilters,
       };
     } else if (filterMode === "advanced" && advancedFilters) {
-      request.filters = advancedFilters;
+      request.filter = advancedFilters;
     }
 
     // Use faceted search if enabled
