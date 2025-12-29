@@ -8,6 +8,16 @@ import { ApiError, ApiResponse } from "@/types";
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
 const API_TIMEOUT = 30000; // 30 seconds
 
+// Retry configuration
+const MAX_RETRIES = 3;
+const INITIAL_RETRY_DELAY = 1000; // 1 second
+const RETRY_STATUS_CODES = [408, 429, 500, 502, 503, 504];
+
+/**
+ * Sleep for specified milliseconds
+ */
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 /**
  * Create axios instance with default configuration
  */
@@ -50,6 +60,7 @@ apiClient.interceptors.request.use(
  * - Log responses in development
  * - Handle errors uniformly
  * - Transform responses
+ * - Implement retry logic with exponential backoff
  */
 apiClient.interceptors.response.use(
   (response: AxiosResponse) => {
@@ -72,7 +83,41 @@ apiClient.interceptors.response.use(
 
     return response;
   },
-  (error: AxiosError) => {
+  async (error: AxiosError) => {
+    const config = error.config as AxiosRequestConfig & { _retryCount?: number };
+
+    // Initialize retry count if not present
+    if (!config._retryCount) {
+      config._retryCount = 0;
+    }
+
+    // Check if we should retry
+    const shouldRetry =
+      config._retryCount < MAX_RETRIES &&
+      error.response?.status &&
+      RETRY_STATUS_CODES.includes(error.response.status);
+
+    if (shouldRetry) {
+      config._retryCount++;
+
+      // Calculate exponential backoff delay
+      const delay = INITIAL_RETRY_DELAY * Math.pow(2, config._retryCount - 1);
+
+      // Log retry attempt in development
+      if (process.env.NEXT_PUBLIC_ENABLE_DEBUG === "true") {
+        console.log(
+          `[API Retry] Attempt ${config._retryCount}/${MAX_RETRIES} for ${config.method?.toUpperCase()} ${config.url} after ${delay}ms`
+        );
+      }
+
+      // Wait before retrying
+      await sleep(delay);
+
+      // Retry the request
+      return apiClient.request(config);
+    }
+
+    // No retry, handle error
     const apiError = handleApiError(error);
 
     // Log in development
@@ -82,6 +127,7 @@ apiClient.interceptors.response.use(
         status: apiError.status,
         url: error.config?.url,
         details: apiError.details,
+        retries: config._retryCount || 0,
       });
     }
 

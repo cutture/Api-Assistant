@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { QueryProvider } from "@/lib/providers/QueryProvider";
+import { ThemeProvider } from "@/lib/providers/ThemeProvider";
+import { AuthProvider } from "@/lib/contexts/AuthContext";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { Toaster } from "@/components/ui/toaster";
 import { ErrorBoundary } from "@/components/error/ErrorBoundary";
 
@@ -21,10 +24,16 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
         <ErrorBoundary>
-          <QueryProvider>
-            {children}
-            <Toaster />
-          </QueryProvider>
+          <AuthProvider>
+            <ThemeProvider>
+              <QueryProvider>
+                <ProtectedRoute>
+                  {children}
+                </ProtectedRoute>
+                <Toaster />
+              </QueryProvider>
+            </ThemeProvider>
+          </AuthProvider>
         </ErrorBoundary>
       </body>
     </html>
