@@ -57,3 +57,60 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Mermaid diagram dark mode fixes */
+.dark .mermaid {
+  /* Sequence diagram text */
+  .actor,
+  .messageText,
+  .labelText,
+  .loopText,
+  .noteText {
+    fill: hsl(210 40% 98%) !important;
+    color: hsl(210 40% 98%) !important;
+  }
+
+  /* Flowchart text */
+  .node text,
+  .label,
+  .edgeLabel {
+    fill: hsl(210 40% 98%) !important;
+    color: hsl(210 40% 98%) !important;
+  }
+
+  /* ER diagram text */
+  .entityLabel,
+  .attributeBoxOdd,
+  .attributeBoxEven {
+    fill: hsl(210 40% 98%) !important;
+    color: hsl(210 40% 98%) !important;
+  }
+
+  /* General text elements */
+  text {
+    fill: hsl(210 40% 98%) !important;
+  }
+
+  /* Box backgrounds for better contrast */
+  .actor,
+  .note,
+  .labelBox,
+  rect.actor {
+    fill: hsl(217 32% 22%) !important;
+    stroke: hsl(217 32% 25%) !important;
+  }
+
+  /* Lines and arrows */
+  line,
+  path,
+  .messageLine0,
+  .messageLine1 {
+    stroke: hsl(215 20% 65%) !important;
+  }
+
+  /* Arrows */
+  marker path {
+    fill: hsl(215 20% 65%) !important;
+    stroke: hsl(215 20% 65%) !important;
+  }
+}
