@@ -391,7 +391,7 @@ class TestFactoryFunction:
         service = get_url_scraper_service()
 
         assert isinstance(service, URLScraperService)
-        assert service.timeout == 10
+        assert service.timeout == 15  # Increased timeout for slow networks
         assert service.max_content_length == 100000
 
 

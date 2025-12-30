@@ -13,7 +13,7 @@ jest.mock('mermaid', () => ({
   __esModule: true,
   default: {
     initialize: jest.fn(),
-    contentLoaded: jest.fn(),
+    render: jest.fn().mockResolvedValue({ svg: '<svg>mock svg</svg>' }),
   },
 }));
 
@@ -83,24 +83,33 @@ describe('MermaidViewer', () => {
   });
 
   describe('Mermaid Initialization', () => {
-    it('should initialize mermaid on mount', () => {
+    it('should initialize mermaid on mount', async () => {
       renderWithProviders(<MermaidViewer code={mockCode} />);
 
-      expect(mermaid.initialize).toHaveBeenCalledWith({
-        startOnLoad: true,
-        theme: 'default',
-        securityLevel: 'loose',
+      await waitFor(() => {
+        expect(mermaid.initialize).toHaveBeenCalledWith({
+          startOnLoad: false,
+          theme: 'default',
+          securityLevel: 'loose',
+          fontFamily: 'arial, sans-serif',
+        });
       });
     });
 
-    it('should call mermaid.contentLoaded after setting code', () => {
+    it('should call mermaid.render after initialization', async () => {
       renderWithProviders(<MermaidViewer code={mockCode} />);
 
-      expect(mermaid.contentLoaded).toHaveBeenCalled();
+      await waitFor(() => {
+        expect(mermaid.render).toHaveBeenCalled();
+      });
     });
 
-    it('should update diagram when code changes', () => {
+    it('should update diagram when code changes', async () => {
       const { rerender } = renderWithProviders(<MermaidViewer code={mockCode} />);
+
+      await waitFor(() => {
+        expect(mermaid.render).toHaveBeenCalledTimes(1);
+      });
 
       const newCode = `graph TD
         A-->B`;
@@ -108,7 +117,9 @@ describe('MermaidViewer', () => {
       rerender(<MermaidViewer code={newCode} />);
 
       // Should be called twice: once for initial render, once for update
-      expect(mermaid.contentLoaded).toHaveBeenCalledTimes(2);
+      await waitFor(() => {
+        expect(mermaid.render).toHaveBeenCalledTimes(2);
+      });
     });
   });
 
@@ -259,6 +270,11 @@ describe('MermaidViewer', () => {
       const { container } = renderWithProviders(
         <MermaidViewer code={mockCode} title="Test Diagram" />
       );
+
+      // Wait for render to complete
+      await waitFor(() => {
+        expect(mermaid.render).toHaveBeenCalled();
+      });
 
       // Mock SVG element
       const mockSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
