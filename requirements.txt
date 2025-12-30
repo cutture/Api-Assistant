@@ -23,10 +23,16 @@ groq>=0.4.0          # Cloud LLM (fast inference)
 duckduckgo-search>=5.0.0  # Free web search
 beautifulsoup4>=4.12.0    # HTML parsing for URL scraping
 
-# OpenAPI Parsing
+# API Specification Parsing
 prance>=23.6.0
 openapi-spec-validator>=0.7.0
 PyYAML>=6.0
+
+# General Document Parsing
+pypdf>=4.0.0          # PDF parsing
+python-docx>=1.1.0    # DOCX parsing
+chardet>=5.2.0        # Character encoding detection
+markdown>=3.5.0       # Markdown processing (optional utilities)
 
 # HTTP & Async
 httpx>=0.25.0

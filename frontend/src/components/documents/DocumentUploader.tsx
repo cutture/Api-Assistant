@@ -95,18 +95,32 @@ export function DocumentUploader() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Upload API Documentation</CardTitle>
+        <CardTitle>Upload Documents</CardTitle>
         <CardDescription>
-          Upload OpenAPI, GraphQL, or Postman collection files
+          Upload API specifications or general documents for indexing and search
         </CardDescription>
         <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-md text-sm">
-          <p className="font-medium text-blue-900 dark:text-blue-100 mb-2">Accepted File Formats:</p>
-          <ul className="list-disc list-inside space-y-1 text-blue-800 dark:text-blue-200 ml-2">
-            <li><strong>OpenAPI:</strong> JSON/YAML files with <code className="px-1 py-0.5 bg-blue-100 dark:bg-blue-900 rounded text-xs">"openapi"</code> or <code className="px-1 py-0.5 bg-blue-100 dark:bg-blue-900 rounded text-xs">"swagger"</code> field</li>
-            <li><strong>Postman:</strong> Collection files with <code className="px-1 py-0.5 bg-blue-100 dark:bg-blue-900 rounded text-xs">"info"</code> and <code className="px-1 py-0.5 bg-blue-100 dark:bg-blue-900 rounded text-xs">"item"</code> fields</li>
-            <li><strong>GraphQL:</strong> Schema files (.graphql, .gql) with type definitions</li>
-          </ul>
-          <p className="mt-2 text-xs text-blue-700 dark:text-blue-300">Note: Only API specification files are accepted. Regular JSON files will be rejected.</p>
+          <p className="font-medium text-blue-900 dark:text-blue-100 mb-2">Supported File Types:</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-blue-800 dark:text-blue-200">
+            <div>
+              <p className="font-semibold mb-1">API Specifications:</p>
+              <ul className="list-disc list-inside space-y-1 ml-2 text-xs">
+                <li>OpenAPI (JSON/YAML)</li>
+                <li>GraphQL (.graphql, .gql)</li>
+                <li>Postman Collections</li>
+              </ul>
+            </div>
+            <div>
+              <p className="font-semibold mb-1">General Documents:</p>
+              <ul className="list-disc list-inside space-y-1 ml-2 text-xs">
+                <li>PDF documents (.pdf)</li>
+                <li>Text files (.txt)</li>
+                <li>Markdown (.md)</li>
+                <li>JSON data files</li>
+              </ul>
+            </div>
+          </div>
+          <p className="mt-2 text-xs text-blue-700 dark:text-blue-300">✨ Documents are automatically detected and chunked for optimal search results</p>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -129,7 +143,7 @@ export function DocumentUploader() {
           <input
             type="file"
             multiple
-            accept=".yaml,.yml,.json,.graphql,.gql"
+            accept=".yaml,.yml,.json,.graphql,.gql,.pdf,.txt,.md,.markdown"
             onChange={handleFileSelect}
             className="hidden"
             id="file-upload"
@@ -141,9 +155,9 @@ export function DocumentUploader() {
           </Label>
         </div>
 
-        {/* Format Selection */}
+        {/* Format Selection - Only for API Specs */}
         <div className="space-y-2">
-          <Label>File Format (Optional - Auto-detect if not specified)</Label>
+          <Label>API Spec Format (Optional - Auto-detect if not specified)</Label>
           <div className="flex space-x-2">
             <Button
               variant={format === "openapi" ? "default" : "outline"}
@@ -167,6 +181,7 @@ export function DocumentUploader() {
               Postman
             </Button>
           </div>
+          <p className="text-xs text-muted-foreground">Only needed for API specifications. General documents are detected automatically.</p>
         </div>
 
         {/* Selected Files */}

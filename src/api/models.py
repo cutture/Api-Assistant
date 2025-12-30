@@ -27,6 +27,24 @@ class SearchMode(str, Enum):
     RERANKED = "reranked"
 
 
+class DocumentTypeEnum(str, Enum):
+    """Supported document types for upload."""
+
+    # API Specifications
+    OPENAPI = "openapi"
+    GRAPHQL = "graphql"
+    POSTMAN = "postman"
+
+    # General Documents
+    PDF = "pdf"
+    TEXT = "text"
+    MARKDOWN = "markdown"
+    JSON_GENERIC = "json_generic"
+    CSV = "csv"
+    DOCX = "docx"
+    HTML = "html"
+
+
 class FilterOperatorEnum(str, Enum):
     """Filter operators for API."""
 

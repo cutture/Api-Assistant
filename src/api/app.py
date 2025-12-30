@@ -267,15 +267,19 @@ def create_app(
     async def upload_files(
         files: List[UploadFile] = File(...),
         format: Optional[str] = None,
+        document_mode: Optional[str] = None,  # "api_spec" or "general_document"
     ):
         """
-        Upload and parse API specification files.
+        Upload and parse documents.
 
-        Accepts OpenAPI, GraphQL, or Postman collection files.
-        Automatically detects format and extracts documents.
+        Supports:
+        - API specifications: OpenAPI, GraphQL, Postman
+        - General documents: PDF, TXT, MD, JSON
+
+        Auto-detects document type if not specified.
         """
         try:
-            from src.parsers.format_handler import UnifiedFormatHandler, APIFormat
+            from src.parsers.format_handler import UnifiedFormatHandler, APIFormat, DocumentType
 
             handler = UnifiedFormatHandler()
             all_document_ids = []
@@ -286,25 +290,60 @@ def create_app(
             for file in files:
                 # Read file content
                 content = await file.read()
-                content_str = content.decode('utf-8')
 
-                # Parse with format hint if provided
-                format_hint = None
-                if format:
-                    format_map = {
-                        "openapi": APIFormat.OPENAPI,
-                        "graphql": APIFormat.GRAPHQL,
-                        "postman": APIFormat.POSTMAN,
-                    }
-                    format_hint = format_map.get(format.lower())
+                # Try to decode as UTF-8, fall back to latin-1
+                try:
+                    content_str = content.decode('utf-8')
+                except UnicodeDecodeError:
+                    try:
+                        content_str = content.decode('latin-1')
+                    except:
+                        # For binary files like PDF, keep as-is
+                        content_str = content
+
+                # Determine parsing mode
+                auto_detect = document_mode is None
+                use_general_parser = document_mode == "general_document"
 
                 # Parse the file
                 try:
-                    result = handler.parse(
-                        content_str,
-                        format_hint=format_hint,
-                        source_file=file.filename or "unknown",
-                    )
+                    # Auto-detect document type for general documents
+                    if auto_detect or use_general_parser:
+                        from src.parsers.format_handler import FormatDetector
+                        detector = FormatDetector()
+                        detected_type = detector.detect_document_type(
+                            content_str if isinstance(content_str, str) else content_str.decode('latin-1'),
+                            filename=file.filename or ""
+                        )
+
+                        # If it's an API spec type, use API parser
+                        if detected_type in [DocumentType.OPENAPI, DocumentType.GRAPHQL, DocumentType.POSTMAN]:
+                            result = handler.parse(
+                                content_str,
+                                source_file=file.filename or "unknown",
+                            )
+                        else:
+                            # Use general document parser
+                            result = handler.parse_document(
+                                content_str,
+                                filename=file.filename or "unknown",
+                            )
+                    else:
+                        # Explicit API spec mode
+                        format_hint = None
+                        if format:
+                            format_map = {
+                                "openapi": APIFormat.OPENAPI,
+                                "graphql": APIFormat.GRAPHQL,
+                                "postman": APIFormat.POSTMAN,
+                            }
+                            format_hint = format_map.get(format.lower())
+
+                        result = handler.parse(
+                            content_str,
+                            format_hint=format_hint,
+                            source_file=file.filename or "unknown",
+                        )
 
                     # Add documents to vector store
                     docs = [
@@ -320,10 +359,12 @@ def create_app(
                     total_new_count += add_result["new_count"]
                     total_skipped_count += add_result["skipped_count"]
 
-                    # Track stats
+                    # Track stats (handle both API specs and general documents)
+                    doc_type = result.get("format") or result.get("document_type", "unknown")
+
                     stats.append({
                         "filename": file.filename,
-                        "format": result["format"],
+                        "type": doc_type,
                         "documents_added": add_result["new_count"],
                         "documents_skipped": add_result["skipped_count"],
                         "stats": result.get("stats", {}),
@@ -332,7 +373,7 @@ def create_app(
                     logger.info(
                         "File uploaded and indexed",
                         filename=file.filename,
-                        format=result["format"],
+                        document_type=doc_type,
                         new_documents=add_result["new_count"],
                         skipped_documents=add_result["skipped_count"],
                     )
