@@ -4,12 +4,6 @@ import * as React from "react";
 import { Moon, Sun, Monitor } from "lucide-react";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 export function ThemeToggle() {
   const { settings, updateSettings } = useSettingsStore();
@@ -43,27 +37,44 @@ export function ThemeToggle() {
     }
   };
 
+  const getNextTheme = () => {
+    switch (currentTheme) {
+      case "light":
+        return "dark";
+      case "dark":
+        return "system";
+      case "system":
+        return "light";
+      default:
+        return "light";
+    }
+  };
+
+  const getThemeLabel = () => {
+    switch (currentTheme) {
+      case "dark":
+        return "Dark mode";
+      case "light":
+        return "Light mode";
+      case "system":
+        return "System mode";
+      default:
+        return "Toggle theme";
+    }
+  };
+
+  const toggleTheme = () => {
+    updateSettings({ theme: getNextTheme() });
+  };
+
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="sm" title="Toggle theme">
-          {getIcon()}
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => updateSettings({ theme: "light" })}>
-          <Sun className="mr-2 h-4 w-4" />
-          <span>Light</span>
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => updateSettings({ theme: "dark" })}>
-          <Moon className="mr-2 h-4 w-4" />
-          <span>Dark</span>
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => updateSettings({ theme: "system" })}>
-          <Monitor className="mr-2 h-4 w-4" />
-          <span>System</span>
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <Button
+      variant="ghost"
+      size="sm"
+      onClick={toggleTheme}
+      title={`Current: ${getThemeLabel()}. Click to change.`}
+    >
+      {getIcon()}
+    </Button>
   );
 }
