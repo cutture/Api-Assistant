@@ -43,7 +43,8 @@ export function SessionManager() {
       },
       {
         onSuccess: (data) => {
-          const sessionId = data?.session_id || "unknown";
+          // Response structure is { session: { session_id: "...", ... } }
+          const sessionId = data?.session?.session_id || "unknown";
           toast({
             title: "Session created",
             description: `Session ID: ${sessionId.substring(0, 8)}...`,

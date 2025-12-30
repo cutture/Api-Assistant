@@ -55,7 +55,8 @@ export default function ChatPage() {
         },
         {
           onSuccess: (data) => {
-            const newSessionId = data?.session_id || null;
+            // Response structure is { session: { session_id: "...", ... } }
+            const newSessionId = data?.session?.session_id || null;
             console.log("Session created:", newSessionId);
             setSessionId(newSessionId);
             // Store in localStorage
