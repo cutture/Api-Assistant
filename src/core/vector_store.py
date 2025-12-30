@@ -335,8 +335,10 @@ class VectorStore:
             else:
                 candidates = self._vector_search_impl(query, rerank_top_k, where_dict, where_doc_dict)
 
-            # Apply client-side filtering if original filter couldn't be converted
-            if original_filter and where_dict is None and where_doc_dict is None:
+            # Apply client-side filtering if we have an original filter
+            # This catches filters that couldn't be converted to ChromaDB format
+            # (e.g., CONTAINS, REGEX, etc.) even if some parts were converted
+            if original_filter:
                 from src.core.advanced_filtering import FacetedSearch
                 candidates = FacetedSearch.apply_client_side_filter(candidates, original_filter)
 
@@ -351,8 +353,10 @@ class VectorStore:
             else:
                 results = self._vector_search_impl(query, n_results, where_dict, where_doc_dict)
 
-            # Apply client-side filtering if original filter couldn't be converted
-            if original_filter and where_dict is None and where_doc_dict is None:
+            # Apply client-side filtering if we have an original filter
+            # This catches filters that couldn't be converted to ChromaDB format
+            # (e.g., CONTAINS, REGEX, etc.) even if some parts were converted
+            if original_filter:
                 from src.core.advanced_filtering import FacetedSearch
                 results = FacetedSearch.apply_client_side_filter(results, original_filter)
 

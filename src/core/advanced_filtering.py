@@ -94,8 +94,12 @@ class MetadataFilter(Filter):
         self.value = value
 
     def to_chroma_where(self) -> Optional[Dict[str, Any]]:
-        """Convert to ChromaDB where clause."""
-        # Map operators to ChromaDB syntax
+        """Convert to ChromaDB where clause.
+
+        Note: ChromaDB only supports: $eq, $ne, $gt, $gte, $lt, $lte, $in, $nin
+        Operators not supported by ChromaDB will return None and use client-side filtering.
+        """
+        # Map operators to ChromaDB syntax (only supported operators)
         operator_map = {
             FilterOperator.EQ: "$eq",
             FilterOperator.NE: "$ne",
@@ -105,8 +109,8 @@ class MetadataFilter(Filter):
             FilterOperator.LTE: "$lte",
             FilterOperator.IN: "$in",
             FilterOperator.NOT_IN: "$nin",
-            FilterOperator.CONTAINS: "$contains",
-            FilterOperator.NOT_CONTAINS: "$not_contains",
+            # Note: CONTAINS, NOT_CONTAINS, STARTS_WITH, ENDS_WITH, REGEX
+            # are NOT supported by ChromaDB and will use client-side filtering
         }
 
         if self.operator in operator_map:
@@ -114,6 +118,12 @@ class MetadataFilter(Filter):
 
         # For operators not supported by ChromaDB, return None
         # (will fall back to client-side filtering)
+        logger.debug(
+            "filter_operator_not_supported_by_chromadb",
+            operator=self.operator.value,
+            field=self.field,
+            using_client_side_filtering=True,
+        )
         return None
 
     def to_chroma_where_document(self) -> Optional[Dict[str, Any]]:
