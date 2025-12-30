@@ -15,6 +15,7 @@ export default function ChatPage() {
   const { toast } = useToast();
   const [conversationHistory, setConversationHistory] = useState<ChatMessage[]>([]);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [isSessionReady, setIsSessionReady] = useState(false);
   const { mutate: createSession } = useCreateSession();
   const sessionInitialized = useRef(false);
 
@@ -35,6 +36,7 @@ export default function ChatPage() {
       // Use existing session
       console.log("Restoring session:", storedSessionId);
       setSessionId(storedSessionId);
+      setIsSessionReady(true);
     } else {
       // Create new session only once
       console.log("Creating new session...");
@@ -55,17 +57,27 @@ export default function ChatPage() {
         },
         {
           onSuccess: (data) => {
+            // Log the full response to debug structure
+            console.log("Session creation response:", JSON.stringify(data, null, 2));
+
             // Response structure is { session: { session_id: "...", ... } }
             const newSessionId = data?.session?.session_id || null;
-            console.log("Session created:", newSessionId);
+            console.log("Extracted session ID:", newSessionId);
+
             setSessionId(newSessionId);
+            setIsSessionReady(true);
+
             // Store in localStorage
             if (newSessionId) {
               localStorage.setItem("chat_session_id", newSessionId);
+              console.log("Session ID stored in localStorage");
+            } else {
+              console.error("Failed to extract session ID from response!");
             }
           },
           onError: (error: any) => {
             console.error("Failed to create session:", error);
+            setIsSessionReady(false);
             // Reset flag on error so user can try again
             sessionInitialized.current = false;
           },
@@ -77,6 +89,12 @@ export default function ChatPage() {
 
   const handleSendMessage = async (message: string): Promise<string> => {
     try {
+      // Wait for session to be ready
+      if (!isSessionReady || !sessionId) {
+        console.error("Session not ready! isSessionReady:", isSessionReady, "sessionId:", sessionId);
+        throw new Error("Session is not ready yet. Please wait...");
+      }
+
       // Detect if user is asking for code generation
       const codeKeywords = ["write", "generate", "create", "code", "script", "example", "show me"];
       const askingForCode = codeKeywords.some(keyword =>
