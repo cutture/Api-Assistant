@@ -9,14 +9,13 @@ import { ChatInterface } from "@/components/chat/ChatInterface";
 import { useToast } from "@/hooks/use-toast";
 import { sendChatMessage, ChatMessage } from "@/lib/api/chat";
 import { useState, useEffect, useRef } from "react";
-import { useCreateSession } from "@/hooks/useSessions";
+import { createSession } from "@/lib/api/sessions";
 
 export default function ChatPage() {
   const { toast } = useToast();
   const [conversationHistory, setConversationHistory] = useState<ChatMessage[]>([]);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [isSessionReady, setIsSessionReady] = useState(false);
-  const { mutate: createSession } = useCreateSession();
   const sessionInitialized = useRef(false);
 
   // Create or restore session on mount
@@ -40,49 +39,62 @@ export default function ChatPage() {
     } else {
       // Create new session only once
       console.log("Creating new session...");
-      createSession(
-        {
-          ttl_minutes: 1440, // 24 hours
-          settings: {
-            default_search_mode: "hybrid",
-            default_n_results: 10,
-            use_reranking: false,
-            use_query_expansion: true,
-            use_diversification: false,
-            show_scores: true,
-            show_metadata: true,
-            max_content_length: 500,
-            custom_metadata: {},
-          },
-        },
-        {
-          onSuccess: (data) => {
-            // Log the full response to debug structure
-            console.log("Session creation response:", JSON.stringify(data, null, 2));
 
-            // Response structure is { session: { session_id: "...", ... } }
-            const newSessionId = data?.session?.session_id || null;
-            console.log("Extracted session ID:", newSessionId);
+      // Call API directly with timeout handling
+      (async () => {
+        try {
+          console.log("Starting session creation API call...");
+          const response = await createSession({
+            ttl_minutes: 1440, // 24 hours
+            settings: {
+              default_search_mode: "hybrid",
+              default_n_results: 10,
+              use_reranking: false,
+              use_query_expansion: true,
+              use_diversification: false,
+              show_scores: true,
+              show_metadata: true,
+              max_content_length: 500,
+              custom_metadata: {},
+            },
+          });
 
-            setSessionId(newSessionId);
-            setIsSessionReady(true);
+          console.log("Session creation API response received:", JSON.stringify(response, null, 2));
 
-            // Store in localStorage
-            if (newSessionId) {
-              localStorage.setItem("chat_session_id", newSessionId);
-              console.log("Session ID stored in localStorage");
-            } else {
-              console.error("Failed to extract session ID from response!");
-            }
-          },
-          onError: (error: any) => {
-            console.error("Failed to create session:", error);
-            setIsSessionReady(false);
-            // Reset flag on error so user can try again
-            sessionInitialized.current = false;
-          },
+          if (response.error) {
+            throw new Error(response.error);
+          }
+
+          // Response structure is ApiResponse<{session: Session}>
+          // So response.data is { session: { session_id: "...", ... } }
+          const newSessionId = response.data?.session?.session_id || null;
+          console.log("Extracted session ID:", newSessionId);
+
+          setSessionId(newSessionId);
+          setIsSessionReady(true);
+
+          // Store in localStorage
+          if (newSessionId) {
+            localStorage.setItem("chat_session_id", newSessionId);
+            console.log("Session ID stored in localStorage");
+          } else {
+            console.error("Failed to extract session ID from response!");
+            console.error("Response data structure:", response.data);
+          }
+        } catch (error: any) {
+          console.error("Failed to create session:", error);
+          console.error("Error details:", error.message, error.stack);
+          setIsSessionReady(false);
+          // Reset flag on error so user can try again
+          sessionInitialized.current = false;
+
+          toast({
+            title: "Session Creation Failed",
+            description: error.message || "Could not create chat session",
+            variant: "destructive",
+          });
         }
-      );
+      })();
     }
     // Empty dependency array - only run once on mount
   }, []);
