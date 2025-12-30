@@ -11,6 +11,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export function Navbar() {
   const pathname = usePathname();
@@ -93,8 +94,10 @@ export function Navbar() {
             })}
           </div>
 
-          {/* Settings and User Menu */}
+          {/* Theme Toggle, Settings and User Menu */}
           <div className="flex items-center space-x-2">
+            <ThemeToggle />
+
             <Link href="/settings">
               <Button variant="ghost" size="sm">
                 <Settings className="h-4 w-4" />
