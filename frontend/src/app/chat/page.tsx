@@ -48,6 +48,13 @@ export default function ChatPage() {
       const sessions = response.data?.sessions || [];
       setAvailableSessions(sessions);
 
+      // If no sessions exist, create a default one
+      if (sessions.length === 0) {
+        console.log("No sessions found, creating default session...");
+        await createDefaultSession();
+        return; // createDefaultSession will call loadAvailableSessions again
+      }
+
       // Try to restore last used session from localStorage
       const storedSessionId = localStorage.getItem("chat_session_id");
 
@@ -82,6 +89,49 @@ export default function ChatPage() {
       });
     } finally {
       setIsLoadingSessions(false);
+    }
+  };
+
+  // Create default session for new users
+  const createDefaultSession = async () => {
+    try {
+      console.log("Creating default session...");
+      const response = await createSession({
+        ttl_minutes: 1440, // 24 hours
+        settings: {
+          default_search_mode: "hybrid",
+          default_n_results: 10,
+          use_reranking: false,
+          use_query_expansion: true,
+          use_diversification: false,
+          show_scores: true,
+          show_metadata: true,
+          max_content_length: 500,
+          custom_metadata: {},
+        },
+      });
+
+      if (response.error) {
+        throw new Error(response.error);
+      }
+
+      const newSessionId = response.data?.session?.session_id || null;
+
+      if (!newSessionId) {
+        throw new Error("Failed to get session ID from response");
+      }
+
+      console.log("Default session created:", newSessionId);
+
+      // Reload sessions and switch to the new one
+      await loadAvailableSessions();
+    } catch (error: any) {
+      console.error("Failed to create default session:", error);
+      toast({
+        title: "Failed to create default session",
+        description: error.message,
+        variant: "destructive",
+      });
     }
   };
 
@@ -346,7 +396,15 @@ export default function ChatPage() {
           </div>
         )}
 
-        <ChatInterface onSendMessage={handleSendMessage} />
+        <ChatInterface
+          key={sessionId || "no-session"} // Force remount when session changes
+          onSendMessage={handleSendMessage}
+          initialMessages={conversationHistory.map((msg) => ({
+            role: msg.role as "user" | "assistant" | "system",
+            content: msg.content,
+            timestamp: new Date().toISOString(),
+          }))}
+        />
       </div>
     </MainLayout>
   );

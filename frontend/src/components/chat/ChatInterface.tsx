@@ -14,16 +14,21 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 export interface ChatInterfaceProps {
   onSendMessage: (message: string) => Promise<string>;
+  initialMessages?: ChatMessageProps[];
 }
 
-export function ChatInterface({ onSendMessage }: ChatInterfaceProps) {
-  const [messages, setMessages] = useState<ChatMessageProps[]>([
-    {
-      role: "system",
-      content: "Welcome! Ask me anything about your indexed APIs.",
-      timestamp: new Date().toISOString(),
-    },
-  ]);
+export function ChatInterface({ onSendMessage, initialMessages }: ChatInterfaceProps) {
+  const [messages, setMessages] = useState<ChatMessageProps[]>(
+    initialMessages && initialMessages.length > 0
+      ? initialMessages
+      : [
+          {
+            role: "system",
+            content: "Welcome! Ask me anything about your indexed APIs.",
+            timestamp: new Date().toISOString(),
+          },
+        ]
+  );
   const [isLoading, setIsLoading] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
