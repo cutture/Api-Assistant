@@ -227,7 +227,7 @@ export default function ChatPage() {
     }
   };
 
-  const handleSendMessage = async (message: string): Promise<string> => {
+  const handleSendMessage = async (message: string, files?: File[]): Promise<string> => {
     try {
       // Wait for session to be ready
       if (!isSessionReady || !sessionId) {
@@ -241,9 +241,9 @@ export default function ChatPage() {
         message.toLowerCase().includes(keyword)
       );
 
-      console.log("Sending chat message with session_id:", sessionId);
+      console.log("Sending chat message with session_id:", sessionId, "files:", files?.length || 0);
 
-      // Send chat request with LLM
+      // Send chat request with LLM (and files if present)
       const response = await sendChatMessage({
         message,
         session_id: sessionId || undefined,
@@ -251,6 +251,7 @@ export default function ChatPage() {
         enable_url_scraping: true,
         enable_auto_indexing: true,
         agent_type: askingForCode ? "code" : "general",
+        files,
       });
 
       console.log("Chat response received, session_id:", response.data?.session_id);
@@ -295,11 +296,22 @@ export default function ChatPage() {
         });
       }
 
-      // Show info toast about scraping/indexing
-      if (chatResponse.scraped_urls.length > 0 || chatResponse.indexed_docs > 0) {
+      // Show info toast about scraping/indexing/file upload
+      if (chatResponse.scraped_urls.length > 0 || chatResponse.indexed_docs > 0 || (files && files.length > 0)) {
+        const parts = [];
+        if (chatResponse.scraped_urls.length > 0) {
+          parts.push(`Scraped ${chatResponse.scraped_urls.length} URL${chatResponse.scraped_urls.length > 1 ? 's' : ''}`);
+        }
+        if (files && files.length > 0) {
+          parts.push(`Uploaded ${files.length} file${files.length > 1 ? 's' : ''}`);
+        }
+        if (chatResponse.indexed_docs > 0) {
+          parts.push(`Indexed ${chatResponse.indexed_docs} document${chatResponse.indexed_docs > 1 ? 's' : ''}`);
+        }
+
         toast({
-          title: "Content Indexed",
-          description: `Scraped ${chatResponse.scraped_urls.length} URLs and indexed ${chatResponse.indexed_docs} documents`,
+          title: "Content Processed",
+          description: parts.join(', '),
         });
       }
 
@@ -320,10 +332,13 @@ export default function ChatPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">AI Chat Assistant</h1>
           <p className="text-muted-foreground mt-2">
-            Ask questions, provide URLs to scrape, and get AI-powered answers with code examples
+            Ask questions, upload documents, provide URLs to scrape, and get AI-powered answers with code examples
           </p>
           <p className="text-sm text-muted-foreground mt-1">
             💡 Try: "I want to use the JSONPlaceholder API (https://jsonplaceholder.typicode.com). Write a Python script to fetch all users."
+          </p>
+          <p className="text-sm text-muted-foreground mt-1">
+            📎 Upload PDFs, API specs, or text files to get context-aware answers
           </p>
         </div>
 

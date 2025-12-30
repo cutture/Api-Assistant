@@ -14,7 +14,7 @@ Date: 2025-12-27
 
 import structlog
 from typing import List, Optional
-from fastapi import FastAPI, File, HTTPException, UploadFile, status
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
@@ -1024,91 +1024,173 @@ def create_app(
         response_model=ChatResponse,
         tags=["Chat"],
     )
-    async def chat_generate(request: ChatRequest):
+    async def chat_generate(
+        message: str = Form(...),
+        session_id: Optional[str] = Form(None),
+        conversation_history: Optional[str] = Form(None),  # JSON string
+        enable_url_scraping: bool = Form(True),
+        enable_auto_indexing: bool = Form(True),
+        agent_type: str = Form("general"),
+        files: Optional[List[UploadFile]] = File(None),
+    ):
         """
-        Generate AI-powered chat response with dynamic URL fetching and indexing.
+        Generate AI-powered chat response with dynamic URL fetching, indexing, and file upload support.
 
         This endpoint:
+        - Accepts optional file uploads (PDF, TXT, MD, JSON, etc.) for contextual analysis
         - Extracts URLs from the user message and scrapes their content
-        - Dynamically indexes scraped content into the vector store
+        - Dynamically indexes scraped content and uploaded files into the vector store
         - Searches for relevant context from existing documents
         - Generates intelligent responses using LLM (Groq/Ollama)
         - Supports code generation and API documentation assistance
         - Maintains conversation history if session_id provided
 
         Example:
-            POST /chat
-            {
-                "message": "I want to use the JSONPlaceholder API (https://jsonplaceholder.typicode.com). Write a Python script to fetch all users.",
-                "session_id": "abc123",
-                "agent_type": "code"
-            }
+            POST /chat (multipart/form-data)
+            - message: "Explain this API specification"
+            - session_id: "abc123"
+            - files: [openapi.yaml]
         """
         try:
+            import json
             from datetime import datetime, timezone
             from src.services.chat_service import get_chat_service
+            from src.parsers.format_handler import UnifiedFormatHandler
 
-            logger.info("chat_request_received", message_length=len(request.message))
+            logger.info(
+                "chat_request_received",
+                message_length=len(message),
+                has_files=files is not None and len(files) > 0,
+            )
+
+            # Parse conversation history if provided
+            history_list = []
+            if conversation_history:
+                try:
+                    history_data = json.loads(conversation_history)
+                    history_list = [
+                        {"role": msg.get("role", "user"), "content": msg.get("content", "")}
+                        for msg in history_data
+                    ]
+                except json.JSONDecodeError:
+                    logger.warning("Failed to parse conversation history JSON")
+
+            # Process uploaded files if any
+            uploaded_file_count = 0
+            uploaded_file_names = []
+            if files and len(files) > 0:
+                logger.info("processing_uploaded_files", file_count=len(files))
+                handler = UnifiedFormatHandler()
+
+                for file in files:
+                    try:
+                        # Read file content
+                        content = await file.read()
+
+                        # Try UTF-8, fallback to latin-1, keep as bytes for binary files
+                        try:
+                            content_str = content.decode("utf-8")
+                        except UnicodeDecodeError:
+                            try:
+                                content_str = content.decode("latin-1")
+                            except:
+                                # Keep as bytes for binary files (PDFs)
+                                content_str = content
+
+                        # Parse the document
+                        logger.info("parsing_uploaded_file", filename=file.filename)
+                        result = handler.parse_document(content_str, filename=file.filename or "")
+
+                        # Add to vector store with session-specific metadata
+                        docs = []
+                        for doc in result.get("documents", []):
+                            metadata = doc.get("metadata", {})
+                            # Tag with session for potential cleanup
+                            metadata["uploaded_via_chat"] = True
+                            if session_id:
+                                metadata["chat_session_id"] = session_id
+                            metadata["upload_timestamp"] = datetime.now(timezone.utc).isoformat()
+                            metadata["source_file"] = file.filename
+
+                            docs.append({
+                                "content": doc["content"],
+                                "metadata": metadata,
+                            })
+
+                        if docs:
+                            add_result = vector_store.add_documents(docs)
+                            uploaded_file_count += add_result["new_count"]
+                            uploaded_file_names.append(file.filename or "unknown")
+                            logger.info(
+                                "uploaded_file_indexed",
+                                filename=file.filename,
+                                chunks=len(docs),
+                                new_count=add_result["new_count"],
+                            )
+
+                    except Exception as e:
+                        logger.error(
+                            "file_upload_processing_failed",
+                            filename=file.filename,
+                            error=str(e),
+                        )
+                        # Continue with other files
+                        continue
 
             # Get chat service
             chat_service = get_chat_service(
-                agent_type=request.agent_type,
-                enable_url_scraping=request.enable_url_scraping,
-                enable_auto_indexing=request.enable_auto_indexing,
+                agent_type=agent_type,
+                enable_url_scraping=enable_url_scraping,
+                enable_auto_indexing=enable_auto_indexing,
             )
-
-            # Convert conversation history to dict format
-            history_dicts = None
-            if request.conversation_history:
-                history_dicts = [
-                    {"role": msg.role.value, "content": msg.content}
-                    for msg in request.conversation_history
-                ]
 
             # Generate response
             result = await chat_service.generate_response(
-                user_message=request.message,
-                conversation_history=history_dicts,
-                session_id=request.session_id,
+                user_message=message,
+                conversation_history=history_list if history_list else None,
+                session_id=session_id,
             )
 
             # Convert sources to ChatSource models
             sources = [ChatSource(**source) for source in result["sources"]]
 
-            # Build response
+            # Build response - include uploaded file count in indexed_docs
+            total_indexed = result["indexed_docs"] + uploaded_file_count
+
             response = ChatResponse(
                 response=result["response"],
                 sources=sources,
                 scraped_urls=result["scraped_urls"],
                 failed_urls=result.get("failed_urls", []),
-                indexed_docs=result["indexed_docs"],
+                indexed_docs=total_indexed,
                 context_results=result["context_results"],
-                session_id=request.session_id,
+                session_id=session_id,
                 timestamp=datetime.now(timezone.utc).isoformat(),
             )
 
             # If session provided, add messages to session history
-            if request.session_id:
+            if session_id:
                 logger.info(
                     "chat_attempting_to_save_history",
-                    session_id=request.session_id,
+                    session_id=session_id,
                     total_sessions_in_manager=len(session_manager.sessions),
                 )
                 try:
-                    session = session_manager.get_session(request.session_id)
+                    session = session_manager.get_session(session_id)
                     if session:
                         logger.info(
                             "chat_session_found",
-                            session_id=request.session_id,
+                            session_id=session_id,
                             current_message_count=len(session.conversation_history),
                         )
                         # Add user message
                         session.add_message(
                             role="user",
-                            content=request.message,
+                            content=message,
                             metadata={
                                 "scraped_urls": result["scraped_urls"],
-                                "indexed_docs": result["indexed_docs"],
+                                "indexed_docs": total_indexed,
+                                "uploaded_files": uploaded_file_names,
                             },
                         )
                         # Add assistant response
@@ -1123,7 +1205,7 @@ def create_app(
                         session_manager._save_sessions()
                         logger.info(
                             "chat_history_saved_successfully",
-                            session_id=request.session_id,
+                            session_id=session_id,
                             new_message_count=len(session.conversation_history),
                         )
                     else:
@@ -1131,7 +1213,7 @@ def create_app(
                         existing_ids = list(session_manager.sessions.keys())
                         logger.warning(
                             "chat_session_not_found_or_expired",
-                            session_id=request.session_id,
+                            session_id=session_id,
                             existing_session_ids=existing_ids[:5],  # Log first 5 IDs
                             total_sessions=len(existing_ids),
                             message="Session not found or expired - messages not saved",
@@ -1139,7 +1221,7 @@ def create_app(
                 except Exception as e:
                     logger.warning(
                         "chat_history_save_failed",
-                        session_id=request.session_id,
+                        session_id=session_id,
                         error=str(e),
                     )
                     # Don't fail the request if history save fails
@@ -1147,7 +1229,8 @@ def create_app(
             logger.info(
                 "chat_response_generated",
                 scraped_urls=len(result["scraped_urls"]),
-                indexed_docs=result["indexed_docs"],
+                indexed_docs=total_indexed,
+                uploaded_files=len(uploaded_file_names),
                 context_results=result["context_results"],
             )
 

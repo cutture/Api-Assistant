@@ -13,7 +13,7 @@ import { Trash2, Download } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 export interface ChatInterfaceProps {
-  onSendMessage: (message: string) => Promise<string>;
+  onSendMessage: (message: string, files?: File[]) => Promise<string>;
   initialMessages?: ChatMessageProps[];
 }
 
@@ -39,19 +39,25 @@ export function ChatInterface({ onSendMessage, initialMessages }: ChatInterfaceP
     }
   }, [messages]);
 
-  const handleSendMessage = async (content: string) => {
-    // Add user message
+  const handleSendMessage = async (content: string, files?: File[]) => {
+    // Add user message (include file info if present)
+    let messageContent = content;
+    if (files && files.length > 0) {
+      const fileNames = files.map(f => f.name).join(", ");
+      messageContent = `${content}\n\n📎 Attached: ${fileNames}`;
+    }
+
     const userMessage: ChatMessageProps = {
       role: "user",
-      content,
+      content: messageContent,
       timestamp: new Date().toISOString(),
     };
     setMessages((prev) => [...prev, userMessage]);
     setIsLoading(true);
 
     try {
-      // Get AI response
-      const response = await onSendMessage(content);
+      // Get AI response (with files)
+      const response = await onSendMessage(content, files);
 
       // Add assistant message
       const assistantMessage: ChatMessageProps = {

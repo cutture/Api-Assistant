@@ -43,8 +43,42 @@ export interface ChatResponse {
  * Send a chat message and get AI-generated response
  */
 export async function sendChatMessage(
-  request: ChatRequest
+  request: ChatRequest & { files?: File[] }
 ): Promise<ApiResponse<ChatResponse>> {
+  // If files are present, use multipart/form-data
+  if (request.files && request.files.length > 0) {
+    const formData = new FormData();
+    formData.append("message", request.message);
+
+    if (request.session_id) {
+      formData.append("session_id", request.session_id);
+    }
+
+    if (request.conversation_history && request.conversation_history.length > 0) {
+      formData.append("conversation_history", JSON.stringify(request.conversation_history));
+    }
+
+    formData.append("enable_url_scraping", String(request.enable_url_scraping ?? true));
+    formData.append("enable_auto_indexing", String(request.enable_auto_indexing ?? true));
+    formData.append("agent_type", request.agent_type || "general");
+
+    // Append files
+    request.files.forEach((file) => {
+      formData.append("files", file);
+    });
+
+    return apiRequest<ChatResponse>({
+      method: "POST",
+      url: "/chat",
+      data: formData,
+      headers: {
+        // Let browser set Content-Type with boundary for multipart/form-data
+        "Content-Type": undefined,
+      },
+    });
+  }
+
+  // Otherwise use regular JSON
   return apiRequest<ChatResponse>({
     method: "POST",
     url: "/chat",
