@@ -1,0 +1,121 @@
+{
+  "api_endpoints": [
+    {
+      "name": "Get User",
+      "method": "GET",
+      "path": "/api/v1/users/{id}",
+      "description": "Retrieves a single user by ID",
+      "parameters": {
+        "path": [
+          {
+            "name": "id",
+            "type": "integer",
+            "required": true,
+            "description": "User ID"
+          }
+        ],
+        "query": [
+          {
+            "name": "include_posts",
+            "type": "boolean",
+            "required": false,
+            "default": false,
+            "description": "Include user's posts in response"
+          }
+        ]
+      },
+      "responses": {
+        "200": {
+          "description": "User found",
+          "example": {
+            "id": 1,
+            "username": "john_doe",
+            "email": "john@example.com",
+            "created_at": "2025-01-01T00:00:00Z"
+          }
+        },
+        "404": {
+          "description": "User not found"
+        }
+      }
+    },
+    {
+      "name": "Create User",
+      "method": "POST",
+      "path": "/api/v1/users",
+      "description": "Creates a new user",
+      "request_body": {
+        "username": "string",
+        "email": "string",
+        "password": "string"
+      },
+      "responses": {
+        "201": {
+          "description": "User created successfully"
+        },
+        "400": {
+          "description": "Invalid input data"
+        }
+      }
+    },
+    {
+      "name": "List Posts",
+      "method": "GET",
+      "path": "/api/v1/posts",
+      "description": "Retrieves a paginated list of posts",
+      "parameters": {
+        "query": [
+          {
+            "name": "page",
+            "type": "integer",
+            "default": 1
+          },
+          {
+            "name": "limit",
+            "type": "integer",
+            "default": 20,
+            "maximum": 100
+          },
+          {
+            "name": "sort",
+            "type": "string",
+            "enum": ["created_at", "updated_at", "title"],
+            "default": "created_at"
+          }
+        ]
+      },
+      "responses": {
+        "200": {
+          "description": "List of posts",
+          "example": {
+            "data": [
+              {
+                "id": 1,
+                "title": "First Post",
+                "content": "Hello World",
+                "author_id": 1,
+                "created_at": "2025-12-30T10:00:00Z"
+              }
+            ],
+            "pagination": {
+              "page": 1,
+              "limit": 20,
+              "total": 150
+            }
+          }
+        }
+      }
+    }
+  ],
+  "authentication": {
+    "type": "Bearer Token",
+    "description": "Include the token in the Authorization header",
+    "example": "Authorization: Bearer YOUR_API_TOKEN"
+  },
+  "rate_limits": {
+    "requests_per_hour": 1000,
+    "burst_limit": 100
+  },
+  "base_url": "https://api.example.com",
+  "version": "1.0.0"
+}

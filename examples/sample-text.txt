@@ -1,0 +1,35 @@
+API Documentation Best Practices
+
+Introduction
+This document provides guidelines for creating effective API documentation.
+
+Structure Your Documentation
+- Start with a clear overview
+- Provide getting started guides
+- Include authentication details
+- Document all endpoints with examples
+- Add error handling information
+
+Authentication
+Most APIs require authentication. Common methods include:
+- API Keys
+- OAuth 2.0
+- Bearer Tokens
+- Basic Auth
+
+Best Practices
+1. Keep documentation up to date
+2. Provide code examples in multiple languages
+3. Include request and response samples
+4. Document error codes and their meanings
+5. Offer interactive API explorers
+
+Example API Call
+To retrieve user information, send a GET request to /api/users/{id}
+Include your API key in the Authorization header.
+
+Response Format
+All responses are returned in JSON format with appropriate HTTP status codes.
+
+Conclusion
+Good API documentation improves developer experience and accelerates integration.
