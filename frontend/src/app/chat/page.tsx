@@ -275,7 +275,7 @@ export default function ChatPage() {
       // Add metadata about scraped URLs and indexing
       if (chatResponse.scraped_urls.length > 0) {
         formattedResponse += `\n\n---\n**URLs Processed:** ${chatResponse.scraped_urls.length} URLs were scraped and indexed\n`;
-        chatResponse.scraped_urls.forEach((url, idx) => {
+        chatResponse.scraped_urls.forEach((url: string, idx: number) => {
           formattedResponse += `${idx + 1}. ${url}\n`;
         });
       }
@@ -283,7 +283,7 @@ export default function ChatPage() {
       // Add sources if available
       if (chatResponse.sources.length > 0) {
         formattedResponse += `\n\n---\n**Sources Used:**\n`;
-        chatResponse.sources.slice(0, 5).forEach((source, idx) => {
+        chatResponse.sources.slice(0, 5).forEach((source: any, idx: number) => {
           formattedResponse += `${idx + 1}. ${source.title}`;
           if (source.method) {
             formattedResponse += ` (${source.method})`;

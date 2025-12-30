@@ -33,7 +33,7 @@ export function useCollectionStats() {
         throw new Error(response.error);
       }
 
-      setStats(response.data || null);
+      setStats(response.data?.collection || null);
       setIsLoadingStats(false);
 
       return response.data;

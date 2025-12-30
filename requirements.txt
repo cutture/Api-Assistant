@@ -3,6 +3,7 @@ streamlit>=1.28.0
 fastapi>=0.104.0
 uvicorn>=0.24.0
 python-dotenv>=1.0.0
+python-multipart>=0.0.6  # Required for FastAPI file uploads and form data
 
 # LLM & Embeddings
 langchain>=0.3.0

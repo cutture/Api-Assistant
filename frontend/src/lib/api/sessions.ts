@@ -7,6 +7,7 @@ import type {
   ApiResponse,
   Session,
   CreateSessionRequest,
+  CreateSessionResponse,
   UpdateSessionRequest,
   SessionListResponse,
   SessionStatsResponse,
@@ -18,8 +19,8 @@ import type {
  */
 export async function createSession(
   request: CreateSessionRequest
-): Promise<ApiResponse<Session>> {
-  return apiRequest<Session>({
+): Promise<ApiResponse<CreateSessionResponse>> {
+  return apiRequest<CreateSessionResponse>({
     method: "POST",
     url: "/sessions",
     data: request,

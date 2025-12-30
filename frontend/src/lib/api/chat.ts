@@ -2,7 +2,8 @@
  * Chat API functions
  */
 
-import { apiRequest, ApiResponse } from "./client";
+import { apiRequest } from "./client";
+import type { ApiResponse } from "@/types";
 
 export interface ChatMessage {
   role: "user" | "assistant" | "system";

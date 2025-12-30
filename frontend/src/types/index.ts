@@ -33,7 +33,7 @@ export interface SearchRequest {
   query: string;
   n_results?: number;
   mode?: SearchMode;
-  filter?: SearchFilters;
+  filter?: Filter | SearchFilters;
   use_query_expansion?: boolean;
   use_diversification?: boolean;
   diversification_lambda?: number;
@@ -158,6 +158,10 @@ export interface CreateSessionRequest {
   ttl_minutes?: number;
   settings?: UserSettings;
   collection_name?: string;
+}
+
+export interface CreateSessionResponse {
+  session: Session;
 }
 
 export interface UpdateSessionRequest {
