@@ -199,7 +199,12 @@ class UnifiedFormatHandler:
         elif format_type == APIFormat.POSTMAN:
             return self._parse_postman(content, source_file)
         else:
-            raise ValueError(f"Unsupported or unknown API specification format")
+            raise ValueError(
+                "Unsupported or unknown API specification format. "
+                "Please upload a valid OpenAPI (with 'openapi' or 'swagger' field), "
+                "Postman Collection (with 'info' and 'item' fields), "
+                "or GraphQL schema file."
+            )
 
     def _parse_openapi(self, content: str, source_file: str) -> Dict[str, Any]:
         """Parse OpenAPI specification."""

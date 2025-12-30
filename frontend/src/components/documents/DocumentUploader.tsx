@@ -99,6 +99,15 @@ export function DocumentUploader() {
         <CardDescription>
           Upload OpenAPI, GraphQL, or Postman collection files
         </CardDescription>
+        <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-md text-sm">
+          <p className="font-medium text-blue-900 dark:text-blue-100 mb-2">Accepted File Formats:</p>
+          <ul className="list-disc list-inside space-y-1 text-blue-800 dark:text-blue-200 ml-2">
+            <li><strong>OpenAPI:</strong> JSON/YAML files with <code className="px-1 py-0.5 bg-blue-100 dark:bg-blue-900 rounded text-xs">"openapi"</code> or <code className="px-1 py-0.5 bg-blue-100 dark:bg-blue-900 rounded text-xs">"swagger"</code> field</li>
+            <li><strong>Postman:</strong> Collection files with <code className="px-1 py-0.5 bg-blue-100 dark:bg-blue-900 rounded text-xs">"info"</code> and <code className="px-1 py-0.5 bg-blue-100 dark:bg-blue-900 rounded text-xs">"item"</code> fields</li>
+            <li><strong>GraphQL:</strong> Schema files (.graphql, .gql) with type definitions</li>
+          </ul>
+          <p className="mt-2 text-xs text-blue-700 dark:text-blue-300">Note: Only API specification files are accepted. Regular JSON files will be rejected.</p>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Drag & Drop Zone */}
