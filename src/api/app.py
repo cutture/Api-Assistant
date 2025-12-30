@@ -1048,9 +1048,19 @@ def create_app(
 
             # If session provided, add messages to session history
             if request.session_id:
+                logger.info(
+                    "chat_attempting_to_save_history",
+                    session_id=request.session_id,
+                    total_sessions_in_manager=len(session_manager.sessions),
+                )
                 try:
                     session = session_manager.get_session(request.session_id)
                     if session:
+                        logger.info(
+                            "chat_session_found",
+                            session_id=request.session_id,
+                            current_message_count=len(session.conversation_history),
+                        )
                         # Add user message
                         session.add_message(
                             role="user",
@@ -1071,14 +1081,18 @@ def create_app(
                         )
                         session_manager._save_sessions()
                         logger.info(
-                            "chat_history_saved",
+                            "chat_history_saved_successfully",
                             session_id=request.session_id,
-                            message_count=len(session.conversation_history),
+                            new_message_count=len(session.conversation_history),
                         )
                     else:
+                        # Log all existing session IDs to help debug
+                        existing_ids = list(session_manager.sessions.keys())
                         logger.warning(
                             "chat_session_not_found_or_expired",
                             session_id=request.session_id,
+                            existing_session_ids=existing_ids[:5],  # Log first 5 IDs
+                            total_sessions=len(existing_ids),
                             message="Session not found or expired - messages not saved",
                         )
                 except Exception as e:

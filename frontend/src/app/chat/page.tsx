@@ -25,6 +25,9 @@ export default function ChatPage() {
       return;
     }
 
+    // Mark as initialized IMMEDIATELY to prevent double calls
+    sessionInitialized.current = true;
+
     // Try to restore existing session from localStorage
     const storedSessionId = localStorage.getItem("chat_session_id");
 
@@ -32,7 +35,6 @@ export default function ChatPage() {
       // Use existing session
       console.log("Restoring session:", storedSessionId);
       setSessionId(storedSessionId);
-      sessionInitialized.current = true;
     } else {
       // Create new session only once
       console.log("Creating new session...");
@@ -59,12 +61,12 @@ export default function ChatPage() {
             // Store in localStorage
             if (newSessionId) {
               localStorage.setItem("chat_session_id", newSessionId);
-              sessionInitialized.current = true;
             }
           },
           onError: (error: any) => {
             console.error("Failed to create session:", error);
-            sessionInitialized.current = true; // Mark as initialized even on error
+            // Reset flag on error so user can try again
+            sessionInitialized.current = false;
           },
         }
       );
@@ -80,6 +82,8 @@ export default function ChatPage() {
         message.toLowerCase().includes(keyword)
       );
 
+      console.log("Sending chat message with session_id:", sessionId);
+
       // Send chat request with LLM
       const response = await sendChatMessage({
         message,
@@ -89,6 +93,8 @@ export default function ChatPage() {
         enable_auto_indexing: true,
         agent_type: askingForCode ? "code" : "general",
       });
+
+      console.log("Chat response received, session_id:", response.data?.session_id);
 
       if (response.error) {
         throw new Error(response.error);
