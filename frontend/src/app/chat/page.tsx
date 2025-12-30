@@ -9,95 +9,173 @@ import { ChatInterface } from "@/components/chat/ChatInterface";
 import { useToast } from "@/hooks/use-toast";
 import { sendChatMessage, ChatMessage } from "@/lib/api/chat";
 import { useState, useEffect, useRef } from "react";
-import { createSession } from "@/lib/api/sessions";
+import { createSession, listSessions, getSession } from "@/lib/api/sessions";
+import { Session, SessionStatus } from "@/types";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Plus, RefreshCw } from "lucide-react";
 
 export default function ChatPage() {
   const { toast } = useToast();
   const [conversationHistory, setConversationHistory] = useState<ChatMessage[]>([]);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [isSessionReady, setIsSessionReady] = useState(false);
+  const [availableSessions, setAvailableSessions] = useState<Session[]>([]);
+  const [isLoadingSessions, setIsLoadingSessions] = useState(false);
   const sessionInitialized = useRef(false);
 
-  // Create or restore session on mount
+  // Load available sessions on mount
   useEffect(() => {
-    // Prevent double initialization in Strict Mode or re-renders
-    if (sessionInitialized.current) {
-      return;
-    }
-
-    // Mark as initialized IMMEDIATELY to prevent double calls
-    sessionInitialized.current = true;
-
-    // Try to restore existing session from localStorage
-    const storedSessionId = localStorage.getItem("chat_session_id");
-
-    if (storedSessionId) {
-      // Use existing session
-      console.log("Restoring session:", storedSessionId);
-      setSessionId(storedSessionId);
-      setIsSessionReady(true);
-    } else {
-      // Create new session only once
-      console.log("Creating new session...");
-
-      // Call API directly with timeout handling
-      (async () => {
-        try {
-          console.log("Starting session creation API call...");
-          const response = await createSession({
-            ttl_minutes: 1440, // 24 hours
-            settings: {
-              default_search_mode: "hybrid",
-              default_n_results: 10,
-              use_reranking: false,
-              use_query_expansion: true,
-              use_diversification: false,
-              show_scores: true,
-              show_metadata: true,
-              max_content_length: 500,
-              custom_metadata: {},
-            },
-          });
-
-          console.log("Session creation API response received:", JSON.stringify(response, null, 2));
-
-          if (response.error) {
-            throw new Error(response.error);
-          }
-
-          // Response structure is ApiResponse<{session: Session}>
-          // So response.data is { session: { session_id: "...", ... } }
-          const newSessionId = response.data?.session?.session_id || null;
-          console.log("Extracted session ID:", newSessionId);
-
-          setSessionId(newSessionId);
-          setIsSessionReady(true);
-
-          // Store in localStorage
-          if (newSessionId) {
-            localStorage.setItem("chat_session_id", newSessionId);
-            console.log("Session ID stored in localStorage");
-          } else {
-            console.error("Failed to extract session ID from response!");
-            console.error("Response data structure:", response.data);
-          }
-        } catch (error: any) {
-          console.error("Failed to create session:", error);
-          console.error("Error details:", error.message, error.stack);
-          setIsSessionReady(false);
-          // Reset flag on error so user can try again
-          sessionInitialized.current = false;
-
-          toast({
-            title: "Session Creation Failed",
-            description: error.message || "Could not create chat session",
-            variant: "destructive",
-          });
-        }
-      })();
-    }
-    // Empty dependency array - only run once on mount
+    loadAvailableSessions();
   }, []);
+
+  // Load sessions and try to restore last used session
+  const loadAvailableSessions = async () => {
+    setIsLoadingSessions(true);
+    try {
+      const response = await listSessions(undefined, SessionStatus.ACTIVE);
+
+      if (response.error) {
+        throw new Error(response.error);
+      }
+
+      const sessions = response.data?.sessions || [];
+      setAvailableSessions(sessions);
+
+      // Try to restore last used session from localStorage
+      const storedSessionId = localStorage.getItem("chat_session_id");
+
+      if (storedSessionId) {
+        // Check if stored session still exists and is active
+        const sessionExists = sessions.find(s => s.session_id === storedSessionId);
+
+        if (sessionExists) {
+          console.log("Restoring session:", storedSessionId);
+          await switchToSession(storedSessionId);
+        } else {
+          console.log("Stored session no longer exists");
+          localStorage.removeItem("chat_session_id");
+
+          // Use most recent session if available
+          if (sessions.length > 0) {
+            const mostRecent = sessions[0]; // Already sorted by last_accessed
+            await switchToSession(mostRecent.session_id);
+          }
+        }
+      } else if (sessions.length > 0) {
+        // No stored session, use most recent
+        const mostRecent = sessions[0];
+        await switchToSession(mostRecent.session_id);
+      }
+    } catch (error: any) {
+      console.error("Failed to load sessions:", error);
+      toast({
+        title: "Failed to load sessions",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingSessions(false);
+    }
+  };
+
+  // Switch to a different session
+  const switchToSession = async (newSessionId: string) => {
+    try {
+      console.log("Switching to session:", newSessionId);
+      setIsSessionReady(false);
+
+      // Get full session details including conversation history
+      const response = await getSession(newSessionId);
+
+      if (response.error) {
+        throw new Error(response.error);
+      }
+
+      const session = response.data;
+      if (!session) {
+        throw new Error("Session not found");
+      }
+
+      // Load conversation history from session
+      const history: ChatMessage[] = session.conversation_history?.map((msg: any) => ({
+        role: msg.role,
+        content: msg.content,
+      })) || [];
+
+      setSessionId(newSessionId);
+      setConversationHistory(history);
+      setIsSessionReady(true);
+
+      // Store in localStorage
+      localStorage.setItem("chat_session_id", newSessionId);
+
+      console.log(`Switched to session ${newSessionId} with ${history.length} messages`);
+    } catch (error: any) {
+      console.error("Failed to switch session:", error);
+      toast({
+        title: "Failed to switch session",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Create a new session
+  const handleCreateNewSession = async () => {
+    try {
+      console.log("Creating new session...");
+      const response = await createSession({
+        ttl_minutes: 1440, // 24 hours
+        settings: {
+          default_search_mode: "hybrid",
+          default_n_results: 10,
+          use_reranking: false,
+          use_query_expansion: true,
+          use_diversification: false,
+          show_scores: true,
+          show_metadata: true,
+          max_content_length: 500,
+          custom_metadata: {},
+        },
+      });
+
+      if (response.error) {
+        throw new Error(response.error);
+      }
+
+      const newSessionId = response.data?.session?.session_id || null;
+
+      if (!newSessionId) {
+        throw new Error("Failed to get session ID from response");
+      }
+
+      // Clear conversation history for new session
+      setConversationHistory([]);
+
+      // Reload sessions list and switch to new session
+      await loadAvailableSessions();
+      await switchToSession(newSessionId);
+
+      toast({
+        title: "Session created",
+        description: `New session ${newSessionId.substring(0, 8)}... created`,
+      });
+    } catch (error: any) {
+      console.error("Failed to create session:", error);
+      toast({
+        title: "Session Creation Failed",
+        description: error.message || "Could not create chat session",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleSendMessage = async (message: string): Promise<string> => {
     try {
@@ -198,6 +276,75 @@ export default function ChatPage() {
             💡 Try: "I want to use the JSONPlaceholder API (https://jsonplaceholder.typicode.com). Write a Python script to fetch all users."
           </p>
         </div>
+
+        {/* Session Selector */}
+        <div className="flex items-center gap-3 p-4 bg-muted/30 rounded-lg border">
+          <div className="flex-1">
+            <label className="text-sm font-medium mb-2 block">
+              Active Session
+              {sessionId && (
+                <span className="ml-2 text-xs text-muted-foreground font-mono">
+                  ({sessionId.substring(0, 8)}...)
+                </span>
+              )}
+            </label>
+            <Select
+              value={sessionId || ""}
+              onValueChange={switchToSession}
+              disabled={isLoadingSessions || availableSessions.length === 0}
+            >
+              <SelectTrigger className="w-full bg-background">
+                <SelectValue placeholder={isLoadingSessions ? "Loading sessions..." : "Select a session"} />
+              </SelectTrigger>
+              <SelectContent>
+                {availableSessions.map((session) => (
+                  <SelectItem key={session.session_id} value={session.session_id}>
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="font-mono text-xs">
+                        {session.session_id.substring(0, 12)}...
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {session.user_id || "No user"}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {session.conversation_history?.length || 0} msgs
+                      </span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={loadAvailableSessions}
+              disabled={isLoadingSessions}
+              title="Refresh sessions"
+            >
+              <RefreshCw className={`h-4 w-4 ${isLoadingSessions ? "animate-spin" : ""}`} />
+            </Button>
+            <Button
+              variant="default"
+              size="sm"
+              onClick={handleCreateNewSession}
+              disabled={isLoadingSessions}
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              New Session
+            </Button>
+          </div>
+        </div>
+
+        {/* Chat status indicator */}
+        {!isSessionReady && (
+          <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-900 rounded-lg">
+            <p className="text-sm text-yellow-800 dark:text-yellow-200">
+              {isLoadingSessions ? "Loading sessions..." : "No session selected. Please select or create a session to start chatting."}
+            </p>
+          </div>
+        )}
 
         <ChatInterface onSendMessage={handleSendMessage} />
       </div>
