@@ -31,10 +31,20 @@
 ### Environment Setup
 
 1. **Start Backend Server**
+
+   **For Linux/Mac:**
    ```bash
    # Terminal 1 - Backend
    cd /path/to/Api-Assistant
-   source venv/bin/activate  # or venv\Scripts\activate on Windows
+   source venv/bin/activate
+   uvicorn src.api.app:app --reload --port 8000
+   ```
+
+   **For Windows PowerShell:**
+   ```powershell
+   # Terminal 1 - Backend
+   cd C:\path\to\Api-Assistant
+   .\venv\Scripts\Activate.ps1
    uvicorn src.api.app:app --reload --port 8000
    ```
 
@@ -78,6 +88,8 @@ All sample files are in the `examples/` directory:
 ```
 
 **2. Create invalid test files**:
+
+**For Linux/Mac:**
 ```bash
 # Create invalid JSON
 echo '{"invalid": json}' > examples/invalid.json
@@ -89,9 +101,29 @@ touch examples/empty.txt
 for i in {1..1000}; do cat examples/sample-text.txt >> examples/large-text.txt; done
 ```
 
+**For Windows PowerShell:**
+```powershell
+# Create invalid JSON
+Set-Content -Path examples/invalid.json -Value '{"invalid": json}'
+
+# Create empty file
+New-Item -Path examples/empty.txt -ItemType File -Force
+
+# Create large file (for performance testing)
+1..1000 | ForEach-Object { Get-Content examples/sample-text.txt | Add-Content examples/large-text.txt }
+```
+
 ---
 
 ## Backend API Testing
+
+> **Note for Windows PowerShell Users:**
+> - Most test cases below use `curl` commands, which work in PowerShell 7+ and Windows 10/11 (curl is aliased to `Invoke-WebRequest`)
+> - If you encounter issues with `curl`, you can use native PowerShell cmdlets:
+>   - Replace `curl` with `Invoke-RestMethod` for JSON responses
+>   - Replace `curl` with `Invoke-WebRequest` for detailed HTTP responses
+> - Example: `curl -X POST "http://localhost:8000/search" -H "Content-Type: application/json" -d '{"query":"test"}'`
+>   becomes: `Invoke-RestMethod -Uri "http://localhost:8000/search" -Method POST -ContentType "application/json" -Body '{"query":"test"}'`
 
 ### Test Category: Health & Stats Endpoints
 
@@ -2866,7 +2898,9 @@ python -m src.cli.app session delete <session-id> --confirm
 **Type:** Edge Case Test
 
 **Steps:**
-1. Create 0-byte file: `touch empty.txt`
+1. Create 0-byte file:
+   - **Linux/Mac:** `touch empty.txt`
+   - **Windows PowerShell:** `New-Item -Path empty.txt -ItemType File -Force`
 2. Try to upload
 
 **Expected Result:**
@@ -3085,6 +3119,8 @@ curl "http://localhost:8000/documents/../../../etc/passwd"
 **Type:** Security Test - API
 
 **Steps:**
+
+**For Linux/Mac:**
 ```bash
 # Send 100 requests rapidly
 for i in {1..100}; do
@@ -3093,6 +3129,20 @@ for i in {1..100}; do
     -d '{"query": "test"}' &
 done
 wait
+```
+
+**For Windows PowerShell:**
+```powershell
+# Send 100 requests rapidly
+1..100 | ForEach-Object {
+  Start-Job -ScriptBlock {
+    Invoke-RestMethod -Uri "http://localhost:8000/search" `
+      -Method POST `
+      -ContentType "application/json" `
+      -Body '{"query": "test"}'
+  }
+}
+Get-Job | Wait-Job | Remove-Job
 ```
 
 **Expected Result:**
@@ -3751,12 +3801,28 @@ python -m src.cli.app search
 **Type:** CLI Test
 
 **Steps:**
+
+**For Linux/Mac:**
 ```bash
 # Create config file
 cat > ~/.api-assistant/config.yaml <<EOF
 default_search_mode: hybrid
 default_n_results: 20
 EOF
+
+# Use config
+python -m src.cli.app search "users"
+```
+
+**For Windows PowerShell:**
+```powershell
+# Create config file
+$configContent = @"
+default_search_mode: hybrid
+default_n_results: 20
+"@
+New-Item -Path "$env:USERPROFILE\.api-assistant" -ItemType Directory -Force
+Set-Content -Path "$env:USERPROFILE\.api-assistant\config.yaml" -Value $configContent
 
 # Use config
 python -m src.cli.app search "users"
