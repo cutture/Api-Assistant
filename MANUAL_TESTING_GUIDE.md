@@ -1,8 +1,9 @@
 # 🧪 API Assistant - Comprehensive Manual Testing Guide
 
-**Version:** 1.0.0
+**Version:** 2.0.0 (Enhanced Edition)
 **Last Updated:** 2025-12-30
-**Purpose:** Complete manual testing guide for all features including UI, API, CLI, and End-to-End scenarios
+**Test Cases:** 199 comprehensive scenarios
+**Purpose:** Complete manual testing guide covering all features with UI, API, CLI, E2E, Security, Accessibility, and Mobile testing
 
 ---
 
@@ -10,12 +11,18 @@
 
 1. [Prerequisites & Setup](#prerequisites--setup)
 2. [Test Data Preparation](#test-data-preparation)
-3. [Backend API Testing](#backend-api-testing)
-4. [Frontend UI Testing](#frontend-ui-testing)
-5. [CLI Testing](#cli-testing)
-6. [End-to-End Testing](#end-to-end-testing)
-7. [Performance & Edge Cases](#performance--edge-cases)
-8. [Test Results Template](#test-results-template)
+3. [Backend API Testing](#backend-api-testing) - 30 tests
+4. [Frontend UI Testing](#frontend-ui-testing) - 75 tests
+5. [CLI Testing](#cli-testing) - 35 tests
+6. [End-to-End Testing](#end-to-end-testing) - 10 tests
+7. [Performance & Edge Cases](#performance--edge-cases) - 12 tests
+8. [Security & Validation Testing](#security--validation-testing) - 12 tests
+9. [Advanced Integration Testing](#advanced-integration-testing) - 10 tests
+10. [Accessibility Testing](#accessibility-testing) - 8 tests
+11. [Mobile & Responsive Testing](#mobile--responsive-testing) - 7 tests
+12. [Advanced CLI Testing](#advanced-cli-testing) - 10 tests (within CLI section)
+13. [Test Results Template](#test-results-template)
+14. [Test Coverage Summary](#test-coverage-summary)
 
 ---
 
@@ -1018,6 +1025,176 @@ curl -X POST "http://localhost:8000/diagrams/overview" \
 
 ---
 
+#### TEST-UI-056: View Document Library
+**Type:** UI Test
+
+**Steps:**
+1. Navigate to Documents/Home page
+2. Click "Document Library" tab
+3. View list of uploaded documents
+
+**Expected Result:**
+- All uploaded documents displayed
+- Shows: filename, format, date, chunks, size
+- Sortable by different columns
+- Pagination if many documents
+
+---
+
+#### TEST-UI-057: Filter Documents by Format
+**Type:** UI Test
+
+**Steps:**
+1. Document Library tab
+2. Use format filter dropdown
+3. Select "OpenAPI"
+4. Observe filtered results
+
+**Expected Result:**
+- Only OpenAPI documents shown
+- Filter badge displayed
+- Count updated
+- Can clear filter
+
+---
+
+#### TEST-UI-058: Sort Documents
+**Type:** UI Test
+
+**Steps:**
+1. Document Library
+2. Click column headers to sort:
+   - By name (A-Z, Z-A)
+   - By date (newest/oldest)
+   - By size
+
+**Expected Result:**
+- Documents reorder correctly
+- Sort indicator shown
+- Persists during session
+
+---
+
+#### TEST-UI-059: Search Within Documents
+**Type:** UI Test
+
+**Steps:**
+1. Document Library
+2. Use search box to filter by filename
+3. Type: "openapi"
+
+**Expected Result:**
+- Only matching documents shown
+- Search is case-insensitive
+- Real-time filtering
+
+---
+
+#### TEST-UI-060: View Document Details Modal
+**Type:** UI Test
+
+**Steps:**
+1. Document Library
+2. Click on a document row
+3. View details modal/page
+
+**Expected Result:**
+- Full document information shown
+- Content preview available
+- Metadata displayed
+- Chunk count and IDs
+- Can edit tags/metadata
+- Can delete from here
+
+---
+
+#### TEST-UI-061: Document Stats Per File
+**Type:** UI Test
+
+**Steps:**
+1. View document details
+2. Check statistics:
+   - Chunk count
+   - Token count
+   - Format type
+   - Upload date
+   - File size
+
+**Expected Result:**
+- All stats accurate
+- Formatted nicely
+- Helpful tooltips
+
+---
+
+#### TEST-UI-062: Tab Switching (Upload ↔ Library)
+**Type:** UI Test
+
+**Steps:**
+1. Documents page
+2. Switch between tabs:
+   - Upload Documents
+   - Document Library
+3. Perform actions in each tab
+4. Switch tabs again
+
+**Expected Result:**
+- Tab content loads instantly
+- State preserved when switching back
+- No data loss
+- Active tab highlighted
+
+---
+
+#### TEST-UI-063: Refresh Document List
+**Type:** UI Test
+
+**Steps:**
+1. Document Library
+2. Upload new document in another tab/window
+3. Click refresh button in Library
+4. Verify new document appears
+
+**Expected Result:**
+- List refreshes
+- New documents appear
+- Maintains scroll position
+- Loading indicator shown
+
+---
+
+#### TEST-UI-064: Empty State Handling
+**Type:** UI Test
+
+**Steps:**
+1. Clear all documents
+2. Navigate to Document Library
+
+**Expected Result:**
+- Empty state UI shown
+- Helpful message: "No documents yet"
+- Call-to-action: "Upload your first document"
+- Link to upload tab
+
+---
+
+#### TEST-UI-065: Document Count Display
+**Type:** UI Test
+**Prerequisite:** Upload 5+ documents
+
+**Steps:**
+1. Document Library
+2. Check document count display
+3. Apply filters
+4. Check count updates
+
+**Expected Result:**
+- Total count shown: "Showing 5 of 12 documents"
+- Updates when filtering
+- Accurate at all times
+
+---
+
 ### Test Category: Chat Interface
 
 #### TEST-UI-015: Basic Chat Question
@@ -1299,6 +1476,134 @@ curl -X POST "http://localhost:8000/diagrams/overview" \
 - Full content visible
 - Metadata displayed
 - Can close and return to search
+
+---
+
+#### TEST-UI-066: Search Re-ranking Toggle
+**Type:** UI Test
+
+**Steps:**
+1. Search page
+2. Perform search with re-ranking OFF
+3. Note result order
+4. Enable re-ranking
+5. Search again with same query
+
+**Expected Result:**
+- Results re-order when re-ranking enabled
+- Toggle works smoothly
+- Setting persists
+
+---
+
+#### TEST-UI-067: Search Diversification
+**Type:** UI Test
+
+**Steps:**
+1. Search page → Advanced options
+2. Enable "Result Diversification"
+3. Search for: "API users"
+4. Observe results
+
+**Expected Result:**
+- More diverse results (not all from same source)
+- MMR algorithm applied
+- Different document sources represented
+
+---
+
+#### TEST-UI-068: Score Threshold Filtering
+**Type:** UI Test
+
+**Steps:**
+1. Search page
+2. Set minimum score threshold: 0.7
+3. Search for: "authentication"
+
+**Expected Result:**
+- Only results with score ≥ 0.7 shown
+- Lower scored results filtered out
+- Threshold indicated in UI
+
+---
+
+#### TEST-UI-069: Search Result Highlighting
+**Type:** UI Test
+
+**Steps:**
+1. Search for: "GET users"
+2. Check if matching terms highlighted in results
+
+**Expected Result:**
+- Query terms highlighted in result snippets
+- Highlighting visible
+- Different color/style for highlights
+
+---
+
+#### TEST-UI-070: Save Search Query
+**Type:** UI Test
+
+**Steps:**
+1. Perform search with specific filters
+2. Click "Save Search" or bookmark
+3. Name the search
+4. Load saved search later
+
+**Expected Result:**
+- Query and filters saved
+- Can load from saved searches list
+- Quick access to common searches
+
+---
+
+#### TEST-UI-071: Search Export Results
+**Type:** UI Test
+
+**Steps:**
+1. Perform search
+2. Click "Export Results"
+3. Choose format (CSV, JSON, PDF)
+4. Download
+
+**Expected Result:**
+- File downloads successfully
+- Contains all results with metadata
+- Proper formatting
+
+---
+
+#### TEST-UI-072: Search Keyboard Shortcuts
+**Type:** UI Test
+
+**Steps:**
+1. Search page
+2. Try keyboard shortcuts:
+   - `/` to focus search box
+   - `Enter` to search
+   - `Esc` to clear
+   - Arrow keys to navigate results
+
+**Expected Result:**
+- All shortcuts work
+- Improves user efficiency
+- No conflicts with browser shortcuts
+
+---
+
+#### TEST-UI-073: Search Results Copy
+**Type:** UI Test
+
+**Steps:**
+1. Perform search
+2. Select result text
+3. Right-click → Copy
+4. Or click "Copy" button on result
+
+**Expected Result:**
+- Content copies to clipboard
+- Formatting preserved or plain text option
+- Success notification
 
 ---
 
@@ -2676,6 +2981,873 @@ python -m src.cli.app session delete <session-id> --confirm
 
 ---
 
+## Security & Validation Testing
+
+### Test Category: Security Tests
+
+#### TEST-SEC-001: XSS Prevention in Chat
+**Type:** Security Test - UI
+
+**Steps:**
+1. Chat page
+2. Send message: `<script>alert('XSS')</script>`
+3. Observe rendering
+
+**Expected Result:**
+- Script not executed
+- Special characters escaped
+- Displayed as plain text
+- No alert popup
+
+---
+
+#### TEST-SEC-002: XSS Prevention in Search
+**Type:** Security Test - UI
+
+**Steps:**
+1. Search page
+2. Search for: `<img src=x onerror=alert('XSS')>`
+3. Check results display
+
+**Expected Result:**
+- No script execution
+- HTML tags escaped
+- Safe rendering
+
+---
+
+#### TEST-SEC-003: SQL Injection Prevention
+**Type:** Security Test - API
+
+**Steps:**
+```bash
+curl -X POST "http://localhost:8000/search" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "test OR 1=1; DROP TABLE documents--"}'
+```
+
+**Expected Result:**
+- Query treated as literal string
+- No SQL execution
+- Normal search results
+- No database errors
+
+---
+
+#### TEST-SEC-004: File Upload Type Validation
+**Type:** Security Test - UI
+
+**Steps:**
+1. Try to upload .exe file
+2. Try to upload .sh script
+3. Try to upload file with double extension: file.pdf.exe
+
+**Expected Result:**
+- Invalid file types rejected
+- Clear error message
+- Only allowed extensions accepted
+- MIME type validation
+
+---
+
+#### TEST-SEC-005: File Size Limits
+**Type:** Security Test - UI
+
+**Steps:**
+1. Create file larger than limit (e.g., 50MB)
+2. Try to upload
+
+**Expected Result:**
+- Upload rejected
+- Error: "File size exceeds maximum (X MB)"
+- No partial upload
+- No server crash
+
+---
+
+#### TEST-SEC-006: Path Traversal Prevention
+**Type:** Security Test - API
+
+**Steps:**
+```bash
+curl "http://localhost:8000/documents/../../../etc/passwd"
+```
+
+**Expected Result:**
+- 404 Not Found or 400 Bad Request
+- No file system access
+- Path traversal blocked
+- Logged as security event
+
+---
+
+#### TEST-SEC-007: Rate Limiting
+**Type:** Security Test - API
+
+**Steps:**
+```bash
+# Send 100 requests rapidly
+for i in {1..100}; do
+  curl -X POST "http://localhost:8000/search" \
+    -H "Content-Type: application/json" \
+    -d '{"query": "test"}' &
+done
+wait
+```
+
+**Expected Result:**
+- Rate limit enforced
+- 429 Too Many Requests after threshold
+- Retry-After header present
+- IP temporarily blocked
+
+---
+
+#### TEST-SEC-008: Session Hijacking Prevention
+**Type:** Security Test - UI
+
+**Steps:**
+1. Login and get session token
+2. Open incognito window
+3. Try to use same session token manually
+
+**Expected Result:**
+- Session tied to user agent/IP
+- Token invalidation on suspicious activity
+- Cannot reuse from different context
+
+---
+
+#### TEST-SEC-009: API Authentication
+**Type:** Security Test - API
+
+**Steps:**
+```bash
+# Try API without auth (if auth implemented)
+curl -X POST "http://localhost:8000/documents/upload" \
+  -F "files=@test.txt"
+```
+
+**Expected Result:**
+- 401 Unauthorized (if auth required)
+- Clear error message
+- No data leak
+- Proper WWW-Authenticate header
+
+---
+
+#### TEST-SEC-010: CORS Policy
+**Type:** Security Test - API
+
+**Steps:**
+```bash
+curl -X POST "http://localhost:8000/search" \
+  -H "Origin: http://malicious-site.com" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "test"}'
+```
+
+**Expected Result:**
+- CORS headers present
+- Only allowed origins accepted
+- Preflight requests handled
+- No cross-origin data leak
+
+---
+
+#### TEST-SEC-011: Content Security Policy
+**Type:** Security Test - UI
+
+**Steps:**
+1. Open browser DevTools → Network
+2. Check response headers for CSP
+3. Verify CSP directives
+
+**Expected Result:**
+- CSP header present
+- Proper directives set
+- Inline scripts blocked (unless whitelisted)
+- External resources controlled
+
+---
+
+#### TEST-SEC-012: Sensitive Data in Logs
+**Type:** Security Test - Backend
+
+**Steps:**
+1. Upload document with sensitive data
+2. Check backend logs
+3. Search for API keys, passwords
+
+**Expected Result:**
+- No sensitive data in logs
+- Data masked/redacted
+- Proper log sanitization
+- Secure logging practices
+
+---
+
+## Advanced Integration Testing
+
+### Test Category: Cross-Component Integration
+
+#### TEST-INT-001: Upload via UI, Search via CLI
+**Type:** Integration Test - UI + CLI
+
+**Steps:**
+1. **UI:** Upload `sample-openapi.json` via web interface
+2. Wait 3 seconds for indexing
+3. **CLI:** Search using command line:
+   ```bash
+   python -m src.cli.app search "users" --mode hybrid
+   ```
+
+**Expected Result:**
+- CLI finds document uploaded via UI
+- Results include the uploaded file
+- Cross-interface data consistency
+
+---
+
+#### TEST-INT-002: Session Created in UI, Used in CLI
+**Type:** Integration Test - UI + CLI
+
+**Steps:**
+1. **UI:** Create session, note session ID
+2. **CLI:** Use session in CLI commands
+3. Verify session updates from both interfaces
+
+**Expected Result:**
+- Session accessible from both UI and CLI
+- Conversation history synced
+- Settings applied consistently
+
+---
+
+#### TEST-INT-003: Multi-Tab Concurrent Uploads
+**Type:** Integration Test - UI
+
+**Steps:**
+1. Open 3 browser tabs
+2. Simultaneously upload different files in each tab
+3. Check all uploads succeed
+4. Verify no conflicts
+
+**Expected Result:**
+- All 3 uploads succeed
+- No race conditions
+- Stats update correctly
+- No duplicate indexing
+
+---
+
+#### TEST-INT-004: Chat with Multi-Source Context
+**Type:** Integration Test - E2E
+
+**Steps:**
+1. Upload OpenAPI spec
+2. Upload PDF document
+3. Upload text file
+4. Chat: "Compare authentication methods from all documents"
+
+**Expected Result:**
+- AI retrieves context from all 3 sources
+- Response references each document
+- Sources section shows all 3
+- Accurate cross-document analysis
+
+---
+
+#### TEST-INT-005: Diagram from Uploaded then Deleted Document
+**Type:** Integration Test - UI
+
+**Steps:**
+1. Upload API spec
+2. Generate diagram from it
+3. Delete the document
+4. Try to regenerate diagram
+
+**Expected Result:**
+- Error: "Source document not found"
+- Graceful handling
+- Suggest re-uploading document
+- Previous diagram still accessible if saved
+
+---
+
+#### TEST-INT-006: Settings Change Affects All Features
+**Type:** Integration Test - UI
+
+**Steps:**
+1. Settings → Set LLM Provider to Groq
+2. Set API key
+3. Test in Chat: Send message
+4. Test in Diagram: Generate diagram
+5. Verify both use Groq
+
+**Expected Result:**
+- Settings apply globally
+- All features use new provider
+- No restart needed
+- Consistent behavior
+
+---
+
+#### TEST-INT-007: Search After Bulk Upload
+**Type:** Integration Test - CLI + API
+
+**Steps:**
+```bash
+# Bulk upload
+python -m src.cli.app parse batch examples/*.json
+
+# Immediately search
+curl -X POST "http://localhost:8000/search" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "authentication", "n_results": 20}'
+```
+
+**Expected Result:**
+- All uploaded documents searchable
+- Indexing completed before search
+- Results from all uploaded files
+- No missing documents
+
+---
+
+#### TEST-INT-008: Real-time Updates Across Sessions
+**Type:** Integration Test - UI
+
+**Steps:**
+1. User A: Create and switch to session X
+2. User B: Add message to session X (if multi-user supported)
+3. User A: Refresh or auto-update
+4. Verify User A sees User B's message
+
+**Expected Result:**
+- Real-time updates work
+- Or polling updates correctly
+- No conflicts
+- Message ordering preserved
+
+---
+
+#### TEST-INT-009: Document Metadata Propagation
+**Type:** Integration Test - E2E
+
+**Steps:**
+1. Upload document with metadata tags
+2. Search and verify tags in results
+3. Chat and verify AI can access metadata
+4. Export and verify metadata included
+
+**Expected Result:**
+- Metadata flows through all systems
+- Searchable by metadata
+- AI aware of metadata
+- Exports include metadata
+
+---
+
+#### TEST-INT-010: Error Cascade Prevention
+**Type:** Integration Test - Error Handling
+
+**Steps:**
+1. Stop LLM service (Ollama/Groq)
+2. Try chat (should fail)
+3. Try document upload (should succeed)
+4. Try search (should succeed)
+5. Restart LLM
+6. Try chat again (should succeed)
+
+**Expected Result:**
+- LLM failure doesn't break other features
+- Clear error messages
+- Graceful degradation
+- Recovery without restart
+
+---
+
+## Accessibility Testing
+
+### Test Category: Accessibility & Usability
+
+#### TEST-ACC-001: Keyboard Navigation
+**Type:** Accessibility Test - UI
+
+**Steps:**
+1. Navigate entire app using only keyboard
+2. Tab through all interactive elements
+3. Activate buttons with Enter/Space
+4. Test all pages
+
+**Expected Result:**
+- All interactive elements reachable via Tab
+- Focus indicators visible
+- Logical tab order
+- No keyboard traps
+- Skip to content link available
+
+---
+
+#### TEST-ACC-002: Screen Reader Compatibility
+**Type:** Accessibility Test - UI
+
+**Tools:** NVDA, JAWS, or VoiceOver
+
+**Steps:**
+1. Enable screen reader
+2. Navigate through app
+3. Check announcements for:
+   - Page titles
+   - Form labels
+   - Button purposes
+   - Error messages
+   - Status updates
+
+**Expected Result:**
+- All content accessible
+- Proper ARIA labels
+- Semantic HTML used
+- Meaningful announcements
+- No missing alt text
+
+---
+
+#### TEST-ACC-003: Focus Management
+**Type:** Accessibility Test - UI
+
+**Steps:**
+1. Open modal/dialog
+2. Check focus moves to modal
+3. Close modal
+4. Check focus returns to trigger
+
+**Expected Result:**
+- Focus trapped in modals
+- Focus restored on close
+- Esc key closes modals
+- Proper focus indicators
+
+---
+
+#### TEST-ACC-004: Color Contrast
+**Type:** Accessibility Test - UI
+
+**Tools:** Browser DevTools, Contrast Checker
+
+**Steps:**
+1. Check contrast ratios for:
+   - Text on backgrounds
+   - Button text
+   - Link text
+   - Icons
+2. Test in both light and dark modes
+
+**Expected Result:**
+- Minimum 4.5:1 for normal text
+- Minimum 3:1 for large text
+- WCAG AA compliance
+- Both themes pass
+
+---
+
+#### TEST-ACC-005: Form Labels and Errors
+**Type:** Accessibility Test - UI
+
+**Steps:**
+1. Submit forms with errors
+2. Check error associations
+3. Verify label connections
+
+**Expected Result:**
+- All inputs have labels
+- Error messages announced
+- aria-describedby used
+- Required fields indicated
+- Clear error guidance
+
+---
+
+#### TEST-ACC-006: Alternative Text
+**Type:** Accessibility Test - UI
+
+**Steps:**
+1. Check all images for alt text
+2. Verify icons have aria-labels
+3. Check decorative images have empty alt
+
+**Expected Result:**
+- All meaningful images have alt
+- Alt text descriptive
+- Decorative images hidden from screen readers
+- Icon buttons labeled
+
+---
+
+#### TEST-ACC-007: Responsive Text Sizing
+**Type:** Accessibility Test - UI
+
+**Steps:**
+1. Zoom browser to 200%
+2. Check text readability
+3. Verify no horizontal scrolling
+4. Test at 400% zoom (WCAG AAA)
+
+**Expected Result:**
+- Text remains readable
+- Layout adapts
+- No content loss
+- Controls still usable
+
+---
+
+#### TEST-ACC-008: Skip Links
+**Type:** Accessibility Test - UI
+
+**Steps:**
+1. Tab from page load
+2. First Tab should show "Skip to content"
+3. Activate skip link
+4. Verify focus moves to main content
+
+**Expected Result:**
+- Skip link visible on focus
+- Works correctly
+- Bypasses navigation
+- Improves keyboard efficiency
+
+---
+
+## Mobile & Responsive Testing
+
+### Test Category: Mobile Compatibility
+
+#### TEST-MOB-001: Mobile Layout - Documents Page
+**Type:** Mobile Test - UI
+
+**Steps:**
+1. Open app on mobile device or resize browser to 375px
+2. Navigate to Documents page
+3. Test upload, view library
+
+**Expected Result:**
+- Layout adapts to mobile
+- Upload button accessible
+- Table becomes cards or scrollable
+- Touch targets ≥ 44x44px
+- No horizontal scroll
+
+---
+
+#### TEST-MOB-002: Mobile Layout - Chat
+**Type:** Mobile Test - UI
+
+**Steps:**
+1. Mobile viewport
+2. Chat page
+3. Type message, attach file
+
+**Expected Result:**
+- Input area stays at bottom
+- Virtual keyboard doesn't break layout
+- Attach button visible and usable
+- Messages readable
+- Scroll works smoothly
+
+---
+
+#### TEST-MOB-003: Mobile Layout - Search
+**Type:** Mobile Test - UI
+
+**Steps:**
+1. Mobile viewport
+2. Search page
+3. Perform search, apply filters
+
+**Expected Result:**
+- Search box usable
+- Filters accessible (drawer or collapsible)
+- Results readable
+- Tap targets adequate
+- No text overflow
+
+---
+
+#### TEST-MOB-004: Touch Gestures
+**Type:** Mobile Test - UI
+
+**Steps:**
+1. Test swipe gestures (if applicable)
+2. Test pinch to zoom on diagrams
+3. Test long-press menus
+
+**Expected Result:**
+- Gestures work correctly
+- No conflicts with browser gestures
+- Smooth animations
+- Feedback on touch
+
+---
+
+#### TEST-MOB-005: Mobile Performance
+**Type:** Mobile Test - Performance
+
+**Steps:**
+1. Test on actual mobile device (not emulator)
+2. Upload document
+3. Search
+4. Chat
+5. Check performance
+
+**Expected Result:**
+- Load time < 3 seconds
+- Smooth scrolling
+- No lag in typing
+- Acceptable battery usage
+- Works on 3G/4G
+
+---
+
+#### TEST-MOB-006: Orientation Changes
+**Type:** Mobile Test - UI
+
+**Steps:**
+1. Portrait mode: Test features
+2. Rotate to landscape
+3. Test same features
+4. Rotate back to portrait
+
+**Expected Result:**
+- Layout adapts smoothly
+- No data loss on rotation
+- Content repositions correctly
+- State preserved
+
+---
+
+#### TEST-MOB-007: Mobile Browser Compatibility
+**Type:** Mobile Test - Cross-Browser
+
+**Steps:**
+1. Test on mobile browsers:
+   - iOS Safari
+   - Chrome Mobile
+   - Firefox Mobile
+   - Samsung Internet
+
+**Expected Result:**
+- Works on all major mobile browsers
+- No browser-specific bugs
+- Consistent appearance
+- All features functional
+
+---
+
+## Advanced CLI Testing
+
+### Test Category: Advanced CLI Operations
+
+#### TEST-CLI-026: CLI Output Formatting
+**Type:** CLI Test
+
+**Steps:**
+```bash
+# Test different output formats
+python -m src.cli.app search "users" --output-format table
+python -m src.cli.app search "users" --output-format json
+python -m src.cli.app search "users" --output-format csv
+```
+
+**Expected Result:**
+- All formats work correctly
+- Data properly formatted
+- Easy to read/parse
+- No formatting errors
+
+---
+
+#### TEST-CLI-027: CLI Piping and Redirection
+**Type:** CLI Test
+
+**Steps:**
+```bash
+# Pipe to other commands
+python -m src.cli.app search "users" | grep "GET"
+
+# Redirect output
+python -m src.cli.app collection info > stats.txt
+
+# Chain commands
+python -m src.cli.app parse file examples/sample-openapi.json && \
+  python -m src.cli.app search "users"
+```
+
+**Expected Result:**
+- Piping works correctly
+- Redirection successful
+- Command chaining behaves as expected
+- Exit codes correct
+
+---
+
+#### TEST-CLI-028: CLI Progress Indicators
+**Type:** CLI Test
+
+**Steps:**
+```bash
+# Batch operation with progress
+python -m src.cli.app parse batch examples/*.json
+```
+
+**Expected Result:**
+- Progress bar shown
+- ETA displayed
+- Current file indicated
+- Can cancel (Ctrl+C)
+- Final summary shown
+
+---
+
+#### TEST-CLI-029: CLI Color Output
+**Type:** CLI Test
+
+**Steps:**
+```bash
+# With colors (default)
+python -m src.cli.app search "users"
+
+# Without colors
+NO_COLOR=1 python -m src.cli.app search "users"
+```
+
+**Expected Result:**
+- Colors enhance readability
+- Can disable colors
+- Respects NO_COLOR env var
+- Works in all terminals
+
+---
+
+#### TEST-CLI-030: CLI Interactive Mode
+**Type:** CLI Test
+
+**Steps:**
+```bash
+# Interactive prompt (if implemented)
+python -m src.cli.app search
+# Should prompt for query
+```
+
+**Expected Result:**
+- Interactive prompts work
+- Can cancel with Ctrl+C
+- Input validation
+- Help available with ?
+
+---
+
+#### TEST-CLI-031: CLI Configuration File
+**Type:** CLI Test
+
+**Steps:**
+```bash
+# Create config file
+cat > ~/.api-assistant/config.yaml <<EOF
+default_search_mode: hybrid
+default_n_results: 20
+EOF
+
+# Use config
+python -m src.cli.app search "users"
+```
+
+**Expected Result:**
+- Config file loaded
+- Defaults applied
+- Can override with flags
+- Multiple config locations supported
+
+---
+
+#### TEST-CLI-032: CLI Auto-completion
+**Type:** CLI Test
+
+**Steps:**
+```bash
+# Install completion
+python -m src.cli.app --install-completion
+
+# Test in new shell
+python -m src.cli.app se<TAB>
+```
+
+**Expected Result:**
+- Completion installed
+- Commands auto-complete
+- Arguments suggested
+- File paths completed
+
+---
+
+#### TEST-CLI-033: CLI Help Documentation
+**Type:** CLI Test
+
+**Steps:**
+```bash
+# Test help at all levels
+python -m src.cli.app --help
+python -m src.cli.app search --help
+python -m src.cli.app diagram sequence --help
+```
+
+**Expected Result:**
+- Help clear and comprehensive
+- Examples provided
+- Options documented
+- Consistent formatting
+
+---
+
+#### TEST-CLI-034: CLI Error Messages
+**Type:** CLI Test
+
+**Steps:**
+```bash
+# Trigger various errors
+python -m src.cli.app search
+python -m src.cli.app parse file nonexistent.json
+python -m src.cli.app diagram sequence missing.json
+```
+
+**Expected Result:**
+- Clear error messages
+- Suggest fixes
+- Show usage hints
+- Non-zero exit codes
+- No stack traces (unless --debug)
+
+---
+
+#### TEST-CLI-035: CLI Batch Operations with Errors
+**Type:** CLI Test
+
+**Steps:**
+```bash
+# Mix of valid and invalid files
+python -m src.cli.app parse batch examples/*.json examples/invalid.json
+```
+
+**Expected Result:**
+- Continues despite errors
+- Failed files listed
+- Summary shows success/fail count
+- Exit code indicates partial failure
+
+---
+
+---
+
 ## Test Results Template
 
 ### Test Execution Record
@@ -2746,15 +3918,32 @@ Use this checklist for rapid smoke testing:
 
 ## Test Coverage Summary
 
-| Category | Total Tests | Priority |
-|----------|-------------|----------|
-| Backend API | 30 | High |
-| Frontend UI | 55 | High |
-| CLI | 25 | Medium |
-| End-to-End | 10 | High |
-| Performance | 4 | Medium |
-| Edge Cases | 8 | Medium |
-| **TOTAL** | **132** | - |
+| Category | Total Tests | Test IDs | Priority |
+|----------|-------------|----------|----------|
+| **Backend API** | 30 | TEST-API-001 to 030 | High |
+| **Frontend UI - Core** | 55 | TEST-UI-001 to 055 | High |
+| **Frontend UI - Document Library** | 12 | TEST-UI-056 to 065 | High |
+| **Frontend UI - Advanced Search** | 8 | TEST-UI-066 to 073 | High |
+| **CLI - Basic** | 25 | TEST-CLI-001 to 025 | Medium |
+| **CLI - Advanced** | 10 | TEST-CLI-026 to 035 | Medium |
+| **End-to-End** | 10 | TEST-E2E-001 to 010 | High |
+| **Performance** | 4 | TEST-PERF-001 to 004 | Medium |
+| **Edge Cases** | 8 | TEST-EDGE-001 to 008 | Medium |
+| **Security & Validation** | 12 | TEST-SEC-001 to 012 | High |
+| **Integration** | 10 | TEST-INT-001 to 010 | High |
+| **Accessibility** | 8 | TEST-ACC-001 to 008 | High |
+| **Mobile & Responsive** | 7 | TEST-MOB-001 to 007 | High |
+| **TOTAL** | **199** | - | - |
+
+### Test Distribution by Type
+- **UI Tests:** 83 (42%)
+- **API Tests:** 30 (15%)
+- **CLI Tests:** 35 (18%)
+- **Integration/E2E Tests:** 20 (10%)
+- **Security Tests:** 12 (6%)
+- **Accessibility Tests:** 8 (4%)
+- **Mobile Tests:** 7 (4%)
+- **Performance Tests:** 4 (2%)
 
 ---
 
@@ -2775,24 +3964,44 @@ When reporting issues found during testing:
 
 ## Continuous Testing
 
-### Daily Testing
-- Health check endpoints
-- Core document upload
-- Basic search
-- Chat functionality
+### Daily Testing (Critical Path - 15 minutes)
+- **Health Checks:** TEST-API-001, TEST-API-002
+- **Core Upload:** TEST-UI-005, TEST-API-003
+- **Basic Search:** TEST-UI-025, TEST-API-013
+- **Chat Functionality:** TEST-UI-015, TEST-API-018
+- **Document Library:** TEST-UI-056, TEST-UI-062
 
-### Weekly Testing
-- All API endpoints
-- All UI features
-- CLI commands
-- Diagram generation
+### Weekly Testing (Comprehensive - 4-6 hours)
+- **All API Endpoints:** TEST-API-001 to 030 (30 tests)
+- **All UI Features:** TEST-UI-001 to 073 (73 tests)
+- **CLI Commands:** TEST-CLI-001 to 035 (35 tests)
+- **Diagram Generation:** TEST-UI-031 to 037 (7 tests)
+- **Session Management:** TEST-UI-038 to 044 (7 tests)
 
-### Before Release
-- Complete test suite (all 132 tests)
-- Performance testing
-- Edge cases
-- Cross-browser testing
-- Load testing
+### Before Release (Full Suite - 8-12 hours)
+- **Complete Test Suite:** All 199 tests
+- **Performance Testing:** TEST-PERF-001 to 004
+- **Edge Cases:** TEST-EDGE-001 to 008
+- **Security Testing:** TEST-SEC-001 to 012
+- **Accessibility:** TEST-ACC-001 to 008
+- **Mobile Testing:** TEST-MOB-001 to 007
+- **Integration Tests:** TEST-INT-001 to 010, TEST-E2E-001 to 010
+- **Cross-browser Testing:** Chrome, Firefox, Safari, Edge
+- **Load Testing:** Concurrent users, large datasets
+
+### Monthly Security Audit
+- **Security Scan:** TEST-SEC-001 to 012
+- **Penetration Testing:** XSS, SQL injection, CSRF
+- **Dependency Audit:** Check for vulnerable packages
+- **Access Control:** Verify authentication and authorization
+- **Data Protection:** Check sensitive data handling
+
+### Quarterly Accessibility Audit
+- **WCAG Compliance:** TEST-ACC-001 to 008
+- **Screen Reader Testing:** NVDA, JAWS, VoiceOver
+- **Keyboard Navigation:** Full app testing
+- **Contrast Checking:** Light and dark modes
+- **Third-party Audit:** Consider external accessibility review
 
 ---
 
