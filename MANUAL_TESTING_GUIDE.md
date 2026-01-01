@@ -118,6 +118,14 @@ New-Item -Path examples/empty.txt -ItemType File -Force
 ## Backend API Testing
 
 > **Note for Windows PowerShell Users:**
+>
+> **PowerShell Version Check:**
+> - Run `$PSVersionTable.PSVersion` to check your version
+> - **PowerShell 7.0+**: Use the `-Form` parameter syntax shown in file upload examples
+> - **PowerShell 5.1** (older): The `-Form` parameter is NOT available. Use manual multipart construction (see TEST-API-003 example)
+> - **Recommendation**: Upgrade to PowerShell 7+ for easier testing: https://github.com/PowerShell/PowerShell/releases
+>
+> **For non-file-upload tests:**
 > - Most test cases below use `curl` commands, which work in PowerShell 7+ and Windows 10/11 (curl is aliased to `Invoke-WebRequest`)
 > - If you encounter issues with `curl`, you can use native PowerShell cmdlets:
 >   - Replace `curl` with `Invoke-RestMethod` for JSON responses
@@ -200,9 +208,39 @@ New-Item -Path examples/empty.txt -ItemType File -Force
      -F "files=@examples/sample-openapi.json"
    ```
 
-   **For Windows PowerShell:**
+   **For Windows PowerShell 7.0+:**
    ```powershell
    Invoke-RestMethod -Uri "http://localhost:8000/documents/upload" -Method Post -Form @{files = Get-Item "examples/sample-openapi.json"}
+   ```
+
+   **For Windows PowerShell 5.1 (older version):**
+   ```powershell
+   # Manual multipart/form-data construction for PowerShell 5.1
+   $filePath = "examples/sample-openapi.json"
+   $url = "http://localhost:8000/documents/upload"
+
+   # Create boundary
+   $boundary = [System.Guid]::NewGuid().ToString()
+
+   # Read file
+   $fileBytes = [System.IO.File]::ReadAllBytes((Resolve-Path $filePath).Path)
+   $fileName = Split-Path $filePath -Leaf
+
+   # Build multipart/form-data body
+   $LF = "`r`n"
+   $bodyLines = (
+       "--$boundary",
+       "Content-Disposition: form-data; name=`"files`"; filename=`"$fileName`"",
+       "Content-Type: application/json",
+       "",
+       [System.Text.Encoding]::UTF8.GetString($fileBytes),
+       "--$boundary--"
+   ) -join $LF
+
+   # Send request
+   $response = Invoke-RestMethod -Uri $url -Method Post -ContentType "multipart/form-data; boundary=$boundary" -Body $bodyLines
+
+   $response
    ```
 
 **Expected Result:**
