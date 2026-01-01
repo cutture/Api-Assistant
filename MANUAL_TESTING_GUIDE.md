@@ -210,7 +210,10 @@ New-Item -Path examples/empty.txt -ItemType File -Force
 
    **For Windows PowerShell 7.0+:**
    ```powershell
-   Invoke-RestMethod -Uri "http://localhost:8000/documents/upload" -Method Post -Form @{files = Get-Item "examples/sample-openapi.json"}
+   $response = Invoke-RestMethod -Uri "http://localhost:8000/documents/upload" -Method Post -Form @{files = Get-Item "examples/sample-openapi.json"}
+
+   # View the full response as JSON
+   $response | ConvertTo-Json -Depth 10
    ```
 
    **For Windows PowerShell 5.1 (older version):**
@@ -240,8 +243,16 @@ New-Item -Path examples/empty.txt -ItemType File -Force
    # Send request
    $response = Invoke-RestMethod -Uri $url -Method Post -ContentType "multipart/form-data; boundary=$boundary" -Body $bodyLines
 
-   $response
+   # View the response (PowerShell converts JSON to object automatically)
+   $response | ConvertTo-Json -Depth 10
    ```
+
+   > **PowerShell Response Display Note:**
+   > - `Invoke-RestMethod` automatically parses JSON responses into PowerShell objects
+   > - By default, PowerShell may only display some properties (like `document_ids`)
+   > - To see the **full JSON response**, use: `$response | ConvertTo-Json -Depth 10`
+   > - To see **all properties as a list**, use: `$response | Format-List *`
+   > - To access **specific properties**, use: `$response.uploaded_count`, `$response.results`, etc.
 
 **Expected Result:**
 ```json
