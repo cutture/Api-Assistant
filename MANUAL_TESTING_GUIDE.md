@@ -191,11 +191,18 @@ New-Item -Path examples/empty.txt -ItemType File -Force
 **Endpoint:** `POST /documents/upload`
 
 **Steps:**
-1. Use Swagger UI at http://localhost:8000/docs or cURL:
+1. Use Swagger UI at http://localhost:8000/docs or command line:
+
+   **For Linux/Mac (cURL):**
    ```bash
    curl -X POST "http://localhost:8000/documents/upload" \
      -H "Content-Type: multipart/form-data" \
      -F "files=@examples/sample-openapi.json"
+   ```
+
+   **For Windows PowerShell:**
+   ```powershell
+   Invoke-RestMethod -Uri "http://localhost:8000/documents/upload" -Method Post -Form @{files = Get-Item "examples/sample-openapi.json"}
    ```
 
 **Expected Result:**
@@ -232,10 +239,17 @@ New-Item -Path examples/empty.txt -ItemType File -Force
 **Test Data:** Use any PDF file or create from examples/sample-markdown.md
 
 **Steps:**
+
+**For Linux/Mac:**
 ```bash
 curl -X POST "http://localhost:8000/documents/upload" \
   -H "Content-Type: multipart/form-data" \
   -F "files=@path/to/test.pdf"
+```
+
+**For Windows PowerShell:**
+```powershell
+Invoke-RestMethod -Uri "http://localhost:8000/documents/upload" -Method Post -Form @{files = Get-Item "path/to/test.pdf"}
 ```
 
 **Expected Result:**
@@ -266,9 +280,16 @@ curl -X POST "http://localhost:8000/documents/upload" \
 **Test Data:** `examples/sample-text.txt`
 
 **Steps:**
+
+**For Linux/Mac:**
 ```bash
 curl -X POST "http://localhost:8000/documents/upload" \
   -F "files=@examples/sample-text.txt"
+```
+
+**For Windows PowerShell:**
+```powershell
+Invoke-RestMethod -Uri "http://localhost:8000/documents/upload" -Method Post -Form @{files = Get-Item "examples/sample-text.txt"}
 ```
 
 **Expected Result:**
@@ -283,9 +304,16 @@ curl -X POST "http://localhost:8000/documents/upload" \
 **Test Data:** `examples/sample-markdown.md`
 
 **Steps:**
+
+**For Linux/Mac:**
 ```bash
 curl -X POST "http://localhost:8000/documents/upload" \
   -F "files=@examples/sample-markdown.md"
+```
+
+**For Windows PowerShell:**
+```powershell
+Invoke-RestMethod -Uri "http://localhost:8000/documents/upload" -Method Post -Form @{files = Get-Item "examples/sample-markdown.md"}
 ```
 
 **Expected Result:**
@@ -299,9 +327,16 @@ curl -X POST "http://localhost:8000/documents/upload" \
 **Test Data:** `examples/sample-data.json`
 
 **Steps:**
+
+**For Linux/Mac:**
 ```bash
 curl -X POST "http://localhost:8000/documents/upload" \
   -F "files=@examples/sample-data.json"
+```
+
+**For Windows PowerShell:**
+```powershell
+Invoke-RestMethod -Uri "http://localhost:8000/documents/upload" -Method Post -Form @{files = Get-Item "examples/sample-data.json"}
 ```
 
 **Expected Result:**
@@ -314,11 +349,23 @@ curl -X POST "http://localhost:8000/documents/upload" \
 **Type:** API Test
 
 **Steps:**
+
+**For Linux/Mac:**
 ```bash
 curl -X POST "http://localhost:8000/documents/upload" \
   -F "files=@examples/sample-openapi.json" \
   -F "files=@examples/sample-text.txt" \
   -F "files=@examples/sample-markdown.md"
+```
+
+**For Windows PowerShell:**
+```powershell
+$files = @(
+  Get-Item "examples/sample-openapi.json"
+  Get-Item "examples/sample-text.txt"
+  Get-Item "examples/sample-markdown.md"
+)
+Invoke-RestMethod -Uri "http://localhost:8000/documents/upload" -Method Post -Form @{files = $files}
 ```
 
 **Expected Result:**
@@ -333,9 +380,16 @@ curl -X POST "http://localhost:8000/documents/upload" \
 **Test Data:** `examples/invalid.json`
 
 **Steps:**
+
+**For Linux/Mac:**
 ```bash
 curl -X POST "http://localhost:8000/documents/upload" \
   -F "files=@examples/invalid.json"
+```
+
+**For Windows PowerShell:**
+```powershell
+Invoke-RestMethod -Uri "http://localhost:8000/documents/upload" -Method Post -Form @{files = Get-Item "examples/invalid.json"}
 ```
 
 **Expected Result:**
@@ -349,6 +403,8 @@ curl -X POST "http://localhost:8000/documents/upload" \
 **Prerequisite:** Upload a document first and note its ID
 
 **Steps:**
+
+**For Linux/Mac:**
 ```bash
 # First upload
 curl -X POST "http://localhost:8000/documents/upload" \
@@ -356,6 +412,15 @@ curl -X POST "http://localhost:8000/documents/upload" \
 
 # Note the document IDs from response, then get one:
 curl "http://localhost:8000/documents/{document_id}"
+```
+
+**For Windows PowerShell:**
+```powershell
+# First upload
+$response = Invoke-RestMethod -Uri "http://localhost:8000/documents/upload" -Method Post -Form @{files = Get-Item "examples/sample-openapi.json"}
+
+# Note the document IDs from response, then get one:
+Invoke-RestMethod -Uri "http://localhost:8000/documents/{document_id}"
 ```
 
 **Expected Result:**
@@ -590,11 +655,23 @@ curl -X POST "http://localhost:8000/chat" \
 **Type:** API Test
 
 **Steps:**
+
+**For Linux/Mac:**
 ```bash
 curl -X POST "http://localhost:8000/chat" \
   -F "message=Explain this document" \
   -F "files=@examples/sample-text.txt" \
   -F "enable_auto_indexing=true"
+```
+
+**For Windows PowerShell:**
+```powershell
+$form = @{
+  message = "Explain this document"
+  files = Get-Item "examples/sample-text.txt"
+  enable_auto_indexing = "true"
+}
+Invoke-RestMethod -Uri "http://localhost:8000/chat" -Method Post -Form $form
 ```
 
 **Expected Result:**
@@ -3172,10 +3249,18 @@ Get-Job | Wait-Job | Remove-Job
 **Type:** Security Test - API
 
 **Steps:**
+
+**For Linux/Mac:**
 ```bash
 # Try API without auth (if auth implemented)
 curl -X POST "http://localhost:8000/documents/upload" \
   -F "files=@test.txt"
+```
+
+**For Windows PowerShell:**
+```powershell
+# Try API without auth (if auth implemented)
+Invoke-RestMethod -Uri "http://localhost:8000/documents/upload" -Method Post -Form @{files = Get-Item "test.txt"}
 ```
 
 **Expected Result:**
