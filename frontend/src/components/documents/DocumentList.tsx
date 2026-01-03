@@ -96,12 +96,34 @@ export function DocumentList() {
     );
   };
 
-  const toggleSelectAll = () => {
-    if (selectedIds.length === filteredDocuments.length) {
-      setSelectedIds([]);
-    } else {
-      setSelectedIds(filteredDocuments.map((doc) => doc.id));
-    }
+  // Get document name from metadata
+  const getDocumentName = (doc: any): string => {
+    return (
+      doc.metadata?.endpoint ||
+      doc.metadata?.path ||
+      doc.metadata?.api_title ||
+      doc.metadata?.source_file ||
+      "Untitled"
+    );
+  };
+
+  // Get document size in bytes
+  const getDocumentSize = (doc: any): number => {
+    return doc.content?.length || 0;
+  };
+
+  // Format size for display
+  const formatSize = (bytes: number): string => {
+    if (bytes === 0) return "0 B";
+    const k = 1024;
+    const sizes = ["B", "KB", "MB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + " " + sizes[i];
+  };
+
+  // Get chunk count
+  const getChunkCount = (doc: any): number => {
+    return doc.metadata?.total_chunks || 1;
   };
 
   const filteredDocuments = documents
@@ -143,6 +165,14 @@ export function DocumentList() {
       return 0;
     });
 
+  const toggleSelectAll = () => {
+    if (selectedIds.length === filteredDocuments.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(filteredDocuments.map((doc) => doc.id));
+    }
+  };
+
   const getSourceIcon = (source: string) => {
     switch (source) {
       case "openapi":
@@ -154,36 +184,6 @@ export function DocumentList() {
       default:
         return FileText;
     }
-  };
-
-  // Get document name from metadata
-  const getDocumentName = (doc: any): string => {
-    return (
-      doc.metadata?.endpoint ||
-      doc.metadata?.path ||
-      doc.metadata?.api_title ||
-      doc.metadata?.source_file ||
-      "Untitled"
-    );
-  };
-
-  // Get document size in bytes
-  const getDocumentSize = (doc: any): number => {
-    return doc.content?.length || 0;
-  };
-
-  // Format size for display
-  const formatSize = (bytes: number): string => {
-    if (bytes === 0) return "0 B";
-    const k = 1024;
-    const sizes = ["B", "KB", "MB"];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + " " + sizes[i];
-  };
-
-  // Get chunk count
-  const getChunkCount = (doc: any): number => {
-    return doc.metadata?.total_chunks || 1;
   };
 
   // Handle sort column click
