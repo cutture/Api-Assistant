@@ -819,7 +819,7 @@ Test-SearchWithFilter -Query "user" -Field "method" -Operator "eq" -Value "GET"
 
 **For Linux/Mac:**
 ```bash
-curl -X POST "http://localhost:8000/faceted-search" \
+curl -X POST "http://localhost:8000/search/faceted" \
   -H "Content-Type: application/json" \
   -d '{
     "query": "api",

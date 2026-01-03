@@ -362,20 +362,21 @@ function Test-KeywordSearch {
 function Test-FacetedSearch {
     param(
         [string]$Query = "users",
-        [hashtable]$Filters = @{method = "GET"}
+        [string[]]$FacetFields = @("method", "format", "source"),
+        [int]$NResults = 20
     )
 
     Write-Host "Running: Faceted Search" -ForegroundColor Yellow
 
     $bodyObject = @{
         query = $Query
-        filters = $Filters
-        n_results = 10
+        facet_fields = $FacetFields
+        n_results = $NResults
     }
 
     $jsonBody = $bodyObject | ConvertTo-Json -Depth 10
 
-    $response = Invoke-RestMethod -Uri "$baseUrl/faceted-search" `
+    $response = Invoke-RestMethod -Uri "$baseUrl/search/faceted" `
         -Method Post `
         -ContentType "application/json" `
         -Body $jsonBody

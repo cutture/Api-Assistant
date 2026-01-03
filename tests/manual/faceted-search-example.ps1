@@ -14,14 +14,14 @@ $bodyObject = @{
 $jsonBody = $bodyObject | ConvertTo-Json -Depth 10
 
 # Display the request
-Write-Host "Sending POST request to /faceted-search" -ForegroundColor Cyan
+Write-Host "Sending POST request to /search/faceted" -ForegroundColor Cyan
 Write-Host "Request Body:" -ForegroundColor Yellow
 Write-Host $jsonBody -ForegroundColor Gray
 Write-Host ""
 
 # Send the request
 try {
-    $response = Invoke-RestMethod -Uri "$baseUrl/faceted-search" `
+    $response = Invoke-RestMethod -Uri "$baseUrl/search/faceted" `
         -Method Post `
         -ContentType "application/json" `
         -Body $jsonBody
@@ -32,9 +32,6 @@ try {
 }
 catch {
     Write-Host "Error: $_" -ForegroundColor Red
-    if ($_.Exception.Response) {
-        $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream())
-        $responseBody = $reader.ReadToEnd()
-        Write-Host "Response Body: $responseBody" -ForegroundColor Yellow
-    }
+    Write-Host "Status Code: $($_.Exception.Response.StatusCode.value__)" -ForegroundColor Yellow
+    Write-Host "Status Description: $($_.Exception.Response.StatusDescription)" -ForegroundColor Yellow
 }
