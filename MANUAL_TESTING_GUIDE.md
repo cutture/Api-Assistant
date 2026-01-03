@@ -1167,26 +1167,58 @@ curl -X DELETE "http://localhost:8000/sessions/{session_id}"
 
 #### TEST-API-027: Generate Sequence Diagram
 **Type:** API Test
+**Prerequisite:** Document uploaded to vector store
+
+**Important:** The API expects `endpoint_id` (a document ID from the vector store), NOT a `file_path`.
 
 **Steps:**
+
+**1. First, upload a document and get its ID:**
+```powershell
+# Upload an OpenAPI file
+$uploadResponse = Invoke-RestMethod -Uri "http://localhost:8000/documents/upload" `
+    -Method Post `
+    -ContentType "multipart/form-data; boundary=$boundary" `
+    -Body $multipartBody
+
+# Get the first document ID
+$documentId = $uploadResponse.document_ids[0]
+Write-Host "Document ID: $documentId"
+```
+
+**2. Then generate the sequence diagram:**
+
+**For Linux/Mac:**
 ```bash
+# Replace DOCUMENT_ID with actual ID from upload
 curl -X POST "http://localhost:8000/diagrams/sequence" \
   -H "Content-Type: application/json" \
   -d '{
-    "file_path": "examples/sample-openapi.json",
-    "endpoint_path": "/users/{id}",
-    "method": "GET"
+    "endpoint_id": "DOCUMENT_ID"
   }'
+```
+
+**For Windows PowerShell:**
+```powershell
+# Use document ID from upload step
+$body = @{
+    endpoint_id = $documentId
+} | ConvertTo-Json -Depth 10
+
+Invoke-RestMethod -Uri "http://localhost:8000/diagrams/sequence" `
+    -Method Post -ContentType "application/json" -Body $body
 ```
 
 **Expected Result:**
 ```json
 {
-  "diagram": "sequenceDiagram\n    participant Client...",
   "diagram_type": "sequence",
-  "format": "mermaid"
+  "mermaid_code": "sequenceDiagram\n    participant Client...",
+  "title": "API Endpoint"
 }
 ```
+
+**Note:** This endpoint requires a document to already exist in the vector store. The endpoint_id parameter refers to a document ID, typically obtained from uploading an OpenAPI specification.
 
 ---
 
