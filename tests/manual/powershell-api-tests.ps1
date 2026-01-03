@@ -384,6 +384,43 @@ function Test-FacetedSearch {
     return $response
 }
 
+function Test-SearchWithFilter {
+    param(
+        [string]$Query = "user",
+        [string]$Mode = "vector",
+        [string]$Field = "method",
+        [string]$Operator = "eq",
+        [string]$Value = "GET",
+        [int]$NResults = 5
+    )
+
+    Write-Host "Running: Search with Filter" -ForegroundColor Yellow
+
+    $bodyObject = @{
+        query = $Query
+        mode = $Mode
+        n_results = $NResults
+        filter = @{
+            field = $Field
+            operator = $Operator
+            value = $Value
+        }
+    }
+
+    $jsonBody = $bodyObject | ConvertTo-Json -Depth 10
+
+    Write-Host "Request Body:" -ForegroundColor Yellow
+    Write-Host $jsonBody -ForegroundColor Gray
+
+    $response = Invoke-RestMethod -Uri "$baseUrl/search" `
+        -Method Post `
+        -ContentType "application/json" `
+        -Body $jsonBody
+
+    Show-TestResult -TestName "Search with Filter" -Response $response
+    return $response
+}
+
 # ============================================================================
 # CHAT TESTS
 # ============================================================================
