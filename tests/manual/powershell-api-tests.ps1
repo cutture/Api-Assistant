@@ -271,12 +271,13 @@ function Test-BulkDelete {
 
     $jsonBody = $bodyObject | ConvertTo-Json
 
-    $response = Invoke-RestMethod -Uri "$baseUrl/documents/bulk-delete" `
+    $webResponse = Invoke-WebRequest -Uri "$baseUrl/documents/bulk-delete" `
         -Method Post `
-        -ContentType "application/json" `
-        -Body $jsonBody `
+        -ContentType "application/json; charset=utf-8" `
+        -Body ([System.Text.Encoding]::UTF8.GetBytes($jsonBody)) `
         -UseBasicParsing
 
+    $response = $webResponse.Content | ConvertFrom-Json
     Show-TestResult -TestName "Bulk Delete" -Response $response
     return $response
 }
@@ -301,12 +302,13 @@ function Test-VectorSearch {
 
     $jsonBody = $bodyObject | ConvertTo-Json
 
-    $response = Invoke-RestMethod -Uri "$baseUrl/search" `
+    $webResponse = Invoke-WebRequest -Uri "$baseUrl/search" `
         -Method Post `
-        -ContentType "application/json" `
-        -Body $jsonBody `
+        -ContentType "application/json; charset=utf-8" `
+        -Body ([System.Text.Encoding]::UTF8.GetBytes($jsonBody)) `
         -UseBasicParsing
 
+    $response = $webResponse.Content | ConvertFrom-Json
     Show-TestResult -TestName "Vector Search" -Response $response
     return $response
 }
@@ -327,12 +329,13 @@ function Test-HybridSearch {
 
     $jsonBody = $bodyObject | ConvertTo-Json
 
-    $response = Invoke-RestMethod -Uri "$baseUrl/search" `
+    $webResponse = Invoke-WebRequest -Uri "$baseUrl/search" `
         -Method Post `
-        -ContentType "application/json" `
-        -Body $jsonBody `
+        -ContentType "application/json; charset=utf-8" `
+        -Body ([System.Text.Encoding]::UTF8.GetBytes($jsonBody)) `
         -UseBasicParsing
 
+    $response = $webResponse.Content | ConvertFrom-Json
     Show-TestResult -TestName "Hybrid Search" -Response $response
     return $response
 }
@@ -353,12 +356,13 @@ function Test-KeywordSearch {
 
     $jsonBody = $bodyObject | ConvertTo-Json
 
-    $response = Invoke-RestMethod -Uri "$baseUrl/search" `
+    $webResponse = Invoke-WebRequest -Uri "$baseUrl/search" `
         -Method Post `
-        -ContentType "application/json" `
-        -Body $jsonBody `
+        -ContentType "application/json; charset=utf-8" `
+        -Body ([System.Text.Encoding]::UTF8.GetBytes($jsonBody)) `
         -UseBasicParsing
 
+    $response = $webResponse.Content | ConvertFrom-Json
     Show-TestResult -TestName "Keyword Search" -Response $response
     return $response
 }
@@ -379,12 +383,13 @@ function Test-FacetedSearch {
 
     $jsonBody = $bodyObject | ConvertTo-Json
 
-    $response = Invoke-RestMethod -Uri "$baseUrl/faceted-search" `
+    $webResponse = Invoke-WebRequest -Uri "$baseUrl/faceted-search" `
         -Method Post `
-        -ContentType "application/json" `
-        -Body $jsonBody `
+        -ContentType "application/json; charset=utf-8" `
+        -Body ([System.Text.Encoding]::UTF8.GetBytes($jsonBody)) `
         -UseBasicParsing
 
+    $response = $webResponse.Content | ConvertFrom-Json
     Show-TestResult -TestName "Faceted Search" -Response $response
     return $response
 }
@@ -407,12 +412,14 @@ function Test-ChatBasic {
     $jsonBody = $bodyObject | ConvertTo-Json
 
     try {
-        $response = Invoke-RestMethod -Uri "$baseUrl/chat" `
+        # Use Invoke-WebRequest instead of Invoke-RestMethod for better JSON handling in PowerShell 5.1
+        $webResponse = Invoke-WebRequest -Uri "$baseUrl/chat" `
             -Method Post `
-            -ContentType "application/json" `
-            -Body $jsonBody `
+            -ContentType "application/json; charset=utf-8" `
+            -Body ([System.Text.Encoding]::UTF8.GetBytes($jsonBody)) `
             -UseBasicParsing
 
+        $response = $webResponse.Content | ConvertFrom-Json
         Show-TestResult -TestName "Basic Chat" -Response $response
         return $response
     }
@@ -440,12 +447,13 @@ function Test-ChatWithContext {
 
     $jsonBody = $bodyObject | ConvertTo-Json
 
-    $response = Invoke-RestMethod -Uri "$baseUrl/chat" `
+    $webResponse = Invoke-WebRequest -Uri "$baseUrl/chat" `
         -Method Post `
-        -ContentType "application/json" `
-        -Body $jsonBody `
+        -ContentType "application/json; charset=utf-8" `
+        -Body ([System.Text.Encoding]::UTF8.GetBytes($jsonBody)) `
         -UseBasicParsing
 
+    $response = $webResponse.Content | ConvertFrom-Json
     Show-TestResult -TestName "Chat with Context" -Response $response
     return $response
 }
@@ -519,12 +527,13 @@ function Test-CreateSession {
 
     $jsonBody = $bodyObject | ConvertTo-Json
 
-    $response = Invoke-RestMethod -Uri "$baseUrl/sessions" `
+    $webResponse = Invoke-WebRequest -Uri "$baseUrl/sessions" `
         -Method Post `
-        -ContentType "application/json" `
-        -Body $jsonBody `
+        -ContentType "application/json; charset=utf-8" `
+        -Body ([System.Text.Encoding]::UTF8.GetBytes($jsonBody)) `
         -UseBasicParsing
 
+    $response = $webResponse.Content | ConvertFrom-Json
     Show-TestResult -TestName "Create Session" -Response $response
     return $response
 }
@@ -563,12 +572,13 @@ function Test-UpdateSession {
 
     $jsonBody = $bodyObject | ConvertTo-Json
 
-    $response = Invoke-RestMethod -Uri "$baseUrl/sessions/$SessionId" `
+    $webResponse = Invoke-WebRequest -Uri "$baseUrl/sessions/$SessionId" `
         -Method Patch `
-        -ContentType "application/json" `
-        -Body $jsonBody `
+        -ContentType "application/json; charset=utf-8" `
+        -Body ([System.Text.Encoding]::UTF8.GetBytes($jsonBody)) `
         -UseBasicParsing
 
+    $response = $webResponse.Content | ConvertFrom-Json
     Show-TestResult -TestName "Update Session" -Response $response
     return $response
 }
