@@ -8,10 +8,16 @@ $schemaPath = "examples/graphql/schema.graphql"
 
 if (-not (Test-Path $schemaPath)) {
     Write-Host "Error: Schema file not found at $schemaPath" -ForegroundColor Red
-    Write-Host "Please create a GraphQL schema file first or update the path." -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "A sample GraphQL schema file should exist at this path." -ForegroundColor Yellow
+    Write-Host "Please ensure you're running this from the project root directory." -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "Current directory: $PWD" -ForegroundColor Cyan
+    Write-Host "Expected file: $((Resolve-Path .).Path)\$schemaPath" -ForegroundColor Cyan
     exit 1
 }
 
+Write-Host "Reading GraphQL schema from: $schemaPath" -ForegroundColor Cyan
 $schemaContent = Get-Content $schemaPath -Raw
 
 # Build the request body
@@ -25,7 +31,7 @@ $jsonBody = $bodyObject | ConvertTo-Json -Depth 10
 
 # Display the request
 Write-Host "Sending POST request to /diagrams/er" -ForegroundColor Cyan
-Write-Host "Schema file: $schemaPath" -ForegroundColor Yellow
+Write-Host "Schema length: $($schemaContent.Length) characters" -ForegroundColor Yellow
 Write-Host ""
 
 # Send the request
@@ -36,12 +42,18 @@ try {
         -Body $jsonBody
 
     # Display the response
-    Write-Host "Response:" -ForegroundColor Green
+    Write-Host "Success!" -ForegroundColor Green
     Write-Host "Diagram Type: $($response.diagram_type)" -ForegroundColor Cyan
     Write-Host "Title: $($response.title)" -ForegroundColor Cyan
     Write-Host ""
     Write-Host "Mermaid Code:" -ForegroundColor Yellow
+    Write-Host "----------------------------------------" -ForegroundColor Gray
     Write-Host $response.mermaid_code -ForegroundColor White
+    Write-Host "----------------------------------------" -ForegroundColor Gray
+    Write-Host ""
+    Write-Host "You can paste this Mermaid code into:" -ForegroundColor Cyan
+    Write-Host "- https://mermaid.live" -ForegroundColor Yellow
+    Write-Host "- Any Markdown file with Mermaid support" -ForegroundColor Yellow
 }
 catch {
     Write-Host "Error: $_" -ForegroundColor Red
