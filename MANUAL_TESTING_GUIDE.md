@@ -1616,18 +1616,37 @@ Invoke-RestMethod -Uri "http://localhost:8000/diagrams/overview" `
 
 #### TEST-UI-058: Sort Documents
 **Type:** UI Test
+**Status:** ⚠️ **NOT IMPLEMENTED** - Feature does not exist in current UI
 
-**Steps:**
+**Current Limitation:**
+The Document Library currently does NOT have:
+- Column headers (Name, Date, Size, etc.)
+- Sort functionality
+- Only displays: Document name, format badge, delete icon
+
+**Proposed Enhancement:**
+Add sortable table columns for better document management:
+- **Name** - Sort alphabetically (A-Z, Z-A)
+- **Format** - Sort by document type (OpenAPI, PDF, etc.)
+- **Upload Date** - Sort by newest/oldest
+- **Size** - Sort by file size
+- **Chunks** - Sort by number of chunks
+
+**Steps (If Implemented):**
 1. Document Library
 2. Click column headers to sort:
    - By name (A-Z, Z-A)
    - By date (newest/oldest)
    - By size
 
-**Expected Result:**
+**Expected Result (If Implemented):**
 - Documents reorder correctly
-- Sort indicator shown
-- Persists during session
+- Sort indicator shown (↑ ↓)
+- Sort preference persists during session
+
+**Current Workaround:**
+- Use the search box to filter documents by name
+- Delete and re-upload if you need different ordering
 
 ---
 
