@@ -269,13 +269,13 @@ function Test-BulkDelete {
         document_ids = $DocumentIds
     }
 
-    $jsonBody = $bodyObject | ConvertTo-Json -Compress
-    $utf8Body = [System.Text.Encoding]::UTF8.GetBytes($jsonBody)
+    $jsonBody = $bodyObject | ConvertTo-Json
 
     $response = Invoke-RestMethod -Uri "$baseUrl/documents/bulk-delete" `
         -Method Post `
-        -ContentType "application/json; charset=utf-8" `
-        -Body $utf8Body
+        -ContentType "application/json" `
+        -Body $jsonBody `
+        -UseBasicParsing
 
     Show-TestResult -TestName "Bulk Delete" -Response $response
     return $response
@@ -299,13 +299,13 @@ function Test-VectorSearch {
         n_results = $NResults
     }
 
-    $jsonBody = $bodyObject | ConvertTo-Json -Compress
-    $utf8Body = [System.Text.Encoding]::UTF8.GetBytes($jsonBody)
+    $jsonBody = $bodyObject | ConvertTo-Json
 
     $response = Invoke-RestMethod -Uri "$baseUrl/search" `
         -Method Post `
-        -ContentType "application/json; charset=utf-8" `
-        -Body $utf8Body
+        -ContentType "application/json" `
+        -Body $jsonBody `
+        -UseBasicParsing
 
     Show-TestResult -TestName "Vector Search" -Response $response
     return $response
@@ -325,13 +325,13 @@ function Test-HybridSearch {
         n_results = $NResults
     }
 
-    $jsonBody = $bodyObject | ConvertTo-Json -Compress
-    $utf8Body = [System.Text.Encoding]::UTF8.GetBytes($jsonBody)
+    $jsonBody = $bodyObject | ConvertTo-Json
 
     $response = Invoke-RestMethod -Uri "$baseUrl/search" `
         -Method Post `
-        -ContentType "application/json; charset=utf-8" `
-        -Body $utf8Body
+        -ContentType "application/json" `
+        -Body $jsonBody `
+        -UseBasicParsing
 
     Show-TestResult -TestName "Hybrid Search" -Response $response
     return $response
@@ -351,13 +351,13 @@ function Test-KeywordSearch {
         n_results = $NResults
     }
 
-    $jsonBody = $bodyObject | ConvertTo-Json -Compress
-    $utf8Body = [System.Text.Encoding]::UTF8.GetBytes($jsonBody)
+    $jsonBody = $bodyObject | ConvertTo-Json
 
     $response = Invoke-RestMethod -Uri "$baseUrl/search" `
         -Method Post `
-        -ContentType "application/json; charset=utf-8" `
-        -Body $utf8Body
+        -ContentType "application/json" `
+        -Body $jsonBody `
+        -UseBasicParsing
 
     Show-TestResult -TestName "Keyword Search" -Response $response
     return $response
@@ -377,13 +377,13 @@ function Test-FacetedSearch {
         n_results = 10
     }
 
-    $jsonBody = $bodyObject | ConvertTo-Json -Compress
-    $utf8Body = [System.Text.Encoding]::UTF8.GetBytes($jsonBody)
+    $jsonBody = $bodyObject | ConvertTo-Json
 
     $response = Invoke-RestMethod -Uri "$baseUrl/faceted-search" `
         -Method Post `
-        -ContentType "application/json; charset=utf-8" `
-        -Body $utf8Body
+        -ContentType "application/json" `
+        -Body $jsonBody `
+        -UseBasicParsing
 
     Show-TestResult -TestName "Faceted Search" -Response $response
     return $response
@@ -404,16 +404,23 @@ function Test-ChatBasic {
         enable_auto_indexing = $false
     }
 
-    $jsonBody = $bodyObject | ConvertTo-Json -Compress
-    $utf8Body = [System.Text.Encoding]::UTF8.GetBytes($jsonBody)
+    $jsonBody = $bodyObject | ConvertTo-Json
 
-    $response = Invoke-RestMethod -Uri "$baseUrl/chat" `
-        -Method Post `
-        -ContentType "application/json; charset=utf-8" `
-        -Body $utf8Body
+    try {
+        $response = Invoke-RestMethod -Uri "$baseUrl/chat" `
+            -Method Post `
+            -ContentType "application/json" `
+            -Body $jsonBody `
+            -UseBasicParsing
 
-    Show-TestResult -TestName "Basic Chat" -Response $response
-    return $response
+        Show-TestResult -TestName "Basic Chat" -Response $response
+        return $response
+    }
+    catch {
+        Write-Host "Error: $_" -ForegroundColor Red
+        Write-Host "Request Body: $jsonBody" -ForegroundColor Yellow
+        throw
+    }
 }
 
 function Test-ChatWithContext {
@@ -431,13 +438,13 @@ function Test-ChatWithContext {
         enable_auto_indexing = $true
     }
 
-    $jsonBody = $bodyObject | ConvertTo-Json -Compress
-    $utf8Body = [System.Text.Encoding]::UTF8.GetBytes($jsonBody)
+    $jsonBody = $bodyObject | ConvertTo-Json
 
     $response = Invoke-RestMethod -Uri "$baseUrl/chat" `
         -Method Post `
-        -ContentType "application/json; charset=utf-8" `
-        -Body $utf8Body
+        -ContentType "application/json" `
+        -Body $jsonBody `
+        -UseBasicParsing
 
     Show-TestResult -TestName "Chat with Context" -Response $response
     return $response
@@ -510,13 +517,13 @@ function Test-CreateSession {
         agent_type = "general"
     }
 
-    $jsonBody = $bodyObject | ConvertTo-Json -Compress
-    $utf8Body = [System.Text.Encoding]::UTF8.GetBytes($jsonBody)
+    $jsonBody = $bodyObject | ConvertTo-Json
 
     $response = Invoke-RestMethod -Uri "$baseUrl/sessions" `
         -Method Post `
-        -ContentType "application/json; charset=utf-8" `
-        -Body $utf8Body
+        -ContentType "application/json" `
+        -Body $jsonBody `
+        -UseBasicParsing
 
     Show-TestResult -TestName "Create Session" -Response $response
     return $response
@@ -554,13 +561,13 @@ function Test-UpdateSession {
         title = $Title
     }
 
-    $jsonBody = $bodyObject | ConvertTo-Json -Compress
-    $utf8Body = [System.Text.Encoding]::UTF8.GetBytes($jsonBody)
+    $jsonBody = $bodyObject | ConvertTo-Json
 
     $response = Invoke-RestMethod -Uri "$baseUrl/sessions/$SessionId" `
         -Method Patch `
-        -ContentType "application/json; charset=utf-8" `
-        -Body $utf8Body
+        -ContentType "application/json" `
+        -Body $jsonBody `
+        -UseBasicParsing
 
     Show-TestResult -TestName "Update Session" -Response $response
     return $response
