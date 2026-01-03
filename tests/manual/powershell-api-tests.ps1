@@ -393,26 +393,43 @@ function Test-ChatBasic {
 
     Write-Host "Running: Basic Chat" -ForegroundColor Yellow
 
-    $bodyObject = @{
-        message = $Message
-        enable_url_scraping = $false
-        enable_auto_indexing = $false
-    }
+    # Chat endpoint expects multipart/form-data, not JSON
+    $boundary = [System.Guid]::NewGuid().ToString()
+    $LF = "`r`n"
+    $bodyLines = @()
 
-    $jsonBody = $bodyObject | ConvertTo-Json -Depth 10
+    # Add message field
+    $bodyLines += "--$boundary"
+    $bodyLines += "Content-Disposition: form-data; name=`"message`""
+    $bodyLines += ""
+    $bodyLines += $Message
+
+    # Add enable_url_scraping field
+    $bodyLines += "--$boundary"
+    $bodyLines += "Content-Disposition: form-data; name=`"enable_url_scraping`""
+    $bodyLines += ""
+    $bodyLines += "false"
+
+    # Add enable_auto_indexing field
+    $bodyLines += "--$boundary"
+    $bodyLines += "Content-Disposition: form-data; name=`"enable_auto_indexing`""
+    $bodyLines += ""
+    $bodyLines += "false"
+
+    $bodyLines += "--$boundary--"
+    $body = $bodyLines -join $LF
 
     try {
         $response = Invoke-RestMethod -Uri "$baseUrl/chat" `
             -Method Post `
-            -ContentType "application/json" `
-            -Body $jsonBody
+            -ContentType "multipart/form-data; boundary=$boundary" `
+            -Body $body
 
         Show-TestResult -TestName "Basic Chat" -Response $response
         return $response
     }
     catch {
         Write-Host "Error: $_" -ForegroundColor Red
-        Write-Host "Request Body: $jsonBody" -ForegroundColor Yellow
         throw
     }
 }
@@ -425,19 +442,44 @@ function Test-ChatWithContext {
 
     Write-Host "Running: Chat with Context" -ForegroundColor Yellow
 
-    $bodyObject = @{
-        message = $Message
-        session_id = $SessionId
-        enable_url_scraping = $true
-        enable_auto_indexing = $true
+    # Chat endpoint expects multipart/form-data, not JSON
+    $boundary = [System.Guid]::NewGuid().ToString()
+    $LF = "`r`n"
+    $bodyLines = @()
+
+    # Add message field
+    $bodyLines += "--$boundary"
+    $bodyLines += "Content-Disposition: form-data; name=`"message`""
+    $bodyLines += ""
+    $bodyLines += $Message
+
+    # Add session_id field if provided
+    if ($SessionId) {
+        $bodyLines += "--$boundary"
+        $bodyLines += "Content-Disposition: form-data; name=`"session_id`""
+        $bodyLines += ""
+        $bodyLines += $SessionId
     }
 
-    $jsonBody = $bodyObject | ConvertTo-Json -Depth 10
+    # Add enable_url_scraping field
+    $bodyLines += "--$boundary"
+    $bodyLines += "Content-Disposition: form-data; name=`"enable_url_scraping`""
+    $bodyLines += ""
+    $bodyLines += "true"
+
+    # Add enable_auto_indexing field
+    $bodyLines += "--$boundary"
+    $bodyLines += "Content-Disposition: form-data; name=`"enable_auto_indexing`""
+    $bodyLines += ""
+    $bodyLines += "true"
+
+    $bodyLines += "--$boundary--"
+    $body = $bodyLines -join $LF
 
     $response = Invoke-RestMethod -Uri "$baseUrl/chat" `
         -Method Post `
-        -ContentType "application/json" `
-        -Body $jsonBody
+        -ContentType "multipart/form-data; boundary=$boundary" `
+        -Body $body
 
     Show-TestResult -TestName "Chat with Context" -Response $response
     return $response
