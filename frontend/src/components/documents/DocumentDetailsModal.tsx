@@ -142,7 +142,7 @@ export function DocumentDetailsModal({
               <SourceIcon className="h-6 w-6 text-muted-foreground" />
               <div>
                 <DialogTitle className="text-xl">{getDocumentName()}</DialogTitle>
-                <DialogDescription className="flex items-center gap-2 mt-1">
+                <div className="flex items-center gap-2 mt-1">
                   <Badge variant="secondary" className="text-xs">
                     {document.metadata?.source || "unknown"}
                   </Badge>
@@ -151,7 +151,7 @@ export function DocumentDetailsModal({
                       {document.metadata.method}
                     </Badge>
                   )}
-                </DialogDescription>
+                </div>
               </div>
             </div>
             <div className="flex items-center gap-2">
