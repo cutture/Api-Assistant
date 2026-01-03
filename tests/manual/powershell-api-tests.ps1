@@ -269,12 +269,16 @@ function Test-BulkDelete {
         document_ids = $DocumentIds
     }
 
-    $jsonBody = $bodyObject | ConvertTo-Json
+    $jsonBody = $bodyObject | ConvertTo-Json -Depth 10
+
+    $headers = @{
+        "Content-Type" = "application/json; charset=utf-8"
+    }
 
     $webResponse = Invoke-WebRequest -Uri "$baseUrl/documents/bulk-delete" `
         -Method Post `
-        -ContentType "application/json; charset=utf-8" `
-        -Body ([System.Text.Encoding]::UTF8.GetBytes($jsonBody)) `
+        -Headers $headers `
+        -Body $jsonBody `
         -UseBasicParsing
 
     $response = $webResponse.Content | ConvertFrom-Json
@@ -300,12 +304,16 @@ function Test-VectorSearch {
         n_results = $NResults
     }
 
-    $jsonBody = $bodyObject | ConvertTo-Json
+    $jsonBody = $bodyObject | ConvertTo-Json -Depth 10
+
+    $headers = @{
+        "Content-Type" = "application/json; charset=utf-8"
+    }
 
     $webResponse = Invoke-WebRequest -Uri "$baseUrl/search" `
         -Method Post `
-        -ContentType "application/json; charset=utf-8" `
-        -Body ([System.Text.Encoding]::UTF8.GetBytes($jsonBody)) `
+        -Headers $headers `
+        -Body $jsonBody `
         -UseBasicParsing
 
     $response = $webResponse.Content | ConvertFrom-Json
@@ -327,12 +335,16 @@ function Test-HybridSearch {
         n_results = $NResults
     }
 
-    $jsonBody = $bodyObject | ConvertTo-Json
+    $jsonBody = $bodyObject | ConvertTo-Json -Depth 10
+
+    $headers = @{
+        "Content-Type" = "application/json; charset=utf-8"
+    }
 
     $webResponse = Invoke-WebRequest -Uri "$baseUrl/search" `
         -Method Post `
-        -ContentType "application/json; charset=utf-8" `
-        -Body ([System.Text.Encoding]::UTF8.GetBytes($jsonBody)) `
+        -Headers $headers `
+        -Body $jsonBody `
         -UseBasicParsing
 
     $response = $webResponse.Content | ConvertFrom-Json
@@ -354,12 +366,16 @@ function Test-KeywordSearch {
         n_results = $NResults
     }
 
-    $jsonBody = $bodyObject | ConvertTo-Json
+    $jsonBody = $bodyObject | ConvertTo-Json -Depth 10
+
+    $headers = @{
+        "Content-Type" = "application/json; charset=utf-8"
+    }
 
     $webResponse = Invoke-WebRequest -Uri "$baseUrl/search" `
         -Method Post `
-        -ContentType "application/json; charset=utf-8" `
-        -Body ([System.Text.Encoding]::UTF8.GetBytes($jsonBody)) `
+        -Headers $headers `
+        -Body $jsonBody `
         -UseBasicParsing
 
     $response = $webResponse.Content | ConvertFrom-Json
@@ -381,12 +397,16 @@ function Test-FacetedSearch {
         n_results = 10
     }
 
-    $jsonBody = $bodyObject | ConvertTo-Json
+    $jsonBody = $bodyObject | ConvertTo-Json -Depth 10
+
+    $headers = @{
+        "Content-Type" = "application/json; charset=utf-8"
+    }
 
     $webResponse = Invoke-WebRequest -Uri "$baseUrl/faceted-search" `
         -Method Post `
-        -ContentType "application/json; charset=utf-8" `
-        -Body ([System.Text.Encoding]::UTF8.GetBytes($jsonBody)) `
+        -Headers $headers `
+        -Body $jsonBody `
         -UseBasicParsing
 
     $response = $webResponse.Content | ConvertFrom-Json
@@ -409,14 +429,18 @@ function Test-ChatBasic {
         enable_auto_indexing = $false
     }
 
-    $jsonBody = $bodyObject | ConvertTo-Json
+    $jsonBody = $bodyObject | ConvertTo-Json -Depth 10
 
     try {
-        # Use Invoke-WebRequest instead of Invoke-RestMethod for better JSON handling in PowerShell 5.1
+        # For PowerShell 5.1: pass JSON string directly with explicit encoding in headers
+        $headers = @{
+            "Content-Type" = "application/json; charset=utf-8"
+        }
+
         $webResponse = Invoke-WebRequest -Uri "$baseUrl/chat" `
             -Method Post `
-            -ContentType "application/json; charset=utf-8" `
-            -Body ([System.Text.Encoding]::UTF8.GetBytes($jsonBody)) `
+            -Headers $headers `
+            -Body $jsonBody `
             -UseBasicParsing
 
         $response = $webResponse.Content | ConvertFrom-Json
@@ -445,12 +469,16 @@ function Test-ChatWithContext {
         enable_auto_indexing = $true
     }
 
-    $jsonBody = $bodyObject | ConvertTo-Json
+    $jsonBody = $bodyObject | ConvertTo-Json -Depth 10
+
+    $headers = @{
+        "Content-Type" = "application/json; charset=utf-8"
+    }
 
     $webResponse = Invoke-WebRequest -Uri "$baseUrl/chat" `
         -Method Post `
-        -ContentType "application/json; charset=utf-8" `
-        -Body ([System.Text.Encoding]::UTF8.GetBytes($jsonBody)) `
+        -Headers $headers `
+        -Body $jsonBody `
         -UseBasicParsing
 
     $response = $webResponse.Content | ConvertFrom-Json
@@ -525,12 +553,16 @@ function Test-CreateSession {
         agent_type = "general"
     }
 
-    $jsonBody = $bodyObject | ConvertTo-Json
+    $jsonBody = $bodyObject | ConvertTo-Json -Depth 10
+
+    $headers = @{
+        "Content-Type" = "application/json; charset=utf-8"
+    }
 
     $webResponse = Invoke-WebRequest -Uri "$baseUrl/sessions" `
         -Method Post `
-        -ContentType "application/json; charset=utf-8" `
-        -Body ([System.Text.Encoding]::UTF8.GetBytes($jsonBody)) `
+        -Headers $headers `
+        -Body $jsonBody `
         -UseBasicParsing
 
     $response = $webResponse.Content | ConvertFrom-Json
@@ -570,12 +602,16 @@ function Test-UpdateSession {
         title = $Title
     }
 
-    $jsonBody = $bodyObject | ConvertTo-Json
+    $jsonBody = $bodyObject | ConvertTo-Json -Depth 10
+
+    $headers = @{
+        "Content-Type" = "application/json; charset=utf-8"
+    }
 
     $webResponse = Invoke-WebRequest -Uri "$baseUrl/sessions/$SessionId" `
         -Method Patch `
-        -ContentType "application/json; charset=utf-8" `
-        -Body ([System.Text.Encoding]::UTF8.GetBytes($jsonBody)) `
+        -Headers $headers `
+        -Body $jsonBody `
         -UseBasicParsing
 
     $response = $webResponse.Content | ConvertFrom-Json
