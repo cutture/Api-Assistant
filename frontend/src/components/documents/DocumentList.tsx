@@ -40,12 +40,12 @@ export function DocumentList() {
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [selectedDocument, setSelectedDocument] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [displayLimit, setDisplayLimit] = useState<number>(20);
+  const [displayLimit, setDisplayLimit] = useState<number | "all">(20);
 
   const loadDocuments = async () => {
     setLoadingDocs(true);
     try {
-      const response = await exportDocuments(100);
+      const response = await exportDocuments(); // Load all documents (no limit)
       if (response.data) {
         setDocuments(response.data);
       }
@@ -192,8 +192,11 @@ export function DocumentList() {
     });
 
   // Apply display limit
-  const displayedDocuments = filteredAndSortedDocuments.slice(0, displayLimit);
+  const displayedDocuments = displayLimit === "all"
+    ? filteredAndSortedDocuments
+    : filteredAndSortedDocuments.slice(0, displayLimit);
   const totalFilteredCount = filteredAndSortedDocuments.length;
+  const displayedCount = displayedDocuments.length;
 
   const toggleSelectAll = () => {
     if (selectedIds.length === displayedDocuments.length) {
@@ -279,7 +282,7 @@ export function DocumentList() {
                 </span>
                 <Select
                   value={displayLimit.toString()}
-                  onValueChange={(value) => setDisplayLimit(parseInt(value))}
+                  onValueChange={(value) => setDisplayLimit(value === "all" ? "all" : parseInt(value))}
                 >
                   <SelectTrigger className="w-[100px]">
                     <SelectValue />
@@ -289,7 +292,7 @@ export function DocumentList() {
                     <SelectItem value="20">20</SelectItem>
                     <SelectItem value="50">50</SelectItem>
                     <SelectItem value="100">100</SelectItem>
-                    <SelectItem value={documents.length.toString()}>All</SelectItem>
+                    <SelectItem value="all">All</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -305,7 +308,7 @@ export function DocumentList() {
             </div>
             {totalFilteredCount > 0 && (
               <div className="mt-3 text-sm text-muted-foreground">
-                Showing {Math.min(displayLimit, totalFilteredCount)} of {totalFilteredCount} documents
+                Showing {displayedCount} of {totalFilteredCount} documents
                 {searchQuery && " (filtered)"}
               </div>
             )}
