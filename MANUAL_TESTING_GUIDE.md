@@ -1173,40 +1173,30 @@ curl -X DELETE "http://localhost:8000/sessions/{session_id}"
 
 **Steps:**
 
-**1. First, upload a document and get its ID:**
-```powershell
-# Upload an OpenAPI file
-$uploadResponse = Invoke-RestMethod -Uri "http://localhost:8000/documents/upload" `
-    -Method Post `
-    -ContentType "multipart/form-data; boundary=$boundary" `
-    -Body $multipartBody
-
-# Get the first document ID
-$documentId = $uploadResponse.document_ids[0]
-Write-Host "Document ID: $documentId"
-```
-
-**2. Then generate the sequence diagram:**
-
-**For Linux/Mac:**
-```bash
-# Replace DOCUMENT_ID with actual ID from upload
-curl -X POST "http://localhost:8000/diagrams/sequence" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "endpoint_id": "DOCUMENT_ID"
-  }'
-```
-
 **For Windows PowerShell:**
 ```powershell
-# Use document ID from upload step
-$body = @{
-    endpoint_id = $documentId
-} | ConvertTo-Json -Depth 10
+# Run the complete example script (uploads file + generates diagram)
+.\tests\manual\generate-sequence-diagram-example.ps1
+```
 
-Invoke-RestMethod -Uri "http://localhost:8000/diagrams/sequence" `
-    -Method Post -ContentType "application/json" -Body $body
+**For Linux/Mac (Manual two-step process):**
+
+**Step 1: Upload OpenAPI file**
+```bash
+# Upload and capture response
+RESPONSE=$(curl -X POST "http://localhost:8000/documents/upload" \
+  -F "files=@examples/sample-openapi.json")
+
+# Extract document ID (requires jq)
+DOCUMENT_ID=$(echo $RESPONSE | jq -r '.document_ids[0]')
+echo "Document ID: $DOCUMENT_ID"
+```
+
+**Step 2: Generate sequence diagram**
+```bash
+curl -X POST "http://localhost:8000/diagrams/sequence" \
+  -H "Content-Type: application/json" \
+  -d "{\"endpoint_id\": \"$DOCUMENT_ID\"}"
 ```
 
 **Expected Result:**
@@ -1218,7 +1208,7 @@ Invoke-RestMethod -Uri "http://localhost:8000/diagrams/sequence" `
 }
 ```
 
-**Note:** This endpoint requires a document to already exist in the vector store. The endpoint_id parameter refers to a document ID, typically obtained from uploading an OpenAPI specification.
+**Note:** This endpoint requires a document to already exist in the vector store. The endpoint_id parameter refers to a document ID obtained from uploading an OpenAPI specification.
 
 ---
 
