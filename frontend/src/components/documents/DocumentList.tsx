@@ -14,6 +14,7 @@ import { Trash2, Search, FileText, Globe, Code, AlertCircle, ArrowUpDown, ArrowU
 import { useCollectionStats, useDeleteDocument, useBulkDeleteDocuments } from "@/hooks/useDocuments";
 import { useToast } from "@/hooks/use-toast";
 import { exportDocuments } from "@/lib/api/documents";
+import { DocumentDetailsModal } from "./DocumentDetailsModal";
 
 type SortField = "name" | "format" | "size" | "chunks";
 type SortDirection = "asc" | "desc";
@@ -30,6 +31,8 @@ export function DocumentList() {
   const [loadingDocs, setLoadingDocs] = useState(false);
   const [sortField, setSortField] = useState<SortField>("name");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+  const [selectedDocument, setSelectedDocument] = useState<any>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const loadDocuments = async () => {
     setLoadingDocs(true);
@@ -66,6 +69,20 @@ export function DocumentList() {
         });
       },
     });
+  };
+
+  const handleRowClick = (doc: any) => {
+    setSelectedDocument(doc);
+    setIsModalOpen(true);
+  };
+
+  const handleUpdateMetadata = (documentId: string, metadata: any) => {
+    // Update the document in the local state
+    setDocuments((prev) =>
+      prev.map((doc) =>
+        doc.id === documentId ? { ...doc, metadata } : doc
+      )
+    );
   };
 
   const handleBulkDelete = () => {
@@ -325,9 +342,10 @@ export function DocumentList() {
                       return (
                         <tr
                           key={doc.id}
-                          className="hover:bg-muted/50 transition-colors"
+                          className="hover:bg-muted/50 transition-colors cursor-pointer"
+                          onClick={() => handleRowClick(doc)}
                         >
-                          <td className="p-3">
+                          <td className="p-3" onClick={(e) => e.stopPropagation()}>
                             <Checkbox
                               checked={selectedIds.includes(doc.id)}
                               onCheckedChange={() => toggleSelection(doc.id)}
@@ -370,7 +388,7 @@ export function DocumentList() {
                               {getChunkCount(doc)}
                             </span>
                           </td>
-                          <td className="p-3 text-center">
+                          <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
                             <Button
                               variant="ghost"
                               size="sm"
@@ -403,6 +421,15 @@ export function DocumentList() {
           </Card>
         )
       )}
+
+      {/* Document Details Modal */}
+      <DocumentDetailsModal
+        document={selectedDocument}
+        open={isModalOpen}
+        onOpenChange={setIsModalOpen}
+        onDelete={handleDelete}
+        onUpdate={handleUpdateMetadata}
+      />
     </div>
   );
 }
