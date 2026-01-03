@@ -265,14 +265,17 @@ function Test-BulkDelete {
 
     Write-Host "Running: Bulk Delete Documents" -ForegroundColor Yellow
 
-    $body = @{
+    $bodyObject = @{
         document_ids = $DocumentIds
-    } | ConvertTo-Json
+    }
+
+    $jsonBody = $bodyObject | ConvertTo-Json -Compress
+    $utf8Body = [System.Text.Encoding]::UTF8.GetBytes($jsonBody)
 
     $response = Invoke-RestMethod -Uri "$baseUrl/documents/bulk-delete" `
         -Method Post `
-        -ContentType "application/json" `
-        -Body $body
+        -ContentType "application/json; charset=utf-8" `
+        -Body $utf8Body
 
     Show-TestResult -TestName "Bulk Delete" -Response $response
     return $response
@@ -290,16 +293,19 @@ function Test-VectorSearch {
 
     Write-Host "Running: Vector Search" -ForegroundColor Yellow
 
-    $body = @{
+    $bodyObject = @{
         query = $Query
         mode = "vector"
         n_results = $NResults
-    } | ConvertTo-Json
+    }
+
+    $jsonBody = $bodyObject | ConvertTo-Json -Compress
+    $utf8Body = [System.Text.Encoding]::UTF8.GetBytes($jsonBody)
 
     $response = Invoke-RestMethod -Uri "$baseUrl/search" `
         -Method Post `
-        -ContentType "application/json" `
-        -Body $body
+        -ContentType "application/json; charset=utf-8" `
+        -Body $utf8Body
 
     Show-TestResult -TestName "Vector Search" -Response $response
     return $response
@@ -313,16 +319,19 @@ function Test-HybridSearch {
 
     Write-Host "Running: Hybrid Search" -ForegroundColor Yellow
 
-    $body = @{
+    $bodyObject = @{
         query = $Query
         mode = "hybrid"
         n_results = $NResults
-    } | ConvertTo-Json
+    }
+
+    $jsonBody = $bodyObject | ConvertTo-Json -Compress
+    $utf8Body = [System.Text.Encoding]::UTF8.GetBytes($jsonBody)
 
     $response = Invoke-RestMethod -Uri "$baseUrl/search" `
         -Method Post `
-        -ContentType "application/json" `
-        -Body $body
+        -ContentType "application/json; charset=utf-8" `
+        -Body $utf8Body
 
     Show-TestResult -TestName "Hybrid Search" -Response $response
     return $response
@@ -336,16 +345,19 @@ function Test-KeywordSearch {
 
     Write-Host "Running: Keyword Search" -ForegroundColor Yellow
 
-    $body = @{
+    $bodyObject = @{
         query = $Query
         mode = "keyword"
         n_results = $NResults
-    } | ConvertTo-Json
+    }
+
+    $jsonBody = $bodyObject | ConvertTo-Json -Compress
+    $utf8Body = [System.Text.Encoding]::UTF8.GetBytes($jsonBody)
 
     $response = Invoke-RestMethod -Uri "$baseUrl/search" `
         -Method Post `
-        -ContentType "application/json" `
-        -Body $body
+        -ContentType "application/json; charset=utf-8" `
+        -Body $utf8Body
 
     Show-TestResult -TestName "Keyword Search" -Response $response
     return $response
@@ -359,16 +371,19 @@ function Test-FacetedSearch {
 
     Write-Host "Running: Faceted Search" -ForegroundColor Yellow
 
-    $body = @{
+    $bodyObject = @{
         query = $Query
         filters = $Filters
         n_results = 10
-    } | ConvertTo-Json
+    }
+
+    $jsonBody = $bodyObject | ConvertTo-Json -Compress
+    $utf8Body = [System.Text.Encoding]::UTF8.GetBytes($jsonBody)
 
     $response = Invoke-RestMethod -Uri "$baseUrl/faceted-search" `
         -Method Post `
-        -ContentType "application/json" `
-        -Body $body
+        -ContentType "application/json; charset=utf-8" `
+        -Body $utf8Body
 
     Show-TestResult -TestName "Faceted Search" -Response $response
     return $response
@@ -383,16 +398,19 @@ function Test-ChatBasic {
 
     Write-Host "Running: Basic Chat" -ForegroundColor Yellow
 
-    $body = @{
+    $bodyObject = @{
         message = $Message
         enable_url_scraping = $false
         enable_auto_indexing = $false
-    } | ConvertTo-Json
+    }
+
+    $jsonBody = $bodyObject | ConvertTo-Json -Compress
+    $utf8Body = [System.Text.Encoding]::UTF8.GetBytes($jsonBody)
 
     $response = Invoke-RestMethod -Uri "$baseUrl/chat" `
         -Method Post `
-        -ContentType "application/json" `
-        -Body $body
+        -ContentType "application/json; charset=utf-8" `
+        -Body $utf8Body
 
     Show-TestResult -TestName "Basic Chat" -Response $response
     return $response
@@ -406,17 +424,20 @@ function Test-ChatWithContext {
 
     Write-Host "Running: Chat with Context" -ForegroundColor Yellow
 
-    $body = @{
+    $bodyObject = @{
         message = $Message
         session_id = $SessionId
         enable_url_scraping = $true
         enable_auto_indexing = $true
-    } | ConvertTo-Json
+    }
+
+    $jsonBody = $bodyObject | ConvertTo-Json -Compress
+    $utf8Body = [System.Text.Encoding]::UTF8.GetBytes($jsonBody)
 
     $response = Invoke-RestMethod -Uri "$baseUrl/chat" `
         -Method Post `
-        -ContentType "application/json" `
-        -Body $body
+        -ContentType "application/json; charset=utf-8" `
+        -Body $utf8Body
 
     Show-TestResult -TestName "Chat with Context" -Response $response
     return $response
@@ -484,15 +505,18 @@ function Test-ChatWithFileUpload {
 function Test-CreateSession {
     Write-Host "Running: Create Session" -ForegroundColor Yellow
 
-    $body = @{
+    $bodyObject = @{
         title = "Test Session"
         agent_type = "general"
-    } | ConvertTo-Json
+    }
+
+    $jsonBody = $bodyObject | ConvertTo-Json -Compress
+    $utf8Body = [System.Text.Encoding]::UTF8.GetBytes($jsonBody)
 
     $response = Invoke-RestMethod -Uri "$baseUrl/sessions" `
         -Method Post `
-        -ContentType "application/json" `
-        -Body $body
+        -ContentType "application/json; charset=utf-8" `
+        -Body $utf8Body
 
     Show-TestResult -TestName "Create Session" -Response $response
     return $response
@@ -526,14 +550,17 @@ function Test-UpdateSession {
 
     Write-Host "Running: Update Session" -ForegroundColor Yellow
 
-    $body = @{
+    $bodyObject = @{
         title = $Title
-    } | ConvertTo-Json
+    }
+
+    $jsonBody = $bodyObject | ConvertTo-Json -Compress
+    $utf8Body = [System.Text.Encoding]::UTF8.GetBytes($jsonBody)
 
     $response = Invoke-RestMethod -Uri "$baseUrl/sessions/$SessionId" `
         -Method Patch `
-        -ContentType "application/json" `
-        -Body $body
+        -ContentType "application/json; charset=utf-8" `
+        -Body $utf8Body
 
     Show-TestResult -TestName "Update Session" -Response $response
     return $response
