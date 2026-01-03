@@ -804,18 +804,45 @@ curl -X POST "http://localhost:8000/faceted-search" \
 
 ### Test Category: Chat & AI Features
 
+> **IMPORTANT NOTE ON CHAT ENDPOINT FORMAT:**
+>
+> The `/chat` endpoint accepts **multipart/form-data** (NOT JSON) because it supports both text input AND optional file uploads in a single request. This is a design decision in FastAPI where `Form(...)` parameters are used instead of JSON request bodies.
+>
+> **Why this matters:**
+> - Using `Content-Type: application/json` will result in "Field required" errors
+> - All chat requests must use form-data encoding (curl `-F` flag or PowerShell `-Form` parameter)
+> - For PowerShell 5.1 users: Use the provided test suite functions which handle multipart/form-data construction
+
 #### TEST-API-018: Chat - Simple Question
 **Type:** API Test
 
+**Important:** The `/chat` endpoint expects `multipart/form-data`, NOT JSON.
+
 **Steps:**
+
+**For Linux/Mac:**
 ```bash
 curl -X POST "http://localhost:8000/chat" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "message": "What APIs are available?",
-    "enable_url_scraping": false,
-    "enable_auto_indexing": false
-  }'
+  -F "message=What APIs are available?" \
+  -F "enable_url_scraping=false" \
+  -F "enable_auto_indexing=false"
+```
+
+**For Windows PowerShell 7.0+:**
+```powershell
+$form = @{
+  message = "What APIs are available?"
+  enable_url_scraping = "false"
+  enable_auto_indexing = "false"
+}
+Invoke-RestMethod -Uri "http://localhost:8000/chat" -Method Post -Form $form
+```
+
+**For Windows PowerShell 5.1:**
+```powershell
+# Use the PowerShell test suite
+. .\tests\manual\powershell-api-tests.ps1
+Test-ChatBasic -Message "What APIs are available?"
 ```
 
 **Expected Result:**
@@ -834,15 +861,33 @@ curl -X POST "http://localhost:8000/chat" \
 #### TEST-API-019: Chat with URL Scraping
 **Type:** API Test
 
+**Important:** The `/chat` endpoint expects `multipart/form-data`, NOT JSON.
+
 **Steps:**
+
+**For Linux/Mac:**
 ```bash
 curl -X POST "http://localhost:8000/chat" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "message": "Tell me about this API: https://jsonplaceholder.typicode.com/users",
-    "enable_url_scraping": true,
-    "enable_auto_indexing": true
-  }'
+  -F "message=Tell me about this API: https://jsonplaceholder.typicode.com/users" \
+  -F "enable_url_scraping=true" \
+  -F "enable_auto_indexing=true"
+```
+
+**For Windows PowerShell 7.0+:**
+```powershell
+$form = @{
+  message = "Tell me about this API: https://jsonplaceholder.typicode.com/users"
+  enable_url_scraping = "true"
+  enable_auto_indexing = "true"
+}
+Invoke-RestMethod -Uri "http://localhost:8000/chat" -Method Post -Form $form
+```
+
+**For Windows PowerShell 5.1:**
+```powershell
+# Use the PowerShell test suite
+. .\tests\manual\powershell-api-tests.ps1
+Test-ChatWithContext -Message "Tell me about this API: https://jsonplaceholder.typicode.com/users"
 ```
 
 **Expected Result:**
@@ -865,7 +910,7 @@ curl -X POST "http://localhost:8000/chat" \
   -F "enable_auto_indexing=true"
 ```
 
-**For Windows PowerShell:**
+**For Windows PowerShell 7.0+:**
 ```powershell
 $form = @{
   message = "Explain this document"
@@ -873,6 +918,13 @@ $form = @{
   enable_auto_indexing = "true"
 }
 Invoke-RestMethod -Uri "http://localhost:8000/chat" -Method Post -Form $form
+```
+
+**For Windows PowerShell 5.1:**
+```powershell
+# Use the PowerShell test suite (has manual multipart/form-data construction)
+. .\tests\manual\powershell-api-tests.ps1
+Test-ChatWithFileUpload -Message "Explain this document" -FilePath "examples/sample-text.txt"
 ```
 
 **Expected Result:**
@@ -885,14 +937,45 @@ Invoke-RestMethod -Uri "http://localhost:8000/chat" -Method Post -Form $form
 #### TEST-API-021: Chat - Code Generation Request
 **Type:** API Test
 
+**Important:** The `/chat` endpoint expects `multipart/form-data`, NOT JSON.
+
 **Steps:**
+
+**For Linux/Mac:**
 ```bash
 curl -X POST "http://localhost:8000/chat" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "message": "Write Python code to fetch users from the API",
-    "agent_type": "code"
-  }'
+  -F "message=Write Python code to fetch users from the API" \
+  -F "agent_type=code"
+```
+
+**For Windows PowerShell 7.0+:**
+```powershell
+$form = @{
+  message = "Write Python code to fetch users from the API"
+  agent_type = "code"
+}
+Invoke-RestMethod -Uri "http://localhost:8000/chat" -Method Post -Form $form
+```
+
+**For Windows PowerShell 5.1:**
+```powershell
+# Manual multipart/form-data construction
+$boundary = [System.Guid]::NewGuid().ToString()
+$LF = "`r`n"
+$body = @(
+  "--$boundary",
+  "Content-Disposition: form-data; name=`"message`"",
+  "",
+  "Write Python code to fetch users from the API",
+  "--$boundary",
+  "Content-Disposition: form-data; name=`"agent_type`"",
+  "",
+  "code",
+  "--$boundary--"
+) -join $LF
+
+Invoke-RestMethod -Uri "http://localhost:8000/chat" -Method Post `
+  -ContentType "multipart/form-data; boundary=$boundary" -Body $body
 ```
 
 **Expected Result:**
