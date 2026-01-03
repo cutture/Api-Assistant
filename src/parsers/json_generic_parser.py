@@ -60,7 +60,7 @@ class JSONGenericParser(DocumentParser):
             source_file=source_file,
             metadata={
                 "json_type": self._get_json_type(data),
-                "top_level_keys": list(data.keys()) if isinstance(data, dict) else [],
+                "top_level_keys": ", ".join(data.keys()) if isinstance(data, dict) else "",
             },
         )
 
