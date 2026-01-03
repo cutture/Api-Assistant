@@ -1194,13 +1194,33 @@ curl -X POST "http://localhost:8000/diagrams/sequence" \
 **Type:** API Test
 **Prerequisite:** GraphQL schema file
 
+**Important:** The API expects `schema_content` (the actual schema text), NOT a `file_path`.
+
 **Steps:**
+
+**For Linux/Mac:**
 ```bash
+# Read the schema file and send its content
+SCHEMA_CONTENT=$(cat examples/graphql/schema.graphql)
 curl -X POST "http://localhost:8000/diagrams/er" \
   -H "Content-Type: application/json" \
-  -d '{
-    "file_path": "examples/graphql/schema.graphql"
-  }'
+  -d "{\"schema_content\": \"$SCHEMA_CONTENT\", \"include_types\": []}"
+```
+
+**For Windows PowerShell:**
+```powershell
+# Run the standalone script (handles file reading automatically)
+.\tests\manual\generate-er-diagram-example.ps1
+
+# Or manual approach:
+$schemaContent = Get-Content "examples/graphql/schema.graphql" -Raw
+$body = @{
+    schema_content = $schemaContent
+    include_types = @()
+} | ConvertTo-Json -Depth 10
+
+Invoke-RestMethod -Uri "http://localhost:8000/diagrams/er" `
+    -Method Post -ContentType "application/json" -Body $body
 ```
 
 **Expected Result:**
@@ -1212,14 +1232,29 @@ curl -X POST "http://localhost:8000/diagrams/er" \
 #### TEST-API-029: Generate Auth Flow Diagram
 **Type:** API Test
 
+**Important:** The API expects `auth_type` and optional `endpoints` list, NOT a `file_path`.
+
 **Steps:**
+
+**For Linux/Mac:**
 ```bash
 curl -X POST "http://localhost:8000/diagrams/auth-flow" \
   -H "Content-Type: application/json" \
   -d '{
-    "file_path": "examples/sample-openapi.json",
-    "auth_type": "bearer"
+    "auth_type": "bearer",
+    "endpoints": ["/api/login", "/api/protected"]
   }'
+```
+
+**For Windows PowerShell:**
+```powershell
+$body = @{
+    auth_type = "bearer"
+    endpoints = @("/api/login", "/api/protected")
+} | ConvertTo-Json -Depth 10
+
+Invoke-RestMethod -Uri "http://localhost:8000/diagrams/auth-flow" `
+    -Method Post -ContentType "application/json" -Body $body
 ```
 
 **Expected Result:**
@@ -1231,13 +1266,37 @@ curl -X POST "http://localhost:8000/diagrams/auth-flow" \
 #### TEST-API-030: Generate API Overview
 **Type:** API Test
 
+**Important:** The API expects `api_title` and `endpoints` array with endpoint objects, NOT a `file_path`.
+
 **Steps:**
+
+**For Linux/Mac:**
 ```bash
 curl -X POST "http://localhost:8000/diagrams/overview" \
   -H "Content-Type: application/json" \
   -d '{
-    "file_path": "examples/sample-openapi.json"
+    "api_title": "My API",
+    "endpoints": [
+      {"path": "/users", "method": "GET", "tags": ["Users"]},
+      {"path": "/users", "method": "POST", "tags": ["Users"]},
+      {"path": "/products", "method": "GET", "tags": ["Products"]}
+    ]
   }'
+```
+
+**For Windows PowerShell:**
+```powershell
+$body = @{
+    api_title = "My API"
+    endpoints = @(
+        @{path = "/users"; method = "GET"; tags = @("Users")},
+        @{path = "/users"; method = "POST"; tags = @("Users")},
+        @{path = "/products"; method = "GET"; tags = @("Products")}
+    )
+} | ConvertTo-Json -Depth 10
+
+Invoke-RestMethod -Uri "http://localhost:8000/diagrams/overview" `
+    -Method Post -ContentType "application/json" -Body $body
 ```
 
 **Expected Result:**
