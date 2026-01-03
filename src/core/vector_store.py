@@ -218,15 +218,31 @@ class VectorStore:
         doc_ids = []
         contents = []
         metadatas = []
+        seen_ids = set()  # Track IDs in current batch to avoid duplicates
+        batch_duplicates = 0
 
         for doc in documents:
             content = doc["content"]
             metadata = doc.get("metadata", {})
             doc_id = doc.get("id") or self._generate_content_hash(content)
 
+            # Skip if this ID already exists in the current batch
+            if doc_id in seen_ids:
+                batch_duplicates += 1
+                logger.debug("Skipping duplicate ID in batch", doc_id=doc_id)
+                continue
+
+            seen_ids.add(doc_id)
             doc_ids.append(doc_id)
             contents.append(content)
             metadatas.append(metadata)
+
+        if batch_duplicates > 0:
+            logger.info(
+                "Removed duplicate IDs from batch",
+                duplicates=batch_duplicates,
+                unique_documents=len(doc_ids)
+            )
 
         # Generate embeddings in batch
         embeddings = self.embedding_service.embed_texts(contents, batch_size=batch_size)
@@ -242,7 +258,7 @@ class VectorStore:
             return {
                 "document_ids": doc_ids,
                 "new_count": 0,
-                "skipped_count": len(doc_ids),
+                "skipped_count": len(doc_ids) + batch_duplicates,
             }
 
         # Add only new documents
@@ -261,10 +277,15 @@ class VectorStore:
                 metadatas=new_metadatas[i:batch_end],
             )
 
+        # Calculate total skipped: existing docs + batch duplicates
+        total_skipped = (len(doc_ids) - len(new_ids)) + batch_duplicates
+
         logger.info(
             "Documents added successfully",
             new_count=len(new_ids),
-            skipped_count=len(doc_ids) - len(new_ids),
+            skipped_existing=len(doc_ids) - len(new_ids),
+            skipped_batch_duplicates=batch_duplicates,
+            total_skipped=total_skipped,
         )
 
         # Rebuild BM25 index if hybrid search is enabled
@@ -274,7 +295,7 @@ class VectorStore:
         return {
             "document_ids": doc_ids,
             "new_count": len(new_ids),
-            "skipped_count": len(doc_ids) - len(new_ids),
+            "skipped_count": total_skipped,
         }
 
     @monitor_performance("vector_store_search")
