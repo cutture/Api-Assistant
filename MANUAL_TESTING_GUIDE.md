@@ -619,10 +619,26 @@ curl -X DELETE "http://localhost:8000/documents/{document_id}"
 **Type:** API Test
 
 **Steps:**
+
+**For Linux/Mac:**
 ```bash
 curl -X POST "http://localhost:8000/documents/bulk-delete" \
   -H "Content-Type: application/json" \
   -d '{"document_ids": ["id1", "id2", "id3"]}'
+```
+
+**For Windows PowerShell:**
+```powershell
+$body = @{
+    document_ids = @("27b376c5be52357617f57ff98e041b18", "2d7463b97ee053d2c7a49fea806a4620", "c2a911ee7a1619502bad8df9bd86f71a")
+} | ConvertTo-Json
+
+$response = Invoke-RestMethod -Uri "http://localhost:8000/documents/bulk-delete" `
+    -Method Post `
+    -ContentType "application/json" `
+    -Body $body
+
+$response | ConvertTo-Json -Depth 10
 ```
 
 **Expected Result:**
