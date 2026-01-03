@@ -119,19 +119,45 @@ New-Item -Path examples/empty.txt -ItemType File -Force
 
 > **Note for Windows PowerShell Users:**
 >
+> **CRITICAL: PowerShell Cannot Run Bash Curl Commands Directly**
+>
+> PowerShell's `curl` is an alias for `Invoke-WebRequest`, NOT the GNU curl tool. This causes several issues:
+> - **Nested JSON objects** in bash syntax will fail with "JSON decode error" or "unmatched brace" errors
+> - **Arrays in JSON** (like `["method", "format"]`) don't work properly in PowerShell strings
+> - **Quote escaping** differs between bash and PowerShell
+>
+> **Solution: Use the PowerShell Test Suite**
+>
+> We provide a comprehensive PowerShell test suite with pre-built functions:
+> ```powershell
+> # Load the test suite
+> . .\tests\manual\powershell-api-tests.ps1
+>
+> # Use test functions (handles all JSON complexity for you)
+> Test-SearchWithFilter -Query "user" -Field "method" -Value "GET"
+> Test-ChatBasic -Message "What APIs are available?"
+> Test-CreateSession
+> ```
+>
 > **PowerShell Version Check:**
 > - Run `$PSVersionTable.PSVersion` to check your version
-> - **PowerShell 7.0+**: Use the `-Form` parameter syntax shown in file upload examples
-> - **PowerShell 5.1** (older): The `-Form` parameter is NOT available. Use manual multipart construction (see TEST-API-003 example)
-> - **Recommendation**: Upgrade to PowerShell 7+ for easier testing: https://github.com/PowerShell/PowerShell/releases
+> - **PowerShell 7.0+**: Use the `-Form` parameter for file uploads
+> - **PowerShell 5.1** (older): `-Form` parameter NOT available, use test suite functions
+> - **Recommendation**: Use the test suite for ALL tests (works in both 5.1 and 7.0+)
 >
-> **For non-file-upload tests:**
-> - Most test cases below use `curl` commands, which work in PowerShell 7+ and Windows 10/11 (curl is aliased to `Invoke-WebRequest`)
-> - If you encounter issues with `curl`, you can use native PowerShell cmdlets:
->   - Replace `curl` with `Invoke-RestMethod` for JSON responses
->   - Replace `curl` with `Invoke-WebRequest` for detailed HTTP responses
-> - Example: `curl -X POST "http://localhost:8000/search" -H "Content-Type: application/json" -d '{"query":"test"}'`
->   becomes: `Invoke-RestMethod -Uri "http://localhost:8000/search" -Method POST -ContentType "application/json" -Body '{"query":"test"}'`
+> **What the Test Suite Fixes:**
+> - ✅ Properly constructs nested JSON objects using PowerShell hashtables
+> - ✅ Handles multipart/form-data for chat and file upload endpoints
+> - ✅ Works in both PowerShell 5.1 and 7.0+
+> - ✅ Provides formatted output with `ConvertTo-Json -Depth 10`
+> - ✅ Includes error handling and debugging output
+>
+> **For Simple GET Requests:**
+> Simple curl commands work fine in PowerShell:
+> ```powershell
+> curl http://localhost:8000/health
+> Invoke-RestMethod -Uri "http://localhost:8000/sessions/session-id-here"
+> ```
 
 ### Test Category: Health & Stats Endpoints
 
@@ -749,7 +775,11 @@ curl -X POST "http://localhost:8000/search" \
 #### TEST-API-016: Search with Filters
 **Type:** API Test
 
+**Important:** Nested JSON objects in bash curl commands don't work in PowerShell due to how PowerShell's `curl` alias handles strings.
+
 **Steps:**
+
+**For Linux/Mac:**
 ```bash
 curl -X POST "http://localhost:8000/search" \
   -H "Content-Type: application/json" \
@@ -764,6 +794,16 @@ curl -X POST "http://localhost:8000/search" \
   }'
 ```
 
+**For Windows PowerShell (All Versions):**
+```powershell
+# Use the test suite function
+. .\tests\manual\powershell-api-tests.ps1
+Test-SearchWithFilter -Query "user" -Field "method" -Operator "eq" -Value "GET"
+
+# Or run the standalone script
+.\tests\manual\search-with-filter-example.ps1
+```
+
 **Expected Result:**
 - Only GET method results returned
 - Filter applied correctly
@@ -773,7 +813,11 @@ curl -X POST "http://localhost:8000/search" \
 #### TEST-API-017: Faceted Search
 **Type:** API Test
 
+**Important:** Arrays in JSON (like `facet_fields`) require proper handling in PowerShell.
+
 **Steps:**
+
+**For Linux/Mac:**
 ```bash
 curl -X POST "http://localhost:8000/faceted-search" \
   -H "Content-Type: application/json" \
@@ -782,6 +826,16 @@ curl -X POST "http://localhost:8000/faceted-search" \
     "facet_fields": ["method", "format", "source"],
     "n_results": 20
   }'
+```
+
+**For Windows PowerShell (All Versions):**
+```powershell
+# Use the test suite function
+. .\tests\manual\powershell-api-tests.ps1
+Test-FacetedSearch -Query "api"
+
+# Or run the standalone script
+.\tests\manual\faceted-search-example.ps1
 ```
 
 **Expected Result:**
@@ -990,7 +1044,11 @@ Invoke-RestMethod -Uri "http://localhost:8000/chat" -Method Post `
 #### TEST-API-022: Create Session
 **Type:** API Test
 
+**Important:** Nested objects like `settings` require proper PowerShell hashtable handling.
+
 **Steps:**
+
+**For Linux/Mac:**
 ```bash
 curl -X POST "http://localhost:8000/sessions" \
   -H "Content-Type: application/json" \
@@ -1002,6 +1060,26 @@ curl -X POST "http://localhost:8000/sessions" \
       "use_reranking": true
     }
   }'
+```
+
+**For Windows PowerShell:**
+```powershell
+# Use the test suite function
+. .\tests\manual\powershell-api-tests.ps1
+Test-CreateSession
+
+# Or manual PowerShell command
+$body = @{
+    user_id = "test_user_001"
+    ttl_minutes = 60
+    settings = @{
+        default_search_mode = "hybrid"
+        use_reranking = $true
+    }
+} | ConvertTo-Json -Depth 10
+
+Invoke-RestMethod -Uri "http://localhost:8000/sessions" `
+    -Method Post -ContentType "application/json" -Body $body
 ```
 
 **Expected Result:**
