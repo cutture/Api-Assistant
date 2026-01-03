@@ -654,6 +654,8 @@ $response | ConvertTo-Json -Depth 10
 **Prerequisite:** Documents uploaded
 
 **Steps:**
+
+**For Linux/Mac:**
 ```bash
 curl -X POST "http://localhost:8000/search" \
   -H "Content-Type: application/json" \
@@ -662,6 +664,22 @@ curl -X POST "http://localhost:8000/search" \
     "mode": "vector",
     "n_results": 5
   }'
+```
+
+**For Windows PowerShell:**
+```powershell
+$body = @{
+    query = "user authentication"
+    mode = "vector"
+    n_results = 5
+} | ConvertTo-Json
+
+$response = Invoke-RestMethod -Uri "http://localhost:8000/search" `
+    -Method Post `
+    -ContentType "application/json" `
+    -Body $body
+
+$response | ConvertTo-Json -Depth 10
 ```
 
 **Expected Result:**
