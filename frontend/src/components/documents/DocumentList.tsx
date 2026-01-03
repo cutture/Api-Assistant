@@ -15,6 +15,13 @@ import { useCollectionStats, useDeleteDocument, useBulkDeleteDocuments } from "@
 import { useToast } from "@/hooks/use-toast";
 import { exportDocuments } from "@/lib/api/documents";
 import { DocumentDetailsModal } from "./DocumentDetailsModal";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 type SortField = "name" | "format" | "size" | "chunks";
 type SortDirection = "asc" | "desc";
@@ -33,6 +40,7 @@ export function DocumentList() {
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [selectedDocument, setSelectedDocument] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [displayLimit, setDisplayLimit] = useState<number>(20);
 
   const loadDocuments = async () => {
     setLoadingDocs(true);
@@ -143,7 +151,8 @@ export function DocumentList() {
     return doc.metadata?.total_chunks || 1;
   };
 
-  const filteredDocuments = documents
+  // Filter and sort all documents
+  const filteredAndSortedDocuments = documents
     .filter((doc) => {
       if (!searchQuery) return true;
       const search = searchQuery.toLowerCase();
@@ -182,11 +191,15 @@ export function DocumentList() {
       return 0;
     });
 
+  // Apply display limit
+  const displayedDocuments = filteredAndSortedDocuments.slice(0, displayLimit);
+  const totalFilteredCount = filteredAndSortedDocuments.length;
+
   const toggleSelectAll = () => {
-    if (selectedIds.length === filteredDocuments.length) {
+    if (selectedIds.length === displayedDocuments.length) {
       setSelectedIds([]);
     } else {
-      setSelectedIds(filteredDocuments.map((doc) => doc.id));
+      setSelectedIds(displayedDocuments.map((doc) => doc.id));
     }
   };
 
@@ -250,7 +263,7 @@ export function DocumentList() {
       {documents.length > 0 && (
         <Card>
           <CardContent className="pt-6">
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center gap-3">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -259,6 +272,26 @@ export function DocumentList() {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10"
                 />
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground whitespace-nowrap">
+                  Show:
+                </span>
+                <Select
+                  value={displayLimit.toString()}
+                  onValueChange={(value) => setDisplayLimit(parseInt(value))}
+                >
+                  <SelectTrigger className="w-[100px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="10">10</SelectItem>
+                    <SelectItem value="20">20</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                    <SelectItem value="100">100</SelectItem>
+                    <SelectItem value={documents.length.toString()}>All</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               {selectedIds.length > 0 && (
                 <Button
@@ -270,6 +303,12 @@ export function DocumentList() {
                 </Button>
               )}
             </div>
+            {totalFilteredCount > 0 && (
+              <div className="mt-3 text-sm text-muted-foreground">
+                Showing {Math.min(displayLimit, totalFilteredCount)} of {totalFilteredCount} documents
+                {searchQuery && " (filtered)"}
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
@@ -281,7 +320,7 @@ export function DocumentList() {
             {/* Select All Row */}
             <div className="flex items-center space-x-3 p-4 border-b bg-muted/30">
               <Checkbox
-                checked={selectedIds.length === filteredDocuments.length && filteredDocuments.length > 0}
+                checked={selectedIds.length === displayedDocuments.length && displayedDocuments.length > 0}
                 onCheckedChange={toggleSelectAll}
               />
               <span className="text-sm font-medium">
@@ -291,7 +330,7 @@ export function DocumentList() {
               </span>
             </div>
 
-            {filteredDocuments.length > 0 ? (
+            {displayedDocuments.length > 0 ? (
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-muted/50 border-b">
@@ -337,7 +376,7 @@ export function DocumentList() {
                     </tr>
                   </thead>
                   <tbody className="divide-y">
-                    {filteredDocuments.map((doc) => {
+                    {displayedDocuments.map((doc) => {
                       const SourceIcon = getSourceIcon(doc.metadata?.source || "");
                       return (
                         <tr
