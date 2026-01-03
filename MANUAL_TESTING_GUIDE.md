@@ -296,9 +296,22 @@ curl -X POST "http://localhost:8000/documents/upload" \
   -F "files=@path/to/test.pdf"
 ```
 
-**For Windows PowerShell:**
+**For Windows PowerShell 7.0+:**
 ```powershell
-Invoke-RestMethod -Uri "http://localhost:8000/documents/upload" -Method Post -Form @{files = Get-Item "path/to/test.pdf"}
+$response = Invoke-RestMethod -Uri "http://localhost:8000/documents/upload" -Method Post -Form @{files = Get-Item "path/to/test.pdf"}
+$response | ConvertTo-Json -Depth 10
+```
+
+**For Windows PowerShell 5.1:**
+```powershell
+$filePath = "path/to/test.pdf"  # Update with your PDF file path
+$boundary = [System.Guid]::NewGuid().ToString()
+$fileBytes = [System.IO.File]::ReadAllBytes((Resolve-Path $filePath).Path)
+$fileName = Split-Path $filePath -Leaf
+$LF = "`r`n"
+$bodyLines = ("--$boundary", "Content-Disposition: form-data; name=`"files`"; filename=`"$fileName`"", "Content-Type: application/pdf", "", [System.Text.Encoding]::UTF8.GetString($fileBytes), "--$boundary--") -join $LF
+$response = Invoke-RestMethod -Uri "http://localhost:8000/documents/upload" -Method Post -ContentType "multipart/form-data; boundary=$boundary" -Body $bodyLines
+$response | ConvertTo-Json -Depth 10
 ```
 
 **Expected Result:**
@@ -336,9 +349,22 @@ curl -X POST "http://localhost:8000/documents/upload" \
   -F "files=@examples/sample-text.txt"
 ```
 
-**For Windows PowerShell:**
+**For Windows PowerShell 7.0+:**
 ```powershell
-Invoke-RestMethod -Uri "http://localhost:8000/documents/upload" -Method Post -Form @{files = Get-Item "examples/sample-text.txt"}
+$response = Invoke-RestMethod -Uri "http://localhost:8000/documents/upload" -Method Post -Form @{files = Get-Item "examples/sample-text.txt"}
+$response | ConvertTo-Json -Depth 10
+```
+
+**For Windows PowerShell 5.1:**
+```powershell
+$filePath = "examples/sample-text.txt"
+$boundary = [System.Guid]::NewGuid().ToString()
+$fileBytes = [System.IO.File]::ReadAllBytes((Resolve-Path $filePath).Path)
+$fileName = Split-Path $filePath -Leaf
+$LF = "`r`n"
+$bodyLines = ("--$boundary", "Content-Disposition: form-data; name=`"files`"; filename=`"$fileName`"", "Content-Type: text/plain", "", [System.Text.Encoding]::UTF8.GetString($fileBytes), "--$boundary--") -join $LF
+$response = Invoke-RestMethod -Uri "http://localhost:8000/documents/upload" -Method Post -ContentType "multipart/form-data; boundary=$boundary" -Body $bodyLines
+$response | ConvertTo-Json -Depth 10
 ```
 
 **Expected Result:**
@@ -360,9 +386,22 @@ curl -X POST "http://localhost:8000/documents/upload" \
   -F "files=@examples/sample-markdown.md"
 ```
 
-**For Windows PowerShell:**
+**For Windows PowerShell 7.0+:**
 ```powershell
-Invoke-RestMethod -Uri "http://localhost:8000/documents/upload" -Method Post -Form @{files = Get-Item "examples/sample-markdown.md"}
+$response = Invoke-RestMethod -Uri "http://localhost:8000/documents/upload" -Method Post -Form @{files = Get-Item "examples/sample-markdown.md"}
+$response | ConvertTo-Json -Depth 10
+```
+
+**For Windows PowerShell 5.1:**
+```powershell
+$filePath = "examples/sample-markdown.md"
+$boundary = [System.Guid]::NewGuid().ToString()
+$fileBytes = [System.IO.File]::ReadAllBytes((Resolve-Path $filePath).Path)
+$fileName = Split-Path $filePath -Leaf
+$LF = "`r`n"
+$bodyLines = ("--$boundary", "Content-Disposition: form-data; name=`"files`"; filename=`"$fileName`"", "Content-Type: text/markdown", "", [System.Text.Encoding]::UTF8.GetString($fileBytes), "--$boundary--") -join $LF
+$response = Invoke-RestMethod -Uri "http://localhost:8000/documents/upload" -Method Post -ContentType "multipart/form-data; boundary=$boundary" -Body $bodyLines
+$response | ConvertTo-Json -Depth 10
 ```
 
 **Expected Result:**
@@ -383,9 +422,22 @@ curl -X POST "http://localhost:8000/documents/upload" \
   -F "files=@examples/sample-data.json"
 ```
 
-**For Windows PowerShell:**
+**For Windows PowerShell 7.0+:**
 ```powershell
-Invoke-RestMethod -Uri "http://localhost:8000/documents/upload" -Method Post -Form @{files = Get-Item "examples/sample-data.json"}
+$response = Invoke-RestMethod -Uri "http://localhost:8000/documents/upload" -Method Post -Form @{files = Get-Item "examples/sample-data.json"}
+$response | ConvertTo-Json -Depth 10
+```
+
+**For Windows PowerShell 5.1:**
+```powershell
+$filePath = "examples/sample-data.json"
+$boundary = [System.Guid]::NewGuid().ToString()
+$fileBytes = [System.IO.File]::ReadAllBytes((Resolve-Path $filePath).Path)
+$fileName = Split-Path $filePath -Leaf
+$LF = "`r`n"
+$bodyLines = ("--$boundary", "Content-Disposition: form-data; name=`"files`"; filename=`"$fileName`"", "Content-Type: application/json", "", [System.Text.Encoding]::UTF8.GetString($fileBytes), "--$boundary--") -join $LF
+$response = Invoke-RestMethod -Uri "http://localhost:8000/documents/upload" -Method Post -ContentType "multipart/form-data; boundary=$boundary" -Body $bodyLines
+$response | ConvertTo-Json -Depth 10
 ```
 
 **Expected Result:**
@@ -407,14 +459,67 @@ curl -X POST "http://localhost:8000/documents/upload" \
   -F "files=@examples/sample-markdown.md"
 ```
 
-**For Windows PowerShell:**
+**For Windows PowerShell 7.0+:**
 ```powershell
 $files = @(
   Get-Item "examples/sample-openapi.json"
   Get-Item "examples/sample-text.txt"
   Get-Item "examples/sample-markdown.md"
 )
-Invoke-RestMethod -Uri "http://localhost:8000/documents/upload" -Method Post -Form @{files = $files}
+$response = Invoke-RestMethod -Uri "http://localhost:8000/documents/upload" -Method Post -Form @{files = $files}
+
+# View the full response as JSON
+$response | ConvertTo-Json -Depth 10
+```
+
+**For Windows PowerShell 5.1 (older version):**
+```powershell
+# Manual multipart/form-data construction for multiple files
+$url = "http://localhost:8000/documents/upload"
+$filePaths = @(
+    "examples/sample-openapi.json",
+    "examples/sample-text.txt",
+    "examples/sample-markdown.md"
+)
+
+# Create boundary
+$boundary = [System.Guid]::NewGuid().ToString()
+$LF = "`r`n"
+
+# Build multipart body with multiple files
+$bodyLines = @()
+
+foreach ($filePath in $filePaths) {
+    $fileBytes = [System.IO.File]::ReadAllBytes((Resolve-Path $filePath).Path)
+    $fileName = Split-Path $filePath -Leaf
+
+    # Determine content type based on file extension
+    $contentType = switch ([System.IO.Path]::GetExtension($filePath)) {
+        ".json" { "application/json" }
+        ".txt"  { "text/plain" }
+        ".md"   { "text/markdown" }
+        default { "application/octet-stream" }
+    }
+
+    # Add file part
+    $bodyLines += "--$boundary"
+    $bodyLines += "Content-Disposition: form-data; name=`"files`"; filename=`"$fileName`""
+    $bodyLines += "Content-Type: $contentType"
+    $bodyLines += ""
+    $bodyLines += [System.Text.Encoding]::UTF8.GetString($fileBytes)
+}
+
+# Add closing boundary
+$bodyLines += "--$boundary--"
+
+# Join with CRLF
+$body = $bodyLines -join $LF
+
+# Send request
+$response = Invoke-RestMethod -Uri $url -Method Post -ContentType "multipart/form-data; boundary=$boundary" -Body $body
+
+# View the response
+$response | ConvertTo-Json -Depth 10
 ```
 
 **Expected Result:**
@@ -436,9 +541,22 @@ curl -X POST "http://localhost:8000/documents/upload" \
   -F "files=@examples/invalid.json"
 ```
 
-**For Windows PowerShell:**
+**For Windows PowerShell 7.0+:**
 ```powershell
-Invoke-RestMethod -Uri "http://localhost:8000/documents/upload" -Method Post -Form @{files = Get-Item "examples/invalid.json"}
+$response = Invoke-RestMethod -Uri "http://localhost:8000/documents/upload" -Method Post -Form @{files = Get-Item "examples/invalid.json"}
+$response | ConvertTo-Json -Depth 10
+```
+
+**For Windows PowerShell 5.1:**
+```powershell
+$filePath = "examples/invalid.json"
+$boundary = [System.Guid]::NewGuid().ToString()
+$fileBytes = [System.IO.File]::ReadAllBytes((Resolve-Path $filePath).Path)
+$fileName = Split-Path $filePath -Leaf
+$LF = "`r`n"
+$bodyLines = ("--$boundary", "Content-Disposition: form-data; name=`"files`"; filename=`"$fileName`"", "Content-Type: application/json", "", [System.Text.Encoding]::UTF8.GetString($fileBytes), "--$boundary--") -join $LF
+$response = Invoke-RestMethod -Uri "http://localhost:8000/documents/upload" -Method Post -ContentType "multipart/form-data; boundary=$boundary" -Body $bodyLines
+$response | ConvertTo-Json -Depth 10
 ```
 
 **Expected Result:**
