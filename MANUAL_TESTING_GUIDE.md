@@ -1519,13 +1519,17 @@ Invoke-RestMethod -Uri "http://localhost:8000/diagrams/overview" `
 
 **Steps:**
 1. Navigate to Documents page
-2. View the list of uploaded documents
+2. Click on "Document Library" tab (at the top of the page)
+3. Click "Load Documents" button (top right corner)
+4. View the list of uploaded documents
 
 **Expected Result:**
 - Documents displayed in table/cards
 - Shows: filename, format, upload date, chunks
 - Pagination if many documents
 - Sort/filter options available
+
+**Note:** The "Upload Documents" tab (default view) does not show the document list. You must switch to "Document Library" tab and click "Load Documents" to view indexed documents.
 
 ---
 
