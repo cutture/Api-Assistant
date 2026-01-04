@@ -641,6 +641,39 @@ class SessionManager:
 
         return session.get_recent_messages(limit)
 
+    def clear_session_history(self, session_id: str) -> Optional[Session]:
+        """
+        Clear all conversation history for a session.
+
+        This permanently deletes all messages from the session's conversation history
+        while preserving the session itself and its metadata.
+
+        Args:
+            session_id: Session identifier
+
+        Returns:
+            Updated Session if found, None otherwise
+        """
+        with self.lock:
+            # Get session regardless of expiration status (allow clearing expired session history)
+            session = self.get_session_by_id(session_id, include_expired=True)
+
+            if session is None:
+                return None
+
+            # Clear conversation history
+            session.clear_history()
+
+            logger.info(
+                "Session conversation history cleared",
+                session_id=session_id,
+            )
+
+            # Persist to file
+            self._save_sessions()
+
+            return session
+
 
 # Global session manager instance
 _session_manager: Optional[SessionManager] = None

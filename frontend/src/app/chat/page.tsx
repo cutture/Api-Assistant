@@ -9,7 +9,7 @@ import { ChatInterface } from "@/components/chat/ChatInterface";
 import { useToast } from "@/hooks/use-toast";
 import { sendChatMessage, ChatMessage } from "@/lib/api/chat";
 import { useState, useEffect, useRef } from "react";
-import { createSession, listSessions, getSession } from "@/lib/api/sessions";
+import { createSession, listSessions, getSession, updateSession } from "@/lib/api/sessions";
 import { Session, SessionStatus } from "@/types";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,16 +19,42 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, RefreshCw } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Plus, RefreshCw, MoreVertical, Eye, Trash2, StopCircle } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useClearSessionHistory } from "@/hooks/useSessions";
 
 export default function ChatPage() {
   const { toast } = useToast();
+  const router = useRouter();
   const [conversationHistory, setConversationHistory] = useState<ChatMessage[]>([]);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [isSessionReady, setIsSessionReady] = useState(false);
   const [availableSessions, setAvailableSessions] = useState<Session[]>([]);
   const [isLoadingSessions, setIsLoadingSessions] = useState(false);
   const sessionInitialized = useRef(false);
+
+  // State for alert dialogs
+  const [showClearHistoryDialog, setShowClearHistoryDialog] = useState(false);
+  const [showEndSessionDialog, setShowEndSessionDialog] = useState(false);
+
+  // Hook for clearing session history
+  const { mutate: clearHistory, isPending: isClearingHistory } = useClearSessionHistory();
 
   // Load available sessions on mount
   useEffect(() => {
@@ -227,6 +253,109 @@ export default function ChatPage() {
     }
   };
 
+  // Handler for View Session menu option
+  const handleViewSession = () => {
+    if (!sessionId) return;
+    router.push(`/sessions?selected=${sessionId}`);
+  };
+
+  // Handler for Clear Conversation History menu option
+  const handleClearHistoryClick = () => {
+    setShowClearHistoryDialog(true);
+  };
+
+  const confirmClearHistory = () => {
+    if (!sessionId) return;
+
+    clearHistory(sessionId, {
+      onSuccess: () => {
+        // Clear local chat UI
+        setConversationHistory([]);
+        toast({
+          title: "History cleared",
+          description: "All conversation history has been permanently deleted from this session.",
+        });
+        setShowClearHistoryDialog(false);
+      },
+      onError: (error: any) => {
+        toast({
+          title: "Failed to clear history",
+          description: error.message || "An error occurred while clearing history",
+          variant: "destructive",
+        });
+        setShowClearHistoryDialog(false);
+      },
+    });
+  };
+
+  // Handler for End Session menu option
+  const handleEndSessionClick = () => {
+    setShowEndSessionDialog(true);
+  };
+
+  const confirmEndSession = async () => {
+    if (!sessionId) return;
+
+    try {
+      // Set current session to INACTIVE
+      const updateResponse = await updateSession(sessionId, {
+        status: SessionStatus.INACTIVE,
+      });
+
+      if (updateResponse.error) {
+        throw new Error(updateResponse.error);
+      }
+
+      // Create new session
+      const createResponse = await createSession({
+        ttl_minutes: 1440, // 24 hours
+        settings: {
+          default_search_mode: "hybrid",
+          default_n_results: 10,
+          use_reranking: false,
+          use_query_expansion: true,
+          use_diversification: false,
+          show_scores: true,
+          show_metadata: true,
+          max_content_length: 500,
+          custom_metadata: {},
+        },
+      });
+
+      if (createResponse.error) {
+        throw new Error(createResponse.error);
+      }
+
+      const newSessionId = createResponse.data?.session?.session_id || null;
+
+      if (!newSessionId) {
+        throw new Error("Failed to get session ID from response");
+      }
+
+      // Clear UI and switch to new session
+      setConversationHistory([]);
+      setSessionId(newSessionId);
+      localStorage.setItem("chat_session_id", newSessionId);
+      setIsSessionReady(true);
+
+      // Reload available sessions
+      await loadAvailableSessions();
+
+      toast({
+        title: "Session ended",
+        description: "Previous session has been ended. A new session has been created.",
+      });
+      setShowEndSessionDialog(false);
+    } catch (error: any) {
+      toast({
+        title: "Failed to end session",
+        description: error.message || "An error occurred while ending the session",
+        variant: "destructive",
+      });
+      setShowEndSessionDialog(false);
+    }
+  };
+
   const handleSendMessage = async (message: string, files?: File[]): Promise<string> => {
     try {
       // Wait for session to be ready
@@ -345,14 +474,39 @@ export default function ChatPage() {
         {/* Session Selector */}
         <div className="flex items-center gap-3 p-4 bg-muted/30 rounded-lg border">
           <div className="flex-1">
-            <label className="text-sm font-medium mb-2 block">
-              Active Session
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-sm font-medium">
+                Active Session
+                {sessionId && (
+                  <span className="ml-2 text-xs text-muted-foreground font-mono">
+                    ({sessionId.substring(0, 8)}...)
+                  </span>
+                )}
+              </label>
               {sessionId && (
-                <span className="ml-2 text-xs text-muted-foreground font-mono">
-                  ({sessionId.substring(0, 8)}...)
-                </span>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={handleViewSession}>
+                      <Eye className="h-4 w-4 mr-2" />
+                      View Session
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleClearHistoryClick}>
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Clear Conversation History
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleEndSessionClick}>
+                      <StopCircle className="h-4 w-4 mr-2" />
+                      End Session
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               )}
-            </label>
+            </div>
             <Select
               value={sessionId || ""}
               onValueChange={switchToSession}
@@ -420,6 +574,44 @@ export default function ChatPage() {
             timestamp: new Date().toISOString(),
           }))}
         />
+
+        {/* Clear History Confirmation Dialog */}
+        <AlertDialog open={showClearHistoryDialog} onOpenChange={setShowClearHistoryDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Clear Conversation History?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently delete all messages in this session. This action cannot be undone.
+                The session itself will be preserved, but all conversation history will be lost.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={isClearingHistory}>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmClearHistory} disabled={isClearingHistory}>
+                {isClearingHistory ? "Clearing..." : "Clear History"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* End Session Confirmation Dialog */}
+        <AlertDialog open={showEndSessionDialog} onOpenChange={setShowEndSessionDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>End This Session?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will mark the current session as inactive and create a new session for you.
+                All conversation history will be preserved in the ended session, and you can reactivate it later from the Sessions page.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmEndSession}>
+                End Session
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </MainLayout>
   );

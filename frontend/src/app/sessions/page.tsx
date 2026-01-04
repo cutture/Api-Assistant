@@ -4,22 +4,34 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { SessionManager } from "@/components/sessions/SessionManager";
 import { SessionList } from "@/components/sessions/SessionList";
-import { useSession, useUpdateSession, useActivateSession } from "@/hooks/useSessions";
+import { useSession, useUpdateSession, useActivateSession, useClearSessionHistory } from "@/hooks/useSessions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, Edit, Save, X, PlayCircle } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { ArrowLeft, Edit, Save, X, PlayCircle, Trash2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { SessionStatus } from "@/types";
 
 export default function SessionsPage() {
+  const searchParams = useSearchParams();
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editFormData, setEditFormData] = useState({
@@ -30,7 +42,19 @@ export default function SessionsPage() {
   const { data: selectedSession } = useSession(selectedSessionId || "");
   const { mutate: updateSession, isPending: isUpdating } = useUpdateSession();
   const { mutate: activateSession, isPending: isActivating } = useActivateSession();
+  const { mutate: clearHistory, isPending: isClearingHistory } = useClearSessionHistory();
   const { toast } = useToast();
+
+  // State for clear history confirmation
+  const [showClearHistoryDialog, setShowClearHistoryDialog] = useState(false);
+
+  // Auto-select session from query parameter (e.g., from "View Session" in chat)
+  useEffect(() => {
+    const selected = searchParams?.get("selected");
+    if (selected) {
+      setSelectedSessionId(selected);
+    }
+  }, [searchParams]);
 
   const handleBackToList = () => {
     setSelectedSessionId(null);
@@ -115,6 +139,32 @@ export default function SessionsPage() {
     );
   };
 
+  const handleClearHistoryClick = () => {
+    setShowClearHistoryDialog(true);
+  };
+
+  const confirmClearHistory = () => {
+    if (!selectedSessionId) return;
+
+    clearHistory(selectedSessionId, {
+      onSuccess: () => {
+        toast({
+          title: "History cleared",
+          description: "All conversation history has been permanently deleted from this session.",
+        });
+        setShowClearHistoryDialog(false);
+      },
+      onError: (error: any) => {
+        toast({
+          title: "Failed to clear history",
+          description: error.message || "An error occurred while clearing history",
+          variant: "destructive",
+        });
+        setShowClearHistoryDialog(false);
+      },
+    });
+  };
+
   return (
     <MainLayout showSidebar={false}>
       <div className="space-y-6">
@@ -154,6 +204,17 @@ export default function SessionsPage() {
                       >
                         <PlayCircle className="h-4 w-4 mr-2" />
                         {isActivating ? "Activating..." : "Activate"}
+                      </Button>
+                    )}
+                    {!isEditing && selectedSession.conversation_history && selectedSession.conversation_history.length > 0 && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleClearHistoryClick}
+                        disabled={isClearingHistory}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Clear History
                       </Button>
                     )}
                     {!isEditing ? (
@@ -352,6 +413,25 @@ export default function SessionsPage() {
             </div>
           </div>
         )}
+
+        {/* Clear History Confirmation Dialog */}
+        <AlertDialog open={showClearHistoryDialog} onOpenChange={setShowClearHistoryDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Clear Conversation History?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently delete all messages in this session. This action cannot be undone.
+                The session itself will be preserved, but all conversation history will be lost.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={isClearingHistory}>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmClearHistory} disabled={isClearingHistory}>
+                {isClearingHistory ? "Clearing..." : "Clear History"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </MainLayout>
   );

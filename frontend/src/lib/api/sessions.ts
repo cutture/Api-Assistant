@@ -139,3 +139,15 @@ export async function activateSession(
     params: ttlMinutes ? { ttl_minutes: ttlMinutes } : undefined,
   });
 }
+
+/**
+ * Clear all conversation history from a session
+ */
+export async function clearSessionHistory(
+  sessionId: string
+): Promise<ApiResponse<Session>> {
+  return apiRequest<Session>({
+    method: "DELETE",
+    url: `/sessions/${sessionId}/messages`,
+  });
+}

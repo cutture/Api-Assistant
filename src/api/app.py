@@ -1058,6 +1058,41 @@ def create_app(
                 detail=f"Error adding message: {str(e)}",
             )
 
+    @app.delete(
+        "/sessions/{session_id}/messages",
+        response_model=Session,
+        tags=["Sessions"],
+    )
+    async def clear_session_history(session_id: str):
+        """
+        Clear all conversation history from a session.
+
+        Permanently deletes all messages from the session's conversation history
+        while preserving the session itself and its metadata.
+        This action cannot be undone.
+        """
+        try:
+            session = session_manager.clear_session_history(session_id)
+
+            if session is None:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Session not found: {session_id}",
+                )
+
+            logger.info("Session history cleared via API", session_id=session_id)
+
+            session_dict = session.to_dict()
+            return Session(**session_dict)
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error("Error clearing session history", session_id=session_id, exc_info=e)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error clearing session history: {str(e)}",
+            )
+
     # AI Chat Endpoint
     @app.post(
         "/chat",

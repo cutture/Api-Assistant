@@ -14,6 +14,7 @@ import {
   getSessionStats,
   addMessageToSession,
   activateSession,
+  clearSessionHistory,
 } from "@/lib/api/sessions";
 import type {
   CreateSessionRequest,
@@ -215,6 +216,31 @@ export function useActivateSession() {
     onSuccess: (data, variables) => {
       // Invalidate the specific session, sessions list, and stats
       queryClient.invalidateQueries({ queryKey: ["session", variables.sessionId] });
+      queryClient.invalidateQueries({ queryKey: ["sessions"] });
+      queryClient.invalidateQueries({ queryKey: ["session-stats"] });
+    },
+  });
+}
+
+/**
+ * Mutation hook for clearing session conversation history
+ */
+export function useClearSessionHistory() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (sessionId: string) => {
+      const response = await clearSessionHistory(sessionId);
+
+      if (response.error) {
+        throw new Error(response.error);
+      }
+
+      return response.data;
+    },
+    onSuccess: (data, sessionId) => {
+      // Invalidate the specific session to refetch with cleared history
+      queryClient.invalidateQueries({ queryKey: ["session", sessionId] });
       queryClient.invalidateQueries({ queryKey: ["sessions"] });
       queryClient.invalidateQueries({ queryKey: ["session-stats"] });
     },
