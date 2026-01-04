@@ -165,7 +165,7 @@ function SearchResultCard({ result, rank }: SearchResultCardProps) {
               )}
             </div>
             <CardTitle className="text-lg">
-              {metadata?.endpoint || metadata?.path || metadata?.summary || "Untitled"}
+              {metadata?.endpoint || metadata?.path || metadata?.summary || metadata?.title || metadata?.source_file || "Untitled"}
             </CardTitle>
             {metadata?.api_name && (
               <CardDescription className="mt-1">
