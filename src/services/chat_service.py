@@ -38,7 +38,7 @@ class ChatService:
     def __init__(
         self,
         agent_type: str = "general",
-        max_context_results: int = 5,
+        max_context_results: int = 20,  # Increased from 5 to 20 for better coverage
         enable_url_scraping: bool = True,
         enable_auto_indexing: bool = True,
     ):
@@ -47,7 +47,7 @@ class ChatService:
 
         Args:
             agent_type: LLM agent type ("general", "code", "reasoning")
-            max_context_results: Maximum search results to include as context
+            max_context_results: Maximum search results to include as context (default: 20)
             enable_url_scraping: Enable automatic URL extraction and scraping
             enable_auto_indexing: Enable automatic indexing of scraped content
         """
@@ -141,12 +141,19 @@ class ChatService:
                         )
 
             # Step 3: Search vector store for relevant context
+            # Detect if user is asking for API listing/comprehensive overview
+            listing_keywords = ["list", "available", "what apis", "all apis", "all endpoints", "show me apis", "what endpoints"]
+            is_listing_query = any(keyword in user_message.lower() for keyword in listing_keywords)
+
+            # Increase context for listing queries to ensure comprehensive results
+            context_limit = min(50, self.max_context_results * 2) if is_listing_query else self.max_context_results
+
             search_results = self.vector_store.search(
                 query=user_message,
-                n_results=self.max_context_results,
+                n_results=context_limit,
             )
 
-            logger.info("chat_search_complete", results=len(search_results))
+            logger.info("chat_search_complete", results=len(search_results), is_listing_query=is_listing_query)
 
             # Step 4: Build context for LLM
             context = self._build_context(search_results, scraped_content)
@@ -228,10 +235,14 @@ class ChatService:
                                 session_id=session_id,
                             )
 
-            # Search for context
+            # Search for context with smart query detection
+            listing_keywords = ["list", "available", "what apis", "all apis", "all endpoints", "show me apis", "what endpoints"]
+            is_listing_query = any(keyword in user_message.lower() for keyword in listing_keywords)
+            context_limit = min(50, self.max_context_results * 2) if is_listing_query else self.max_context_results
+
             search_results = self.vector_store.search(
                 query=user_message,
-                n_results=self.max_context_results,
+                n_results=context_limit,
             )
 
             # Build prompts
@@ -299,7 +310,7 @@ class ChatService:
                 context_parts.append(
                     f"### Result {i} (Score: {score:.2f}):\n"
                     f"{meta_str}\n"
-                    f"{content[:1000]}\n"  # Limit length
+                    f"{content[:2000]}\n"  # Increased from 1000 to 2000 for more detail
                 )
 
         if not context_parts:
@@ -309,25 +320,37 @@ class ChatService:
 
     def _build_system_prompt(self, context: str) -> str:
         """Build system prompt with context."""
-        return f"""You are an expert API documentation assistant. Your role is to help users understand and work with APIs by:
+        return f"""You are an expert API documentation assistant specialized in API development and integration. Your role is to help users understand and work with APIs by:
 
 1. Analyzing API specifications and documentation
 2. Explaining authentication methods and endpoints
-3. Generating code examples in Python, JavaScript, cURL, etc.
+3. Generating code examples in Python, JavaScript, cURL, and other languages
 4. Providing best practices for API integration
 5. Answering questions about API usage
+6. **When asked about available APIs/endpoints, comprehensively list ALL endpoints found in the context**
+
+When listing endpoints or APIs:
+- Enumerate ALL endpoints provided in the context below
+- Group by API name or service for clarity
+- Include HTTP method, endpoint path, and brief description for each
+- Format as a structured, easy-to-read list or table
+- Don't omit endpoints - include everything from the context
 
 When generating code examples:
 - Use clear, well-commented code
 - Include error handling
 - Show practical, working examples
 - Specify any required dependencies
+- Provide authentication setup when applicable
+- Include example request/response data
 
 Here is the relevant context from the indexed API documentation:
 
 {context}
 
-Use this context to provide accurate, specific answers. If the context doesn't contain enough information, say so and provide general guidance based on API best practices."""
+**Important:** When the user asks for a list of available APIs, endpoints, or "what APIs are available", enumerate ALL endpoints found in the context above comprehensively. Don't summarize - list them all with their details.
+
+Use this context to provide accurate, specific answers. If the context doesn't contain enough information for a complete answer, say so and provide general guidance based on API best practices."""
 
     def _build_user_prompt(self, user_message: str, context: str) -> str:
         """Build user prompt."""
@@ -407,7 +430,7 @@ def get_chat_service(
     """
     return ChatService(
         agent_type=agent_type,
-        max_context_results=5,
+        max_context_results=20,  # Increased from 5 to 20 for better context coverage
         enable_url_scraping=enable_url_scraping,
         enable_auto_indexing=enable_auto_indexing,
     )
