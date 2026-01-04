@@ -8,13 +8,21 @@ import { SearchResult } from "@/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { FileText, Globe, Code, AlertCircle, Copy, Check } from "lucide-react";
+import { FileText, Globe, Code, AlertCircle, Copy, Check, ChevronLeft, ChevronRight } from "lucide-react";
 import { useSearchStore } from "@/lib/stores/searchStore";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
 
 export function SearchResults() {
-  const { results, isSearching, searchError, searchTime, query } = useSearchStore();
+  const { results, isSearching, searchError, searchTime, query, currentPage, resultsLimit, setCurrentPage } = useSearchStore();
+
+  // Calculate pagination
+  const totalPages = Math.ceil(results.length / resultsLimit);
+  const paginatedResults = useMemo(() => {
+    const startIndex = (currentPage - 1) * resultsLimit;
+    const endIndex = startIndex + resultsLimit;
+    return results.slice(startIndex, endIndex);
+  }, [results, currentPage, resultsLimit]);
 
   if (isSearching) {
     return (
@@ -78,16 +86,87 @@ export function SearchResults() {
       <div className="flex items-center justify-between text-sm text-muted-foreground">
         <p>
           Found <span className="font-medium text-foreground">{results.length}</span> results
+          {totalPages > 1 && (
+            <span className="ml-2">
+              (Page {currentPage} of {totalPages})
+            </span>
+          )}
         </p>
         <p>Search time: {searchTime.toFixed(0)}ms</p>
       </div>
 
       {/* Results List */}
       <div className="space-y-3">
-        {results.map((result, index) => (
-          <SearchResultCard key={index} result={result} rank={index + 1} />
+        {paginatedResults.map((result, index) => (
+          <SearchResultCard
+            key={index}
+            result={result}
+            rank={(currentPage - 1) * resultsLimit + index + 1}
+          />
         ))}
       </div>
+
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <Card>
+          <CardContent className="py-4">
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-muted-foreground">
+                Showing {(currentPage - 1) * resultsLimit + 1} to{" "}
+                {Math.min(currentPage * resultsLimit, results.length)} of {results.length} results
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(currentPage - 1)}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4 mr-1" />
+                  Previous
+                </Button>
+
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNumber;
+                    if (totalPages <= 5) {
+                      pageNumber = i + 1;
+                    } else if (currentPage <= 3) {
+                      pageNumber = i + 1;
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNumber = totalPages - 4 + i;
+                    } else {
+                      pageNumber = currentPage - 2 + i;
+                    }
+
+                    return (
+                      <Button
+                        key={i}
+                        variant={currentPage === pageNumber ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setCurrentPage(pageNumber)}
+                        className="w-9"
+                      >
+                        {pageNumber}
+                      </Button>
+                    );
+                  })}
+                </div>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

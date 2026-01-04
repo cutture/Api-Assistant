@@ -29,9 +29,10 @@ export default function SearchPage() {
   const handleSearch = (query: string) => {
     if (!query.trim()) return;
 
+    // Fetch up to 100 results from backend, paginate client-side based on resultsLimit
     const request: SearchRequest = {
       query,
-      n_results: resultsLimit,
+      n_results: 100, // Fetch more results to enable pagination
       mode: mode,
       use_query_expansion: useQueryExpansion,
     };
