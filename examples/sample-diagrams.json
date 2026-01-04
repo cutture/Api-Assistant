@@ -57,7 +57,16 @@
     "4_api_overview_diagram": {
       "description": "Generate an API overview diagram showing API structure and endpoint groupings",
       "endpoint": "POST /diagrams/overview",
-      "note": "This is the CORRECT format for API Overview diagrams",
+      "IMPORTANT_FRONTEND_UI_NOTE": "In the web UI, enter 'api_title' in the separate 'API Title' input field. Enter ONLY the 'endpoints' array (without the wrapper) in the 'Endpoints (JSON)' textarea!",
+      "api_payload_format": {
+        "note": "This is the format for direct API calls (curl, Postman, etc.)",
+        "api_title": "User Management API",
+        "endpoints": "array_of_endpoint_objects"
+      },
+      "frontend_ui_usage": {
+        "step_1": "Enter in 'API Title' field: User Management API",
+        "step_2": "Enter in 'Endpoints (JSON)' textarea: ONLY the array below (lines starting with [ to ])"
+      },
       "payload": {
         "api_title": "User Management API",
         "endpoints": [
@@ -186,6 +195,39 @@
             "path": "/posts",
             "method": "GET",
             "tags": ["Posts"]
+          }
+        ]
+      },
+      "COPY_THIS_FOR_FRONTEND_UI": {
+        "instructions": "For the web UI at /diagrams, copy ONLY the array below into the 'Endpoints (JSON)' textarea",
+        "endpoints_array_to_paste": [
+          {
+            "path": "/api/v1/users/{id}",
+            "method": "GET",
+            "summary": "Get User - Retrieves a single user by ID",
+            "description": "Retrieves user details including optional posts",
+            "tags": ["Users"]
+          },
+          {
+            "path": "/api/v1/users",
+            "method": "POST",
+            "summary": "Create User - Creates a new user",
+            "description": "Creates a new user with username, email, and password",
+            "tags": ["Users"]
+          },
+          {
+            "path": "/api/v1/posts",
+            "method": "GET",
+            "summary": "List Posts - Retrieves paginated posts",
+            "description": "Returns a paginated list of posts with sorting options",
+            "tags": ["Posts"]
+          },
+          {
+            "path": "/api/v1/auth/login",
+            "method": "POST",
+            "summary": "Login - User authentication",
+            "description": "Authenticates user and returns token",
+            "tags": ["Authentication"]
           }
         ]
       }
