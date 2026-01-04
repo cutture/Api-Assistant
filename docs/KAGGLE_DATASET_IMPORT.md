@@ -15,7 +15,11 @@ This guide explains how to import the "Ultimate API Dataset (1000+ Data Sources)
 
 ### 1. Kaggle API Setup
 
-First, you need to set up Kaggle API credentials:
+You have **two options** for configuring Kaggle credentials:
+
+#### Option A: Using kaggle.json File (Recommended for Most Users)
+
+Best for one-time or occasional imports:
 
 1. **Create a Kaggle Account** (if you don't have one):
    - Go to https://www.kaggle.com and sign up
@@ -33,14 +37,42 @@ First, you need to set up Kaggle API credentials:
    mv ~/Downloads/kaggle.json ~/.kaggle/
    chmod 600 ~/.kaggle/kaggle.json
 
-   # On Windows
-   # Place kaggle.json in C:\Users\<YourUsername>\.kaggle\
+   # On Windows (Command Prompt)
+   mkdir %USERPROFILE%\.kaggle
+   move %USERPROFILE%\Downloads\kaggle.json %USERPROFILE%\.kaggle\
+
+   # On Windows (PowerShell)
+   mkdir $env:USERPROFILE\.kaggle
+   move $env:USERPROFILE\Downloads\kaggle.json $env:USERPROFILE\.kaggle\
    ```
 
 4. **Install Kaggle Package**:
    ```bash
    pip install kaggle
    ```
+
+#### Option B: Using Environment Variables (For Automation/CI/CD)
+
+Best for automated imports or production environments:
+
+1. **Get Your Credentials**:
+   - Go to https://www.kaggle.com/settings/account
+   - Click "Create New API Token"
+   - Open the downloaded `kaggle.json` to see your username and key
+
+2. **Add to .env File**:
+   ```bash
+   # In your .env file, uncomment and fill these:
+   KAGGLE_USERNAME=your_kaggle_username
+   KAGGLE_KEY=your_kaggle_api_key_from_json
+   ```
+
+3. **Install Kaggle Package**:
+   ```bash
+   pip install kaggle
+   ```
+
+**Security Note**: The script will automatically use environment variables if present, otherwise fall back to `~/.kaggle/kaggle.json`
 
 ### 2. Backend Running
 

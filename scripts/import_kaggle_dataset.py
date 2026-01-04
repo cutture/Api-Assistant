@@ -49,6 +49,18 @@ class KaggleDatasetImporter:
         try:
             import kaggle
 
+            # Setup Kaggle credentials from environment if provided
+            # This allows using .env file instead of ~/.kaggle/kaggle.json
+            kaggle_username = os.getenv('KAGGLE_USERNAME')
+            kaggle_key = os.getenv('KAGGLE_KEY')
+
+            if kaggle_username and kaggle_key:
+                print("   Using Kaggle credentials from environment variables")
+                os.environ['KAGGLE_USERNAME'] = kaggle_username
+                os.environ['KAGGLE_KEY'] = kaggle_key
+            else:
+                print("   Using Kaggle credentials from ~/.kaggle/kaggle.json")
+
             # Download to our temp directory
             kaggle.api.dataset_download_files(
                 self.dataset_name,
@@ -65,9 +77,10 @@ class KaggleDatasetImporter:
             sys.exit(1)
         except Exception as e:
             print(f"❌ Error downloading dataset: {e}")
-            print("\nMake sure you have:")
-            print("1. Kaggle API token in ~/.kaggle/kaggle.json")
-            print("2. Run: pip install kaggle")
+            print("\nMake sure you have one of:")
+            print("1. Kaggle API token in ~/.kaggle/kaggle.json, OR")
+            print("2. KAGGLE_USERNAME and KAGGLE_KEY in .env file")
+            print("3. Run: pip install kaggle")
             sys.exit(1)
 
     def analyze_dataset(self, dataset_dir: Path) -> List[Path]:

@@ -50,6 +50,11 @@ data/chroma_db/*
 data/uploads/*
 !data/uploads/.gitkeep
 
+# Kaggle dataset import
+data/kaggle_import/
+kaggle.json
+.kaggle/
+
 # Logs
 *.log
 logs/
