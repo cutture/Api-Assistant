@@ -2182,6 +2182,206 @@ Add sortable table columns for better document management:
 
 ---
 
+### Test Category: Session Management - Advanced Controls
+
+#### TEST-UI-074: Active Session Dropdown Menu
+**Type:** UI Test
+**Prerequisite:** At least one active session exists
+
+**Steps:**
+1. Navigate to Chat page
+2. Locate "Active Session" label with session ID (e.g., "abc123...")
+3. Click the three-dot menu button (⋮) next to the session label
+4. Observe menu options
+
+**Expected Result:**
+- Dropdown menu appears with three options:
+  - "View Session" (with Eye icon)
+  - "Clear Conversation History" (with Trash icon)
+  - "End Session" (with StopCircle icon)
+- Menu is only visible when a session is active
+- Icons properly aligned with text
+
+---
+
+#### TEST-UI-075: View Session Navigation from Chat
+**Type:** UI Test
+**Prerequisite:** Active session in chat
+
+**Steps:**
+1. Chat page → Click session dropdown menu (⋮)
+2. Click "View Session"
+
+**Expected Result:**
+- Navigates to Sessions page (`/sessions?selected={sessionId}`)
+- Automatically selects and displays the current session
+- Session details shown (not list view)
+- Can navigate back to Chat
+- Session ID matches the one from chat
+
+---
+
+#### TEST-UI-076: Clear Conversation History from Chat
+**Type:** UI Test
+**Prerequisite:** Active session with at least 2 messages
+
+**Steps:**
+1. Chat page with active conversation
+2. Click session dropdown menu (⋮)
+3. Click "Clear Conversation History"
+4. Read confirmation dialog
+5. Click "Clear History"
+
+**Expected Result:**
+- Confirmation dialog appears with warning:
+  - "This will permanently delete all messages in this session"
+  - "This action cannot be undone"
+  - "The session itself will be preserved"
+- After confirmation:
+  - All messages cleared from chat UI
+  - Session still exists (check Sessions page)
+  - Session ID remains the same
+  - Success toast: "All conversation history has been permanently deleted"
+  - Can start new conversation in same session
+
+**Cancel Test:**
+- Repeat steps 1-4
+- Click "Cancel" instead
+- Expected: No changes, messages remain
+
+---
+
+#### TEST-UI-077: End Session Functionality
+**Type:** UI Test
+**Prerequisite:** Active session with conversation history
+
+**Steps:**
+1. Chat page with active session
+2. Note current session ID (e.g., "abc123...")
+3. Click session dropdown menu (⋮)
+4. Click "End Session"
+5. Read confirmation dialog
+6. Click "End Session"
+
+**Expected Result:**
+- Confirmation dialog appears explaining:
+  - Session will be marked as inactive
+  - New session will be created
+  - History will be preserved
+  - Can reactivate later
+- After confirmation:
+  - Current session set to INACTIVE status
+  - New session automatically created
+  - Chat switches to new session (different ID)
+  - Chat UI cleared (fresh start)
+  - Success toast: "Previous session has been ended. A new session has been created"
+  - Old session visible in Sessions page with INACTIVE status
+  - Can reactivate old session from Sessions page
+
+**Verify Preservation:**
+- Navigate to Sessions page
+- Filter by "Inactive"
+- Find old session (abc123...)
+- Click "View" → All conversation history intact
+
+---
+
+#### TEST-UI-078: Clear History from Session Details Page
+**Type:** UI Test
+**Prerequisite:** Session with conversation history exists
+
+**Steps:**
+1. Navigate to Sessions page
+2. Click on a session with messages (message count > 0)
+3. In session details view, locate "Clear History" button (next to Edit/Activate)
+4. Click "Clear History"
+5. Confirm in dialog
+
+**Expected Result:**
+- "Clear History" button only visible when session has messages
+- Button shows Trash icon
+- Confirmation dialog appears with same warning as chat version
+- After confirmation:
+  - All conversation history deleted
+  - Session metadata preserved (ID, user, created date, settings)
+  - Success toast notification
+  - Message count updates to 0
+  - Button disappears (no messages to clear)
+
+**Test with Different Session States:**
+- Active session: ✓ Can clear
+- Inactive session: ✓ Can clear
+- Expired session: ✓ Can clear
+
+---
+
+#### TEST-UI-079: Session Reactivation from Chat Dropdown
+**Type:** UI Test
+**Prerequisite:** At least one inactive or expired session exists
+
+**Steps:**
+1. Create/have an expired or inactive session
+2. Navigate to Chat page
+3. Use session dropdown to select the inactive/expired session
+4. Observe that chat indicates session is inactive
+5. Navigate to Sessions page
+6. Click on the inactive/expired session
+7. Click "Activate" button
+8. Return to Chat page
+9. Check "Active Session" dropdown
+
+**Expected Result:**
+- Activated session appears in dropdown list
+- Can be selected and used normally
+- Conversation history preserved and loaded
+- Session status shows as "active"
+- New expiration time set (default TTL)
+
+---
+
+#### TEST-UI-080: Confirmation Dialog Safety
+**Type:** UI Test
+
+**Steps:**
+1. Test all destructive actions with dialogs:
+   - Clear Conversation History (chat)
+   - Clear Conversation History (sessions page)
+   - End Session
+
+**For Each:**
+a. Initiate action
+b. Click outside dialog
+c. Press ESC key
+d. Click "Cancel"
+
+**Expected Result:**
+- Dialog can be dismissed without action
+- No data is modified
+- User must explicitly confirm
+- Loading states shown during operations
+- Buttons disabled during pending operations
+
+---
+
+#### TEST-UI-081: Session Operations Error Handling
+**Type:** UI Test
+
+**Steps:**
+1. Disconnect network/stop backend
+2. Try to:
+   - Clear conversation history
+   - End session
+   - View session from chat
+
+**Expected Result:**
+- Error toasts appear with clear messages
+- UI doesn't crash
+- User can retry after network restored
+- No partial operations
+- Session state remains consistent
+
+---
+
 ### Test Category: Diagram Generation
 
 #### TEST-UI-031: Generate Sequence Diagram
@@ -4541,6 +4741,7 @@ Use this checklist for rapid smoke testing:
 | **Frontend UI - Core** | 55 | TEST-UI-001 to 055 | High |
 | **Frontend UI - Document Library** | 12 | TEST-UI-056 to 065 | High |
 | **Frontend UI - Advanced Search** | 8 | TEST-UI-066 to 073 | High |
+| **Frontend UI - Session Management Advanced** | 8 | TEST-UI-074 to 081 | High |
 | **CLI - Basic** | 25 | TEST-CLI-001 to 025 | Medium |
 | **CLI - Advanced** | 10 | TEST-CLI-026 to 035 | Medium |
 | **End-to-End** | 10 | TEST-E2E-001 to 010 | High |
@@ -4550,16 +4751,16 @@ Use this checklist for rapid smoke testing:
 | **Integration** | 10 | TEST-INT-001 to 010 | High |
 | **Accessibility** | 8 | TEST-ACC-001 to 008 | High |
 | **Mobile & Responsive** | 7 | TEST-MOB-001 to 007 | High |
-| **TOTAL** | **199** | - | - |
+| **TOTAL** | **207** | - | - |
 
 ### Test Distribution by Type
-- **UI Tests:** 83 (42%)
-- **API Tests:** 30 (15%)
-- **CLI Tests:** 35 (18%)
+- **UI Tests:** 91 (44%)
+- **API Tests:** 30 (14%)
+- **CLI Tests:** 35 (17%)
 - **Integration/E2E Tests:** 20 (10%)
 - **Security Tests:** 12 (6%)
 - **Accessibility Tests:** 8 (4%)
-- **Mobile Tests:** 7 (4%)
+- **Mobile Tests:** 7 (3%)
 - **Performance Tests:** 4 (2%)
 
 ---
@@ -4590,13 +4791,14 @@ When reporting issues found during testing:
 
 ### Weekly Testing (Comprehensive - 4-6 hours)
 - **All API Endpoints:** TEST-API-001 to 030 (30 tests)
-- **All UI Features:** TEST-UI-001 to 073 (73 tests)
+- **All UI Features:** TEST-UI-001 to 081 (81 tests)
 - **CLI Commands:** TEST-CLI-001 to 035 (35 tests)
 - **Diagram Generation:** TEST-UI-031 to 037 (7 tests)
 - **Session Management:** TEST-UI-038 to 044 (7 tests)
+- **Session Management Advanced:** TEST-UI-074 to 081 (8 tests)
 
 ### Before Release (Full Suite - 8-12 hours)
-- **Complete Test Suite:** All 199 tests
+- **Complete Test Suite:** All 207 tests
 - **Performance Testing:** TEST-PERF-001 to 004
 - **Edge Cases:** TEST-EDGE-001 to 008
 - **Security Testing:** TEST-SEC-001 to 012

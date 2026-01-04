@@ -97,6 +97,13 @@ An AI-powered assistant that helps developers understand, document, and generate
 - **Session Management**: Create, update, delete, and filter user sessions
   - **Session Update UI**: Inline editing of session metadata, TTL, and settings
   - **Edit/Save/Cancel**: Full session modification with validation
+  - **Session Reactivation**: Reactivate expired/inactive sessions with one click
+  - **Active Session Dropdown Menu**: Quick access to session operations in chat
+    - View Session: Navigate to session details from chat
+    - Clear Conversation History: Permanently delete messages while preserving session
+    - End Session: Mark as inactive and create new session
+  - **Clear History**: Delete conversation history from chat or session details page
+  - **Confirmation Dialogs**: Safety prompts for all destructive operations
 - **Chat Interface**: AI-powered conversations with source citations
 - **Search Interface**: Advanced search with filters and result display
 - **Document Management**: Upload and manage API specifications
