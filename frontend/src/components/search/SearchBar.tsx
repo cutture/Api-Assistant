@@ -18,6 +18,23 @@ interface SearchBarProps {
   isSearching?: boolean;
 }
 
+// Generate valid min_score values with custom stepping
+// 0.00 to 0.15 in steps of 0.01, then 0.20 to 1.00 in steps of 0.05
+const generateMinScoreValues = (): number[] => {
+  const values: number[] = [];
+  // 0.00 to 0.15 in steps of 0.01
+  for (let i = 0; i <= 15; i++) {
+    values.push(i / 100);
+  }
+  // 0.20 to 1.00 in steps of 0.05
+  for (let i = 20; i <= 100; i += 5) {
+    values.push(i / 100);
+  }
+  return values;
+};
+
+const MIN_SCORE_VALUES = generateMinScoreValues();
+
 export function SearchBar({ onSearch, isSearching }: SearchBarProps) {
   const {
     query,
@@ -28,6 +45,8 @@ export function SearchBar({ onSearch, isSearching }: SearchBarProps) {
     setUseQueryExpansion,
     resultsLimit,
     setResultsLimit,
+    minScore,
+    setMinScore,
   } = useSearchStore();
 
   const [localQuery, setLocalQuery] = useState(query);
@@ -36,6 +55,12 @@ export function SearchBar({ onSearch, isSearching }: SearchBarProps) {
     e.preventDefault();
     setQuery(localQuery);
     onSearch(localQuery);
+  };
+
+  // Find the closest index for the current minScore value
+  const getMinScoreIndex = () => {
+    const index = MIN_SCORE_VALUES.findIndex(v => v === minScore);
+    return index >= 0 ? index : 0;
   };
 
   return (
@@ -78,7 +103,7 @@ export function SearchBar({ onSearch, isSearching }: SearchBarProps) {
             <Label className="text-sm font-medium mb-3 block">
               Search Options
             </Label>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {/* Search Mode */}
               <div className="flex flex-col space-y-2">
                 <Label htmlFor="mode" className="text-sm font-medium">
@@ -126,6 +151,31 @@ export function SearchBar({ onSearch, isSearching }: SearchBarProps) {
                   <option value={20}>20 results</option>
                   <option value={50}>50 results</option>
                 </select>
+              </div>
+
+              {/* Min Score Slider */}
+              <div className="flex flex-col space-y-2">
+                <Label htmlFor="minScore" className="text-sm font-medium">
+                  Min Score: {minScore.toFixed(2)}
+                  {minScore === 0 && <span className="text-xs text-muted-foreground ml-1">(No filter)</span>}
+                </Label>
+                <input
+                  type="range"
+                  id="minScore"
+                  min="0"
+                  max={MIN_SCORE_VALUES.length - 1}
+                  value={getMinScoreIndex()}
+                  onChange={(e) => {
+                    const index = parseInt(e.target.value);
+                    setMinScore(MIN_SCORE_VALUES[index]);
+                  }}
+                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+                />
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>0.00</span>
+                  <span>0.15</span>
+                  <span>1.00</span>
+                </div>
               </div>
             </div>
           </div>

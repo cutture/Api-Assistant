@@ -11,6 +11,7 @@ interface SearchState {
   mode: SearchMode;
   useQueryExpansion: boolean;
   resultsLimit: number;
+  minScore: number; // Minimum relevance score threshold
 
   // Search results
   results: SearchResult[];
@@ -27,6 +28,7 @@ interface SearchState {
   setMode: (mode: SearchMode) => void;
   setUseQueryExpansion: (use: boolean) => void;
   setResultsLimit: (limit: number) => void;
+  setMinScore: (score: number) => void;
   setResults: (results: SearchResult[]) => void;
   setIsSearching: (isSearching: boolean) => void;
   setSearchError: (error: string | null) => void;
@@ -41,6 +43,7 @@ const initialState = {
   mode: "hybrid" as SearchMode,
   useQueryExpansion: false,
   resultsLimit: 10,
+  minScore: 0.0, // Default: no filtering
   results: [],
   isSearching: false,
   searchError: null,
@@ -56,6 +59,7 @@ export const useSearchStore = create<SearchState>((set) => ({
   setMode: (mode) => set({ mode }),
   setUseQueryExpansion: (useQueryExpansion) => set({ useQueryExpansion }),
   setResultsLimit: (resultsLimit) => set({ resultsLimit, currentPage: 1 }), // Reset to page 1 on limit change
+  setMinScore: (minScore) => set({ minScore }),
   setResults: (results) => set({ results, totalResults: results.length }),
   setIsSearching: (isSearching) => set({ isSearching }),
   setSearchError: (searchError) => set({ searchError }),
