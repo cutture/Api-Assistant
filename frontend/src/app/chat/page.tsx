@@ -56,6 +56,9 @@ export default function ChatPage() {
   // Hook for clearing session history
   const { mutate: clearHistory, isPending: isClearingHistory } = useClearSessionHistory();
 
+  // Key to force ChatInterface re-mount when history is cleared
+  const [chatKey, setChatKey] = useState(0);
+
   // Load available sessions on mount
   useEffect(() => {
     loadAvailableSessions();
@@ -271,6 +274,8 @@ export default function ChatPage() {
       onSuccess: () => {
         // Clear local chat UI
         setConversationHistory([]);
+        // Force ChatInterface to re-mount with empty messages
+        setChatKey(prev => prev + 1);
         toast({
           title: "History cleared",
           description: "All conversation history has been permanently deleted from this session.",
@@ -334,6 +339,7 @@ export default function ChatPage() {
 
       // Clear UI and switch to new session
       setConversationHistory([]);
+      setChatKey(prev => prev + 1); // Force ChatInterface to re-mount
       setSessionId(newSessionId);
       localStorage.setItem("chat_session_id", newSessionId);
       setIsSessionReady(true);
@@ -566,7 +572,7 @@ export default function ChatPage() {
         )}
 
         <ChatInterface
-          key={sessionId || "no-session"} // Force remount when session changes
+          key={`${sessionId || "no-session"}-${chatKey}`} // Force remount when session changes or history is cleared
           onSendMessage={handleSendMessage}
           initialMessages={conversationHistory.map((msg) => ({
             role: msg.role as "user" | "assistant" | "system",
