@@ -47,6 +47,9 @@ pydantic-settings>=2.0.0
 tenacity>=8.2.0
 structlog>=23.1.0
 
+# Dataset Import (Optional)
+# kaggle>=1.6.0  # Uncomment to enable Kaggle dataset import
+
 # Observability & Monitoring
 langfuse>=2.0.0
 
