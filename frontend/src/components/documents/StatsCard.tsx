@@ -7,7 +7,47 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useCollectionStats } from "@/hooks/useDocuments";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Database, FileText, Globe, Code } from "lucide-react";
+import { Database, FileText, Info } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+
+// Feature descriptions for user guidance
+const FEATURE_INFO = {
+  hybrid_search: {
+    name: "Hybrid Search",
+    description: "Combines BM25 keyword search with vector similarity search using Reciprocal Rank Fusion. Best for technical queries with specific terms.",
+    shortDesc: "BM25 + Vector search"
+  },
+  reranking: {
+    name: "Reranking",
+    description: "Uses cross-encoder models to deeply analyze and re-rank search results for maximum relevance. Slower but most accurate.",
+    shortDesc: "Cross-encoder re-ranking"
+  },
+  query_expansion: {
+    name: "Query Expansion",
+    description: "Automatically expands queries with synonyms, related terms, and technical abbreviations to improve search recall.",
+    shortDesc: "Synonym & term expansion"
+  },
+  diversification: {
+    name: "Diversification",
+    description: "Uses MMR algorithm to reduce redundancy in search results by ensuring diversity while maintaining relevance.",
+    shortDesc: "MMR diversity algorithm"
+  },
+  faceted_search: {
+    name: "Faceted Search",
+    description: "Enables filtering and grouping of search results by metadata fields (source, method, API name) for better organization.",
+    shortDesc: "Metadata-based filtering"
+  },
+  filtering: {
+    name: "Filtering",
+    description: "Advanced boolean filtering with 13 operators (eq, in, contains, regex, etc.) for precise document queries.",
+    shortDesc: "Advanced boolean filters"
+  },
+};
 
 export function StatsCard() {
   const { data: stats, isLoading, error } = useCollectionStats();
@@ -65,23 +105,53 @@ export function StatsCard() {
         {stats?.features && (
           <div className="mt-6 pt-6 border-t">
             <h4 className="text-sm font-medium mb-3">Enabled Features</h4>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-              {Object.entries(stats.features).map(([feature, enabled]) => (
-                <div
-                  key={feature}
-                  className={`px-3 py-2 rounded-md text-center ${
-                    enabled ? "bg-green-100 dark:bg-green-900/20" : "bg-muted"
-                  }`}
-                >
-                  <div className="text-xs capitalize">
-                    {feature.replace(/_/g, " ")}
-                  </div>
-                  <div className="text-sm font-semibold">
-                    {enabled ? "✓" : "✗"}
-                  </div>
-                </div>
-              ))}
-            </div>
+            <TooltipProvider>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {Object.entries(stats.features).map(([feature, enabled]) => {
+                  const featureInfo = FEATURE_INFO[feature as keyof typeof FEATURE_INFO];
+                  return (
+                    <div
+                      key={feature}
+                      className={`relative px-3 py-3 rounded-md border ${
+                        enabled
+                          ? "bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-900"
+                          : "bg-muted border-border"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs font-medium capitalize mb-0.5">
+                            {featureInfo?.name || feature.replace(/_/g, " ")}
+                          </div>
+                          {featureInfo?.shortDesc && (
+                            <div className="text-[10px] text-muted-foreground line-clamp-1">
+                              {featureInfo.shortDesc}
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          {featureInfo && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button className="p-0.5 hover:bg-background/50 rounded transition-colors">
+                                  <Info className="h-3 w-3 text-muted-foreground" />
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent className="max-w-xs">
+                                <p className="text-xs">{featureInfo.description}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          )}
+                          <div className="text-sm font-semibold">
+                            {enabled ? "✓" : "✗"}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </TooltipProvider>
           </div>
         )}
       </CardContent>
