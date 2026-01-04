@@ -308,7 +308,7 @@ class VectorStore:
         use_hybrid: bool = True,
         use_reranker: bool = False,
         rerank_top_k: Optional[int] = None,
-        min_score: float = 0.15,
+        min_score: float = 0.0,
     ) -> list[dict[str, Any]]:
         """
         Search for similar documents with performance monitoring.
@@ -332,7 +332,7 @@ class VectorStore:
             use_hybrid: Use hybrid search if available (default: True).
             use_reranker: Use cross-encoder re-ranking (default: False).
             rerank_top_k: Number of candidates to retrieve before re-ranking (default: n_results * 3).
-            min_score: Minimum relevance score threshold (0.0-1.0). Results below this are filtered out (default: 0.15).
+            min_score: Minimum relevance score threshold (0.0-1.0). Results below this are filtered out (default: 0.0 - disabled).
 
         Returns:
             List of search results with content, metadata, and similarity score (filtered by min_score).

@@ -28,7 +28,7 @@ export async function search(
       use_query_expansion: request.use_query_expansion ?? false,
       use_diversification: request.use_diversification ?? false,
       diversification_lambda: request.diversification_lambda ?? 0.5,
-      min_score: request.min_score ?? 0.15,
+      min_score: request.min_score ?? 0.0,
     },
   });
 }
