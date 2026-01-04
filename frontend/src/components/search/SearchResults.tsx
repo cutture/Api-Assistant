@@ -95,6 +95,21 @@ export function SearchResults() {
         <p>Search time: {searchTime.toFixed(0)}ms</p>
       </div>
 
+      {/* Top Pagination Controls */}
+      {totalPages > 1 && (
+        <Card>
+          <CardContent className="py-3">
+            <PaginationControls
+              currentPage={currentPage}
+              totalPages={totalPages}
+              results={results}
+              resultsLimit={resultsLimit}
+              onPageChange={setCurrentPage}
+            />
+          </CardContent>
+        </Card>
+      )}
+
       {/* Results List */}
       <div className="space-y-3">
         {paginatedResults.map((result, index) => (
@@ -106,67 +121,94 @@ export function SearchResults() {
         ))}
       </div>
 
-      {/* Pagination Controls */}
+      {/* Bottom Pagination Controls */}
       {totalPages > 1 && (
         <Card>
           <CardContent className="py-4">
-            <div className="flex items-center justify-between">
-              <div className="text-sm text-muted-foreground">
-                Showing {(currentPage - 1) * resultsLimit + 1} to{" "}
-                {Math.min(currentPage * resultsLimit, results.length)} of {results.length} results
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(currentPage - 1)}
-                  disabled={currentPage === 1}
-                >
-                  <ChevronLeft className="h-4 w-4 mr-1" />
-                  Previous
-                </Button>
-
-                <div className="flex items-center gap-1">
-                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                    let pageNumber;
-                    if (totalPages <= 5) {
-                      pageNumber = i + 1;
-                    } else if (currentPage <= 3) {
-                      pageNumber = i + 1;
-                    } else if (currentPage >= totalPages - 2) {
-                      pageNumber = totalPages - 4 + i;
-                    } else {
-                      pageNumber = currentPage - 2 + i;
-                    }
-
-                    return (
-                      <Button
-                        key={i}
-                        variant={currentPage === pageNumber ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setCurrentPage(pageNumber)}
-                        className="w-9"
-                      >
-                        {pageNumber}
-                      </Button>
-                    );
-                  })}
-                </div>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(currentPage + 1)}
-                  disabled={currentPage === totalPages}
-                >
-                  Next
-                  <ChevronRight className="h-4 w-4 ml-1" />
-                </Button>
-              </div>
-            </div>
+            <PaginationControls
+              currentPage={currentPage}
+              totalPages={totalPages}
+              results={results}
+              resultsLimit={resultsLimit}
+              onPageChange={setCurrentPage}
+            />
           </CardContent>
         </Card>
       )}
+    </div>
+  );
+}
+
+// Separate pagination component for reusability
+interface PaginationControlsProps {
+  currentPage: number;
+  totalPages: number;
+  results: SearchResult[];
+  resultsLimit: number;
+  onPageChange: (page: number) => void;
+}
+
+function PaginationControls({
+  currentPage,
+  totalPages,
+  results,
+  resultsLimit,
+  onPageChange,
+}: PaginationControlsProps) {
+  return (
+    <div className="flex items-center justify-between">
+      <div className="text-sm text-muted-foreground">
+        Showing {(currentPage - 1) * resultsLimit + 1} to{" "}
+        {Math.min(currentPage * resultsLimit, results.length)} of {results.length} results
+      </div>
+      <div className="flex items-center gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onPageChange(currentPage - 1)}
+          disabled={currentPage === 1}
+        >
+          <ChevronLeft className="h-4 w-4 mr-1" />
+          Previous
+        </Button>
+
+        <div className="flex items-center gap-1">
+          {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+            let pageNumber;
+            if (totalPages <= 5) {
+              pageNumber = i + 1;
+            } else if (currentPage <= 3) {
+              pageNumber = i + 1;
+            } else if (currentPage >= totalPages - 2) {
+              pageNumber = totalPages - 4 + i;
+            } else {
+              pageNumber = currentPage - 2 + i;
+            }
+
+            return (
+              <Button
+                key={i}
+                variant={currentPage === pageNumber ? "default" : "outline"}
+                size="sm"
+                onClick={() => onPageChange(pageNumber)}
+                className="w-9"
+              >
+                {pageNumber}
+              </Button>
+            );
+          })}
+        </div>
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onPageChange(currentPage + 1)}
+          disabled={currentPage === totalPages}
+        >
+          Next
+          <ChevronRight className="h-4 w-4 ml-1" />
+        </Button>
+      </div>
     </div>
   );
 }

@@ -4,13 +4,13 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { Trash2, Search, FileText, Globe, Code, AlertCircle, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Trash2, Search, FileText, Globe, Code, AlertCircle, ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { useCollectionStats, useDeleteDocument, useBulkDeleteDocuments } from "@/hooks/useDocuments";
 import { useToast } from "@/hooks/use-toast";
 import { exportDocuments } from "@/lib/api/documents";
@@ -40,7 +40,13 @@ export function DocumentList() {
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [selectedDocument, setSelectedDocument] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [displayLimit, setDisplayLimit] = useState<number | "all">(20);
+  const [displayLimit, setDisplayLimit] = useState<number>(20);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+
+  // Reset to page 1 when search query changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
 
   const loadDocuments = async () => {
     setLoadingDocs(true);
@@ -191,11 +197,18 @@ export function DocumentList() {
       return 0;
     });
 
-  // Apply display limit
-  const displayedDocuments = displayLimit === "all"
-    ? filteredAndSortedDocuments
-    : filteredAndSortedDocuments.slice(0, displayLimit);
   const totalFilteredCount = filteredAndSortedDocuments.length;
+
+  // Calculate pagination
+  const totalPages = Math.ceil(totalFilteredCount / displayLimit);
+
+  // Apply pagination
+  const displayedDocuments = useMemo(() => {
+    const startIndex = (currentPage - 1) * displayLimit;
+    const endIndex = startIndex + displayLimit;
+    return filteredAndSortedDocuments.slice(startIndex, endIndex);
+  }, [filteredAndSortedDocuments, currentPage, displayLimit]);
+
   const displayedCount = displayedDocuments.length;
 
   const toggleSelectAll = () => {
@@ -282,7 +295,10 @@ export function DocumentList() {
                 </span>
                 <Select
                   value={displayLimit.toString()}
-                  onValueChange={(value) => setDisplayLimit(value === "all" ? "all" : parseInt(value))}
+                  onValueChange={(value) => {
+                    setDisplayLimit(parseInt(value));
+                    setCurrentPage(1); // Reset to page 1 when changing limit
+                  }}
                 >
                   <SelectTrigger className="w-[100px]">
                     <SelectValue />
@@ -292,7 +308,6 @@ export function DocumentList() {
                     <SelectItem value="20">20</SelectItem>
                     <SelectItem value="50">50</SelectItem>
                     <SelectItem value="100">100</SelectItem>
-                    <SelectItem value="all">All</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -308,10 +323,26 @@ export function DocumentList() {
             </div>
             {totalFilteredCount > 0 && (
               <div className="mt-3 text-sm text-muted-foreground">
-                Showing {displayedCount} of {totalFilteredCount} documents
+                Showing {(currentPage - 1) * displayLimit + 1} to {Math.min(currentPage * displayLimit, totalFilteredCount)} of {totalFilteredCount} documents
                 {searchQuery && " (filtered)"}
+                {totalPages > 1 && ` (Page ${currentPage} of ${totalPages})`}
               </div>
             )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Top Pagination Controls */}
+      {documents.length > 0 && totalPages > 1 && (
+        <Card>
+          <CardContent className="py-3">
+            <DocumentPaginationControls
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalCount={totalFilteredCount}
+              displayLimit={displayLimit}
+              onPageChange={setCurrentPage}
+            />
           </CardContent>
         </Card>
       )}
@@ -464,6 +495,21 @@ export function DocumentList() {
         )
       )}
 
+      {/* Bottom Pagination Controls */}
+      {documents.length > 0 && totalPages > 1 && (
+        <Card>
+          <CardContent className="py-4">
+            <DocumentPaginationControls
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalCount={totalFilteredCount}
+              displayLimit={displayLimit}
+              onPageChange={setCurrentPage}
+            />
+          </CardContent>
+        </Card>
+      )}
+
       {/* Document Details Modal */}
       <DocumentDetailsModal
         document={selectedDocument}
@@ -472,6 +518,80 @@ export function DocumentList() {
         onDelete={handleDelete}
         onUpdate={handleUpdateMetadata}
       />
+    </div>
+  );
+}
+
+// Pagination component for document list
+interface DocumentPaginationControlsProps {
+  currentPage: number;
+  totalPages: number;
+  totalCount: number;
+  displayLimit: number;
+  onPageChange: (page: number) => void;
+}
+
+function DocumentPaginationControls({
+  currentPage,
+  totalPages,
+  totalCount,
+  displayLimit,
+  onPageChange,
+}: DocumentPaginationControlsProps) {
+  return (
+    <div className="flex items-center justify-between">
+      <div className="text-sm text-muted-foreground">
+        Showing {(currentPage - 1) * displayLimit + 1} to{" "}
+        {Math.min(currentPage * displayLimit, totalCount)} of {totalCount} documents
+      </div>
+      <div className="flex items-center gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onPageChange(currentPage - 1)}
+          disabled={currentPage === 1}
+        >
+          <ChevronLeft className="h-4 w-4 mr-1" />
+          Previous
+        </Button>
+
+        <div className="flex items-center gap-1">
+          {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+            let pageNumber;
+            if (totalPages <= 5) {
+              pageNumber = i + 1;
+            } else if (currentPage <= 3) {
+              pageNumber = i + 1;
+            } else if (currentPage >= totalPages - 2) {
+              pageNumber = totalPages - 4 + i;
+            } else {
+              pageNumber = currentPage - 2 + i;
+            }
+
+            return (
+              <Button
+                key={i}
+                variant={currentPage === pageNumber ? "default" : "outline"}
+                size="sm"
+                onClick={() => onPageChange(pageNumber)}
+                className="w-9"
+              >
+                {pageNumber}
+              </Button>
+            );
+          })}
+        </div>
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onPageChange(currentPage + 1)}
+          disabled={currentPage === totalPages}
+        >
+          Next
+          <ChevronRight className="h-4 w-4 ml-1" />
+        </Button>
+      </div>
     </div>
   );
 }
