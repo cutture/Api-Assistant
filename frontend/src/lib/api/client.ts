@@ -7,6 +7,7 @@ import { ApiError, ApiResponse } from "@/types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
 const API_TIMEOUT = 30000; // 30 seconds
+const API_KEY = process.env.NEXT_PUBLIC_API_KEY; // Optional API key for authentication
 
 // Retry configuration
 const MAX_RETRIES = 3;
@@ -40,6 +41,11 @@ apiClient.interceptors.request.use(
     // Add request timestamp
     config.headers["X-Request-Time"] = new Date().toISOString();
 
+    // Add API key if configured (for production authentication)
+    if (API_KEY) {
+      config.headers["X-API-Key"] = API_KEY;
+    }
+
     // If data is FormData, remove Content-Type header to let axios set it with boundary
     if (config.data instanceof FormData) {
       delete config.headers["Content-Type"];
@@ -50,6 +56,7 @@ apiClient.interceptors.request.use(
       console.log(`[API Request] ${config.method?.toUpperCase()} ${config.url}`, {
         params: config.params,
         data: config.data instanceof FormData ? "[FormData]" : config.data,
+        apiKeyConfigured: !!API_KEY,
       });
     }
 
@@ -181,8 +188,8 @@ function handleApiError(error: AxiosError): ApiError {
 function getDefaultErrorMessage(status: number): string {
   const messages: Record<number, string> = {
     400: "Bad request. Please check your input.",
-    401: "Unauthorized. Please log in.",
-    403: "Forbidden. You don't have permission to access this resource.",
+    401: "Unauthorized. API key required or invalid.",
+    403: "Forbidden. Invalid API key or insufficient permissions.",
     404: "Resource not found.",
     408: "Request timeout. Please try again.",
     409: "Conflict. The resource already exists or conflicts with current state.",

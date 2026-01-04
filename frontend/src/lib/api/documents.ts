@@ -88,12 +88,26 @@ export async function bulkDeleteDocuments(
 
 /**
  * Clear all documents (use with caution)
+ *
+ * Note: This uses exportDocuments + bulkDeleteDocuments since there's no
+ * dedicated "delete all" endpoint on the backend.
  */
-export async function clearAllDocuments(): Promise<ApiResponse<{ message: string }>> {
-  return apiRequest<{ message: string }>({
-    method: "DELETE",
-    url: "/documents",
-  });
+export async function clearAllDocuments(): Promise<ApiResponse<{ deleted_count: number; not_found_count: number }>> {
+  // First, get all document IDs
+  const allDocsResponse = await exportDocuments();
+
+  if (!allDocsResponse.data || allDocsResponse.data.length === 0) {
+    return {
+      data: { deleted_count: 0, not_found_count: 0 },
+      error: null,
+    };
+  }
+
+  // Extract all document IDs
+  const docIds = allDocsResponse.data.map(doc => doc.id);
+
+  // Bulk delete all documents
+  return bulkDeleteDocuments(docIds);
 }
 
 /**

@@ -62,13 +62,9 @@ export interface SearchResult {
 export interface SearchResponse {
   results: SearchResult[];
   query: string;
-  total_results: number;
-  search_time_ms: number;
-  metadata: {
-    use_hybrid: boolean;
-    use_reranking: boolean;
-    use_query_expansion: boolean;
-  };
+  total: number;  // Backend sends "total", not "total_results"
+  expanded_query?: string;  // Optional expanded query from query expansion
+  mode: "vector" | "hybrid" | "reranked";  // Search mode used
 }
 
 // Faceted Search Types
