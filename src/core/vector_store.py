@@ -79,6 +79,7 @@ class VectorStore:
         self._hybrid_search: Optional[HybridSearch] = None  # Hybrid search strategy
         self._reranker: Optional[CrossEncoderReranker] = None  # Cross-encoder re-ranker
         self._documents_cache: List[Dict[str, Any]] = []  # Cache for BM25 indexing
+        self._bm25_dirty = False  # Track if BM25 index needs rebuild (lazy rebuild optimization)
 
     @property
     def client(self) -> chromadb.PersistentClient:
@@ -146,6 +147,28 @@ class VectorStore:
 
         logger.info("BM25 index rebuilt", document_count=len(self._documents_cache))
 
+    def _ensure_bm25_index(self):
+        """
+        Ensure BM25 index is built and up-to-date.
+
+        Uses lazy rebuild pattern: only rebuilds if dirty flag is set or index doesn't exist.
+        This dramatically improves performance by avoiding O(n) rebuilds on every document addition.
+        """
+        if not self.enable_hybrid_search:
+            return
+
+        # Rebuild only if needed
+        if self._bm25 is None or self._bm25_dirty:
+            logger.info(
+                "BM25 index needs rebuild",
+                reason="not_built" if self._bm25 is None else "dirty_flag_set"
+            )
+            self._rebuild_bm25_index()
+            self._bm25_dirty = False  # Clear dirty flag
+            logger.debug("BM25 index is now up-to-date")
+        else:
+            logger.debug("BM25 index is up-to-date, skipping rebuild")
+
     def add_document(
         self,
         content: str,
@@ -187,9 +210,10 @@ class VectorStore:
             metadatas=[metadata],
         )
 
-        # Rebuild BM25 index if hybrid search is enabled
+        # Mark BM25 index as dirty (will rebuild lazily on next search)
         if self.enable_hybrid_search:
-            self._rebuild_bm25_index()
+            self._bm25_dirty = True
+            logger.debug("BM25 index marked as dirty, will rebuild on next search")
 
         logger.debug("Added document", doc_id=doc_id, metadata=metadata)
         return doc_id
@@ -288,9 +312,10 @@ class VectorStore:
             total_skipped=total_skipped,
         )
 
-        # Rebuild BM25 index if hybrid search is enabled
+        # Mark BM25 index as dirty (will rebuild lazily on next search)
         if self.enable_hybrid_search:
-            self._rebuild_bm25_index()
+            self._bm25_dirty = True
+            logger.debug("BM25 index marked as dirty after batch add, will rebuild on next search")
 
         return {
             "document_ids": doc_ids,
@@ -337,6 +362,9 @@ class VectorStore:
         Returns:
             List of search results with content, metadata, and similarity score (filtered by min_score).
         """
+        # Ensure BM25 index is up-to-date (lazy rebuild if dirty)
+        self._ensure_bm25_index()
+
         # Store original filter object for client-side filtering if needed
         original_filter = where if isinstance(where, Filter) else None
 
