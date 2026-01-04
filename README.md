@@ -330,6 +330,7 @@ api-assistant/
 │   ├── ARCHITECTURAL_REVIEW.md # Comprehensive architecture analysis
 │   ├── LLM_PROVIDER_GUIDE.md   # LLM provider switching guide
 │   ├── AGENT_ARCHITECTURE.md   # Multi-agent system design
+│   ├── SEARCH_GUIDE.md         # Search modes & query expansion guide
 │   └── Week_*/                 # Weekly development guides
 ├── scripts/                  # Deployment scripts
 │   ├── deploy.sh             # Multi-environment deployment
@@ -603,6 +604,18 @@ pip install -r requirements.txt
 rm -rf data/chroma_db
 streamlit run src/main.py
 ```
+
+## 📚 Documentation
+
+Comprehensive guides and documentation:
+
+- **[Search Guide](docs/SEARCH_GUIDE.md)** - Understanding search modes and query expansion
+- **[LLM Provider Guide](docs/LLM_PROVIDER_GUIDE.md)** - Switching between Ollama and Groq
+- **[Agent Architecture](docs/AGENT_ARCHITECTURE.md)** - Multi-agent system design
+- **[CLI Guide](CLI_GUIDE.md)** - Complete CLI command reference
+- **[Testing Guide](TESTING_GUIDE.md)** - Running and writing tests
+- **[Production Deployment](PRODUCTION_DEPLOYMENT.md)** - Deploy to production
+- **[Docker Deployment](DOCKER_DEPLOYMENT.md)** - Docker and docker-compose setup
 
 ## 🤝 Contributing
 
