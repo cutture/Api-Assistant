@@ -192,7 +192,7 @@ class SearchRequest(BaseModel):
         0.5, description="Diversification lambda (0=diversity, 1=relevance)", ge=0.0, le=1.0
     )
     min_score: float = Field(
-        0.3, description="Minimum relevance score threshold (0.0-1.0). Results below this score are filtered out.", ge=0.0, le=1.0
+        0.15, description="Minimum relevance score threshold (0.0-1.0). Results below this score are filtered out.", ge=0.0, le=1.0
     )
 
 
