@@ -183,7 +183,7 @@ class SearchRequest(BaseModel):
     """Search request."""
 
     query: str = Field(..., description="Search query", min_length=1)
-    n_results: int = Field(5, description="Number of results to return", ge=1, le=100)
+    n_results: int = Field(5, description="Number of results to return", ge=1, le=500)
     mode: SearchMode = Field(SearchMode.HYBRID, description="Search mode")
     filter: Optional[FilterSpec] = Field(None, description="Filter specification")
     use_query_expansion: bool = Field(False, description="Use query expansion")
@@ -235,7 +235,7 @@ class FacetedSearchRequest(BaseModel):
 
     query: str = Field(..., description="Search query", min_length=1)
     facet_fields: List[str] = Field(..., description="Fields to facet on", min_length=1)
-    n_results: int = Field(20, description="Number of results to return", ge=1, le=100)
+    n_results: int = Field(20, description="Number of results to return", ge=1, le=500)
     filter: Optional[FilterSpec] = Field(None, description="Filter specification")
     top_facet_values: int = Field(10, description="Number of top facet values to return", ge=1, le=50)
 
