@@ -239,18 +239,24 @@ export function DocumentDetailsModal({
                   )}
                 </div>
 
-                {document.metadata?.tags && document.metadata.tags.length > 0 && (
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium text-muted-foreground">Tags</p>
-                    <div className="flex flex-wrap gap-2">
-                      {document.metadata.tags.map((tag: string, index: number) => (
-                        <Badge key={index} variant="outline">
-                          {tag}
-                        </Badge>
-                      ))}
+                {document.metadata?.tags && (() => {
+                  // Handle tags - backend stores as comma-separated string or array
+                  const tags: string[] = Array.isArray(document.metadata.tags)
+                    ? document.metadata.tags
+                    : (document.metadata.tags as string).split(',').filter((t: string) => t.trim());
+                  return tags.length > 0 ? (
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-muted-foreground">Tags</p>
+                      <div className="flex flex-wrap gap-2">
+                        {tags.map((tag: string, index: number) => (
+                          <Badge key={index} variant="outline">
+                            {tag}
+                          </Badge>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  ) : null;
+                })()}
               </div>
             </ScrollArea>
           </TabsContent>
