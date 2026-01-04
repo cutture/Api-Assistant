@@ -72,9 +72,7 @@ export async function sendChatMessage(
     method: "POST",
     url: "/chat",
     data: formData,
-    headers: {
-      // Let browser set Content-Type with boundary for multipart/form-data
-      "Content-Type": undefined,
-    },
+    // Increase timeout for file uploads (2 minutes for processing large PDFs)
+    timeout: 120000,
   });
 }

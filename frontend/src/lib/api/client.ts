@@ -33,17 +33,23 @@ const apiClient: AxiosInstance = axios.create({
  * Request interceptor
  * - Add timestamps for debugging
  * - Log requests in development
+ * - Handle FormData Content-Type automatically
  */
 apiClient.interceptors.request.use(
   (config) => {
     // Add request timestamp
     config.headers["X-Request-Time"] = new Date().toISOString();
 
+    // If data is FormData, remove Content-Type header to let axios set it with boundary
+    if (config.data instanceof FormData) {
+      delete config.headers["Content-Type"];
+    }
+
     // Log in development
     if (process.env.NEXT_PUBLIC_ENABLE_DEBUG === "true") {
       console.log(`[API Request] ${config.method?.toUpperCase()} ${config.url}`, {
         params: config.params,
-        data: config.data,
+        data: config.data instanceof FormData ? "[FormData]" : config.data,
       });
     }
 
