@@ -54,10 +54,38 @@ class Settings(BaseSettings):
     web_search_min_relevance: float = Field(default=0.5)  # Min relevance score before fallback
     web_search_max_results: int = Field(default=5)  # Max web search results to fetch
 
+    # ----- Security -----
+    secret_key: str = Field(
+        default="",
+        description="Secret key for session encryption (REQUIRED in production)"
+    )
+    allowed_origins: str = Field(
+        default="http://localhost:3000,http://localhost:3001",
+        description="Comma-separated list of allowed CORS origins"
+    )
+    api_keys: str = Field(
+        default="",
+        description="Comma-separated list of valid API keys for authentication"
+    )
+    require_auth: bool = Field(
+        default=False,
+        description="Require API key authentication for all endpoints"
+    )
+
     @property
     def allowed_extensions_list(self) -> list[str]:
         """Get allowed extensions as a list."""
         return [ext.strip() for ext in self.allowed_extensions.split(",")]
+
+    @property
+    def cors_origins(self) -> list[str]:
+        """Parse allowed CORS origins into list."""
+        return [origin.strip() for origin in self.allowed_origins.split(",") if origin.strip()]
+
+    @property
+    def api_keys_list(self) -> list[str]:
+        """Parse API keys into list."""
+        return [key.strip() for key in self.api_keys.split(",") if key.strip()]
 
     @property
     def max_upload_size_bytes(self) -> int:

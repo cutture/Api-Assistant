@@ -14,9 +14,11 @@ Date: 2025-12-27
 
 import structlog
 from typing import List, Optional
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile, status
+from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+
+from src.api.auth import verify_api_key
 
 from src.api.models import (
     AddDocumentsRequest,
@@ -61,6 +63,7 @@ from src.api.models import (
     UpdateSessionRequest,
     UserSettings,
 )
+from src.config import get_settings
 from src.core import (
     CombinedFilter,
     ContentFilter,
@@ -104,11 +107,15 @@ def create_app(
         redoc_url="/redoc",
     )
 
-    # Add CORS middleware
+    # Add CORS middleware with secure configuration
     if enable_cors:
+        settings = get_settings()
+        cors_origins = settings.cors_origins
+        logger.info(f"CORS enabled for origins: {cors_origins}")
+
         app.add_middleware(
             CORSMiddleware,
-            allow_origins=["*"],  # Configure appropriately for production
+            allow_origins=cors_origins,  # From environment variable
             allow_credentials=True,
             allow_methods=["*"],
             allow_headers=["*"],
@@ -268,6 +275,7 @@ def create_app(
         files: List[UploadFile] = File(...),
         format: Optional[str] = None,
         document_mode: Optional[str] = None,  # "api_spec" or "general_document"
+        api_key: str = Depends(verify_api_key),
     ):
         """
         Upload and parse documents.
@@ -411,7 +419,10 @@ def create_app(
         status_code=status.HTTP_201_CREATED,
         tags=["Documents"],
     )
-    async def add_documents(request: AddDocumentsRequest):
+    async def add_documents(
+        request: AddDocumentsRequest,
+        api_key: str = Depends(verify_api_key),
+    ):
         """
         Add documents to the collection.
 
@@ -517,7 +528,10 @@ def create_app(
         response_model=DeleteDocumentResponse,
         tags=["Documents"],
     )
-    async def delete_document(document_id: str):
+    async def delete_document(
+        document_id: str,
+        api_key: str = Depends(verify_api_key),
+    ):
         """
         Delete a document by ID.
 
@@ -552,7 +566,10 @@ def create_app(
         response_model=BulkDeleteResponse,
         tags=["Documents"],
     )
-    async def bulk_delete_documents(request: BulkDeleteRequest):
+    async def bulk_delete_documents(
+        request: BulkDeleteRequest,
+        api_key: str = Depends(verify_api_key),
+    ):
         """
         Delete multiple documents by IDs.
 
@@ -589,7 +606,10 @@ def create_app(
 
     # Search Endpoints
     @app.post("/search", response_model=SearchResponse, tags=["Search"])
-    async def search(request: SearchRequest):
+    async def search(
+        request: SearchRequest,
+        api_key: str = Depends(verify_api_key),
+    ):
         """
         Search for documents.
 
@@ -1108,6 +1128,7 @@ def create_app(
         enable_auto_indexing: bool = Form(True),
         agent_type: str = Form("general"),
         files: Optional[List[UploadFile]] = File(None),
+        api_key: str = Depends(verify_api_key),
     ):
         """
         Generate AI-powered chat response with dynamic URL fetching, indexing, and file upload support.
