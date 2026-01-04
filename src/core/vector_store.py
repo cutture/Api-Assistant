@@ -333,7 +333,7 @@ class VectorStore:
         use_hybrid: bool = True,
         use_reranker: bool = False,
         rerank_top_k: Optional[int] = None,
-        min_score: float = 0.1,
+        min_score: float = 0.0,
     ) -> list[dict[str, Any]]:
         """
         Search for similar documents with performance monitoring.
