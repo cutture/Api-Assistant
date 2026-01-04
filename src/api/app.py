@@ -842,9 +842,11 @@ def create_app(
         Get session by ID.
 
         Returns session details including conversation history and settings.
+        This endpoint allows viewing expired sessions for historical reference.
         """
         try:
-            session = session_manager.get_session(session_id)
+            # Allow viewing expired sessions (include_expired=True)
+            session = session_manager.get_session_by_id(session_id, include_expired=True)
 
             if session is None:
                 raise HTTPException(
@@ -976,6 +978,44 @@ def create_app(
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Error deleting session: {str(e)}",
+            )
+
+    @app.post(
+        "/sessions/{session_id}/activate",
+        response_model=Session,
+        tags=["Sessions"],
+    )
+    async def activate_session(session_id: str, ttl_minutes: Optional[int] = None):
+        """
+        Activate an expired or inactive session.
+
+        Resets the expiration time and sets the status to ACTIVE.
+        This allows users to continue using previously expired sessions.
+
+        Args:
+            session_id: The session ID to activate
+            ttl_minutes: Optional new TTL in minutes (uses default if not provided)
+        """
+        try:
+            session = session_manager.activate_session(session_id, ttl_minutes)
+
+            if session is None:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Session not found: {session_id}",
+                )
+
+            logger.info("Session activated via API", session_id=session_id)
+
+            session_dict = session.to_dict()
+            return Session(**session_dict)
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error("Error activating session", session_id=session_id, exc_info=e)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error activating session: {str(e)}",
             )
 
     @app.post(

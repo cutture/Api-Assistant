@@ -367,6 +367,35 @@ class SessionManager:
 
             return session
 
+    def get_session_by_id(self, session_id: str, include_expired: bool = False) -> Optional[Session]:
+        """
+        Get session by ID, optionally including expired sessions.
+
+        This method is useful for viewing session details without activating them.
+
+        Args:
+            session_id: Session identifier
+            include_expired: If True, return expired sessions as well
+
+        Returns:
+            Session if found, None otherwise
+        """
+        with self.lock:
+            session = self.sessions.get(session_id)
+
+            if session is None:
+                return None
+
+            # Update status if expired
+            if session.is_expired():
+                session.status = SessionStatus.EXPIRED
+
+            # If not including expired and session is expired, return None
+            if not include_expired and session.is_expired():
+                return None
+
+            return session
+
     def update_session(self, session_id: str, **kwargs) -> Optional[Session]:
         """
         Update session attributes.
@@ -544,6 +573,45 @@ class SessionManager:
                 session.expires_at += timedelta(minutes=minutes)
 
             logger.info("Session extended", session_id=session_id, minutes=minutes)
+
+            # Persist to file
+            self._save_sessions()
+
+            return session
+
+    def activate_session(self, session_id: str, ttl_minutes: Optional[int] = None) -> Optional[Session]:
+        """
+        Activate an expired or inactive session.
+
+        This resets the expiration time and sets the status to ACTIVE.
+
+        Args:
+            session_id: Session identifier
+            ttl_minutes: New TTL in minutes (uses default if None)
+
+        Returns:
+            Activated Session if found, None otherwise
+        """
+        with self.lock:
+            # Get session regardless of expiration status
+            session = self.get_session_by_id(session_id, include_expired=True)
+
+            if session is None:
+                return None
+
+            # Set new expiration time
+            ttl = timedelta(minutes=ttl_minutes) if ttl_minutes is not None else self.default_ttl
+            session.expires_at = datetime.now() + ttl
+
+            # Activate the session
+            session.status = SessionStatus.ACTIVE
+            session.last_accessed = datetime.now()
+
+            logger.info(
+                "Session activated",
+                session_id=session_id,
+                new_expires_at=session.expires_at.isoformat(),
+            )
 
             # Persist to file
             self._save_sessions()

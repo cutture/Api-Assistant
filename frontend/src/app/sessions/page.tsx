@@ -8,15 +8,16 @@ import { useState } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { SessionManager } from "@/components/sessions/SessionManager";
 import { SessionList } from "@/components/sessions/SessionList";
-import { useSession, useUpdateSession } from "@/hooks/useSessions";
+import { useSession, useUpdateSession, useActivateSession } from "@/hooks/useSessions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, Edit, Save, X } from "lucide-react";
+import { ArrowLeft, Edit, Save, X, PlayCircle } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { SessionStatus } from "@/types";
 
 export default function SessionsPage() {
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
@@ -28,6 +29,7 @@ export default function SessionsPage() {
   });
   const { data: selectedSession } = useSession(selectedSessionId || "");
   const { mutate: updateSession, isPending: isUpdating } = useUpdateSession();
+  const { mutate: activateSession, isPending: isActivating } = useActivateSession();
   const { toast } = useToast();
 
   const handleBackToList = () => {
@@ -90,6 +92,29 @@ export default function SessionsPage() {
     );
   };
 
+  const handleActivateSession = () => {
+    if (!selectedSessionId) return;
+
+    activateSession(
+      { sessionId: selectedSessionId },
+      {
+        onSuccess: () => {
+          toast({
+            title: "Session activated",
+            description: "Session has been reactivated successfully. You can now use it in the chat.",
+          });
+        },
+        onError: (error: any) => {
+          toast({
+            title: "Activation failed",
+            description: error.message || "Failed to activate session",
+            variant: "destructive",
+          });
+        },
+      }
+    );
+  };
+
   return (
     <MainLayout showSidebar={false}>
       <div className="space-y-6">
@@ -117,28 +142,43 @@ export default function SessionsPage() {
                       {selectedSession.session_id}
                     </span>
                   </div>
-                  {!isEditing ? (
-                    <Button variant="outline" size="sm" onClick={handleStartEdit}>
-                      <Edit className="h-4 w-4 mr-2" />
-                      Edit
-                    </Button>
-                  ) : (
-                    <div className="flex space-x-2">
+                  <div className="flex space-x-2">
+                    {/* Show Activate button for expired or inactive sessions */}
+                    {(selectedSession.status === SessionStatus.EXPIRED ||
+                      selectedSession.status === SessionStatus.INACTIVE) && !isEditing && (
                       <Button
-                        variant="outline"
+                        variant="default"
                         size="sm"
-                        onClick={handleCancelEdit}
-                        disabled={isUpdating}
+                        onClick={handleActivateSession}
+                        disabled={isActivating}
                       >
-                        <X className="h-4 w-4 mr-2" />
-                        Cancel
+                        <PlayCircle className="h-4 w-4 mr-2" />
+                        {isActivating ? "Activating..." : "Activate"}
                       </Button>
-                      <Button size="sm" onClick={handleSaveEdit} disabled={isUpdating}>
-                        <Save className="h-4 w-4 mr-2" />
-                        Save
+                    )}
+                    {!isEditing ? (
+                      <Button variant="outline" size="sm" onClick={handleStartEdit}>
+                        <Edit className="h-4 w-4 mr-2" />
+                        Edit
                       </Button>
-                    </div>
-                  )}
+                    ) : (
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleCancelEdit}
+                          disabled={isUpdating}
+                        >
+                          <X className="h-4 w-4 mr-2" />
+                          Cancel
+                        </Button>
+                        <Button size="sm" onClick={handleSaveEdit} disabled={isUpdating}>
+                          <Save className="h-4 w-4 mr-2" />
+                          Save
+                        </Button>
+                      </>
+                    )}
+                  </div>
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">

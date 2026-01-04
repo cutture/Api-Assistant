@@ -125,3 +125,17 @@ export async function getSessionHistory(
     url: `/sessions/${sessionId}`,
   });
 }
+
+/**
+ * Activate an expired or inactive session
+ */
+export async function activateSession(
+  sessionId: string,
+  ttlMinutes?: number
+): Promise<ApiResponse<Session>> {
+  return apiRequest<Session>({
+    method: "POST",
+    url: `/sessions/${sessionId}/activate`,
+    params: ttlMinutes ? { ttl_minutes: ttlMinutes } : undefined,
+  });
+}

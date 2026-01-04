@@ -13,6 +13,7 @@ import {
   deleteSession,
   getSessionStats,
   addMessageToSession,
+  activateSession,
 } from "@/lib/api/sessions";
 import type {
   CreateSessionRequest,
@@ -185,6 +186,37 @@ export function useAddMessageToSession() {
     onSuccess: (data, variables) => {
       // Invalidate the specific session to refetch with new message
       queryClient.invalidateQueries({ queryKey: ["session", variables.sessionId] });
+    },
+  });
+}
+
+/**
+ * Mutation hook for activating an expired or inactive session
+ */
+export function useActivateSession() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      sessionId,
+      ttlMinutes,
+    }: {
+      sessionId: string;
+      ttlMinutes?: number;
+    }) => {
+      const response = await activateSession(sessionId, ttlMinutes);
+
+      if (response.error) {
+        throw new Error(response.error);
+      }
+
+      return response.data;
+    },
+    onSuccess: (data, variables) => {
+      // Invalidate the specific session, sessions list, and stats
+      queryClient.invalidateQueries({ queryKey: ["session", variables.sessionId] });
+      queryClient.invalidateQueries({ queryKey: ["sessions"] });
+      queryClient.invalidateQueries({ queryKey: ["session-stats"] });
     },
   });
 }
