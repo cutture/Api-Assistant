@@ -308,6 +308,7 @@ class VectorStore:
         use_hybrid: bool = True,
         use_reranker: bool = False,
         rerank_top_k: Optional[int] = None,
+        min_score: float = 0.3,
     ) -> list[dict[str, Any]]:
         """
         Search for similar documents with performance monitoring.
@@ -321,6 +322,7 @@ class VectorStore:
         - If use_reranker=True: Retrieve candidates → Re-rank with cross-encoder
         - If use_hybrid=True: BM25 + Vector with RRF fusion
         - Otherwise: Pure vector search
+        - Filter results by minimum score threshold
 
         Args:
             query: The search query.
@@ -330,9 +332,10 @@ class VectorStore:
             use_hybrid: Use hybrid search if available (default: True).
             use_reranker: Use cross-encoder re-ranking (default: False).
             rerank_top_k: Number of candidates to retrieve before re-ranking (default: n_results * 3).
+            min_score: Minimum relevance score threshold (0.0-1.0). Results below this are filtered out (default: 0.3).
 
         Returns:
-            List of search results with content, metadata, and similarity score.
+            List of search results with content, metadata, and similarity score (filtered by min_score).
         """
         # Store original filter object for client-side filtering if needed
         original_filter = where if isinstance(where, Filter) else None
@@ -364,7 +367,17 @@ class VectorStore:
                 candidates = FacetedSearch.apply_client_side_filter(candidates, original_filter)
 
             # Re-rank with cross-encoder
-            return self._rerank_results(query, candidates, n_results)
+            results = self._rerank_results(query, candidates, n_results)
+
+            # Filter by minimum score threshold
+            filtered_results = [r for r in results if r.get("score", 0) >= min_score]
+            logger.debug(
+                "Score filtering applied",
+                original_count=len(results),
+                filtered_count=len(filtered_results),
+                min_score=min_score
+            )
+            return filtered_results
         else:
             # Standard search without re-ranking
             use_hybrid_mode = use_hybrid and self.enable_hybrid_search and self._bm25 is not None
@@ -381,7 +394,15 @@ class VectorStore:
                 from src.core.advanced_filtering import FacetedSearch
                 results = FacetedSearch.apply_client_side_filter(results, original_filter)
 
-            return results
+            # Filter by minimum score threshold
+            filtered_results = [r for r in results if r.get("score", 0) >= min_score]
+            logger.debug(
+                "Score filtering applied",
+                original_count=len(results),
+                filtered_count=len(filtered_results),
+                min_score=min_score
+            )
+            return filtered_results
 
     def _vector_search_impl(
         self,

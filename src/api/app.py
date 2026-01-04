@@ -632,6 +632,7 @@ def create_app(
                 where=filter_obj,
                 use_hybrid=use_hybrid,
                 use_reranker=use_reranker,
+                min_score=request.min_score,
             )
 
             # Apply diversification if requested

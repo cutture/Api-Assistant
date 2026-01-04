@@ -37,6 +37,7 @@ export interface SearchRequest {
   use_query_expansion?: boolean;
   use_diversification?: boolean;
   diversification_lambda?: number;
+  min_score?: number;
 }
 
 export interface SearchFilters {
