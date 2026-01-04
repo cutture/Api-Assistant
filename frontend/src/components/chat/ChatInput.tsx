@@ -29,7 +29,10 @@ export function ChatInput({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if ((message.trim() || attachedFiles.length > 0) && !isLoading) {
-      onSend(message.trim(), attachedFiles.length > 0 ? attachedFiles : undefined);
+      // If no message but files present, use default message
+      const messageToSend = message.trim() || (attachedFiles.length > 0 ? "Analyze these files" : "");
+
+      onSend(messageToSend, attachedFiles.length > 0 ? attachedFiles : undefined);
       setMessage("");
       setAttachedFiles([]);
       // Reset textarea height
