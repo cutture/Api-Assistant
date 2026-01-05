@@ -219,11 +219,20 @@ ollama serve
 
 ### 6. Run the application
 
+**Backend (FastAPI):**
 ```bash
-streamlit run src/main.py
+# Terminal 1 - Start FastAPI backend
+uvicorn src.api.app:app --reload --port 8000
 ```
 
-Open your browser to `http://localhost:8501`
+**Frontend (Next.js):**
+```bash
+# Terminal 2 - Start Next.js frontend
+cd frontend
+npm run dev
+```
+
+Open your browser to `http://localhost:3000`
 
 ## 📖 Usage Guide
 
@@ -602,7 +611,7 @@ pip install -r requirements.txt
 ```bash
 # Clear database and restart
 rm -rf data/chroma_db
-streamlit run src/main.py
+uvicorn src.api.app:app --reload --port 8000
 ```
 
 ## 📚 Documentation
@@ -654,7 +663,8 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - [Ollama](https://ollama.com/) for local LLM inference
 - [Groq](https://groq.com/) for lightning-fast cloud inference
 - [ChromaDB](https://www.trychroma.com/) for vector storage
-- [Streamlit](https://streamlit.io/) for rapid UI development
+- [Next.js](https://nextjs.org/) & [React](https://react.dev/) for modern web frontend
+- [FastAPI](https://fastapi.tiangolo.com/) for high-performance REST API
 - [Langfuse](https://langfuse.com/) for LLM observability
 
 ---
