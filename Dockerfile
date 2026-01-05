@@ -4,7 +4,7 @@
 # ============================================================================
 
 # ----- Stage 1: Builder -----
-FROM python:3.11-slim as builder
+FROM python:3.11-slim AS builder
 
 # Set working directory
 WORKDIR /build
@@ -36,10 +36,7 @@ LABEL version="0.2.0"
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PATH="/opt/venv/bin:$PATH" \
-    STREAMLIT_SERVER_PORT=8501 \
-    STREAMLIT_SERVER_ADDRESS=0.0.0.0 \
-    STREAMLIT_SERVER_HEADLESS=true \
-    STREAMLIT_BROWSER_GATHER_USAGE_STATS=false
+    PORT=8000
 
 # Create non-root user
 RUN groupadd -r appuser && useradd -r -g appuser -u 1000 appuser
@@ -65,12 +62,12 @@ RUN mkdir -p /app/data/chroma_db /app/logs && \
 # Switch to non-root user
 USER appuser
 
-# Expose Streamlit port
-EXPOSE 8501
+# Expose port (Railway will override with $PORT)
+EXPOSE 8000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD curl -f http://localhost:8501/_stcore/health || exit 1
+    CMD curl -f http://localhost:${PORT:-8000}/health || exit 1
 
-# Run the application
-CMD ["streamlit", "run", "src/main.py", "--server.port=8501", "--server.address=0.0.0.0"]
+# Run FastAPI application
+CMD ["sh", "-c", "uvicorn src.api.app:app --host 0.0.0.0 --port ${PORT:-8000}"]

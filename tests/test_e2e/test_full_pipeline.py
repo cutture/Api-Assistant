@@ -338,48 +338,9 @@ class TestLLMProviderSwitching:
                 assert client.model == "llama-3.3-70b-versatile"
 
 
-class TestConversationContext:
-    """Test conversation history and context management."""
-
-    def test_context_with_short_history(self):
-        """Test context building with short conversation history."""
-        from src.main import _build_conversation_context
-
-        messages = [
-            {"role": "user", "content": "What is this API?"},
-            {"role": "assistant", "content": "This is a REST API for managing users."},
-            {"role": "user", "content": "How do I create a user?"},
-            {"role": "assistant", "content": "Use POST /users endpoint."},
-        ]
-
-        context = _build_conversation_context(messages)
-
-        # Should include all messages for short history
-        assert "What is this API?" in context
-        assert "How do I create a user?" in context
-        assert len(context) > 0
-
-    def test_context_with_long_history(self):
-        """Test context building with long conversation (uses summarization)."""
-        from src.main import _build_conversation_context
-
-        # Create long message history (> 12 messages = > 6 exchanges)
-        messages = []
-        for i in range(15):
-            messages.append({"role": "user", "content": f"Question {i}"})
-            messages.append({"role": "assistant", "content": f"Answer {i}"})
-
-        with patch('src.main.get_llm_client') as mock_get_llm:
-            mock_client = MagicMock()
-            mock_client.generate.return_value = "Summary of middle exchanges"
-            mock_get_llm.return_value = mock_client
-
-            context = _build_conversation_context(messages)
-
-        # Should include first 3, summary, and last 3
-        assert "Question 0" in context  # First exchange
-        assert "Question 14" in context  # Last exchange
-        assert "Summary" in context or "summary" in context.lower()
+# TestConversationContext class removed - tested Streamlit UI functionality (src/main.py)
+# which has been replaced by FastAPI chat service (src/services/chat_service.py)
+# Conversation context is now handled by ChatService with simpler last-N-messages approach
 
 
 class TestErrorHandling:
