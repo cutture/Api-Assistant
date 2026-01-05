@@ -32,11 +32,10 @@ LABEL maintainer="API Integration Assistant Team"
 LABEL description="AI-powered API integration assistant with RAG and code generation"
 LABEL version="0.2.0"
 
-# Set environment variables
+# Set environment variables (no hardcoded PORT - let Railway set it dynamically)
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    PATH="/opt/venv/bin:$PATH" \
-    PORT=8000
+    PATH="/opt/venv/bin:$PATH"
 
 # Create non-root user
 RUN groupadd -r appuser && useradd -r -g appuser -u 1000 appuser
@@ -52,6 +51,10 @@ WORKDIR /app
 # Copy virtual environment from builder
 COPY --from=builder /opt/venv /opt/venv
 
+# Copy entrypoint script first (before changing ownership)
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
 # Copy application code
 COPY --chown=appuser:appuser . .
 
@@ -62,12 +65,12 @@ RUN mkdir -p /app/data/chroma_db /app/logs && \
 # Switch to non-root user
 USER appuser
 
-# Expose port (Railway will override with $PORT)
+# Expose port (Railway will set $PORT dynamically)
 EXPOSE 8000
 
-# Health check
+# Health check (Railway will check the /health endpoint on the dynamically assigned PORT)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD curl -f http://localhost:${PORT:-8000}/health || exit 1
 
-# Run FastAPI application
-CMD ["sh", "-c", "uvicorn src.api.app:app --host 0.0.0.0 --port ${PORT:-8000}"]
+# Use entrypoint script for better logging and port handling
+CMD ["/usr/local/bin/docker-entrypoint.sh"]
