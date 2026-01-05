@@ -51,12 +51,9 @@ WORKDIR /app
 # Copy virtual environment from builder
 COPY --from=builder /opt/venv /opt/venv
 
-# Copy entrypoint script first (before changing ownership)
-COPY docker-entrypoint.sh /usr/local/bin/
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh
-
-# Copy application code
-COPY --chown=appuser:appuser . .
+# Copy application code (before switching to appuser)
+COPY . .
+RUN chown -R appuser:appuser /app
 
 # Create necessary directories with proper permissions
 RUN mkdir -p /app/data/chroma_db /app/logs && \
@@ -72,5 +69,7 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD curl -f http://localhost:${PORT:-8000}/health || exit 1
 
-# Use entrypoint script for better logging and port handling
-CMD ["/usr/local/bin/docker-entrypoint.sh"]
+# Start the application
+# Use shell form to allow PORT environment variable expansion
+# Railway sets PORT automatically, defaults to 8000 if not set
+CMD uvicorn src.api.app:app --host 0.0.0.0 --port ${PORT:-8000}
