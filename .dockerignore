@@ -1,0 +1,89 @@
+# ============================================================================
+# .dockerignore - Exclude unnecessary files from Docker build context
+# ============================================================================
+
+# Python cache and bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+*.cover
+.tox/
+.nox/
+
+# Development tools
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Docker
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Documentation (not needed in runtime)
+*.md
+docs/
+*.rst
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+
+# Environment files (use env vars instead)
+.env
+.env.*
+*.env
+
+# Data directories (use volumes instead)
+data/
+logs/
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+*.tmp
+
+# Large model files (should be downloaded at runtime)
+*.bin
+*.gguf
+*.safetensors
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Jupyter notebooks
+*.ipynb
+.ipynb_checkpoints/
+
+# Archives
+*.zip
+*.tar.gz
+*.rar
+
+# Temporary files
+tmp/
+temp/

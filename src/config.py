@@ -25,13 +25,18 @@ class Settings(BaseSettings):
     debug: bool = Field(default=False)
     log_level: str = Field(default="INFO")
 
+    # ----- LLM Provider -----
+    llm_provider: str = Field(default="ollama")  # "ollama" or "groq"
+
     # ----- Ollama (Local LLM) -----
     ollama_base_url: str = Field(default="http://localhost:11434")
     ollama_model: str = Field(default="deepseek-coder:6.7b")
 
-    # ----- Groq (Cloud Fallback) -----
+    # ----- Groq (Cloud LLM) -----
     groq_api_key: Optional[str] = Field(default=None)
-    groq_model: str = Field(default="llama-3.3-70b-versatile")
+    groq_reasoning_model: str = Field(default="llama-3.3-70b-versatile")  # For QueryAnalyzer, DocAnalyzer
+    groq_code_model: str = Field(default="llama-3.3-70b-versatile")  # For CodeGenerator
+    groq_general_model: str = Field(default="llama-3.3-70b-versatile")  # For RAGAgent
 
     # ----- Embeddings -----
     embedding_model: str = Field(default="all-MiniLM-L6-v2")
@@ -44,10 +49,43 @@ class Settings(BaseSettings):
     max_upload_size_mb: int = Field(default=10)
     allowed_extensions: str = Field(default="json,yaml,yml,md,txt")
 
+    # ----- Web Search (Fallback) -----
+    enable_web_search: bool = Field(default=True)  # Enable web search fallback
+    web_search_min_relevance: float = Field(default=0.5)  # Min relevance score before fallback
+    web_search_max_results: int = Field(default=5)  # Max web search results to fetch
+
+    # ----- Security -----
+    secret_key: str = Field(
+        default="",
+        description="Secret key for session encryption (REQUIRED in production)"
+    )
+    allowed_origins: str = Field(
+        default="http://localhost:3000,http://localhost:3001",
+        description="Comma-separated list of allowed CORS origins"
+    )
+    api_keys: str = Field(
+        default="",
+        description="Comma-separated list of valid API keys for authentication"
+    )
+    require_auth: bool = Field(
+        default=False,
+        description="Require API key authentication for all endpoints"
+    )
+
     @property
     def allowed_extensions_list(self) -> list[str]:
         """Get allowed extensions as a list."""
         return [ext.strip() for ext in self.allowed_extensions.split(",")]
+
+    @property
+    def cors_origins(self) -> list[str]:
+        """Parse allowed CORS origins into list."""
+        return [origin.strip() for origin in self.allowed_origins.split(",") if origin.strip()]
+
+    @property
+    def api_keys_list(self) -> list[str]:
+        """Parse API keys into list."""
+        return [key.strip() for key in self.api_keys.split(",") if key.strip()]
 
     @property
     def max_upload_size_bytes(self) -> int:

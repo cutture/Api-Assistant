@@ -19,9 +19,22 @@ from src.config import settings
 from src.core.embeddings import EmbeddingService
 from src.core.vector_store import VectorStore
 from src.core.llm_client import LLMClient
+from src.core.monitoring import initialize_monitoring
+from src.core.logging_config import (
+    configure_development_logging,
+    configure_production_logging,
+    set_request_id,
+)
+from src.core.security import (
+    ValidationError,
+    get_validator,
+    get_sanitizer,
+)
 from src.parsers.openapi_parser import OpenAPIParser
+from src.agents import create_supervisor
 from src.ui.sidebar import render_sidebar
 from src.ui.chat import render_chat, init_chat_state, clear_chat_history
+import structlog
 
 
 # ----- Initialize Services (cached) -----
@@ -50,34 +63,69 @@ def get_openapi_parser() -> OpenAPIParser:
     return OpenAPIParser()
 
 
+@st.cache_resource
+def get_supervisor():
+    """Get cached Supervisor agent."""
+    # Initialize logging if not already done
+    if settings.debug:
+        configure_development_logging()
+    else:
+        configure_production_logging()
+
+    # Initialize monitoring if not already done
+    initialize_monitoring()
+
+    vector_store = get_vector_store()  # VectorStore instance is returned directly
+
+    # create_supervisor now handles creating specialized LLM clients internally
+    # based on LLM_PROVIDER setting (ollama or groq)
+    return create_supervisor(vector_store=vector_store)
+
+
 # ----- File Processing -----
 
 def process_uploaded_files(uploaded_files: list) -> None:
     """
-    Process uploaded API specification files.
-    
+    Process uploaded API specification files with security validation.
+
     Args:
         uploaded_files: List of Streamlit uploaded file objects.
     """
     if not uploaded_files:
         return
-    
+
     vector_store = get_vector_store()
     parser = get_openapi_parser()
-    
+    validator = get_validator()
+    sanitizer = get_sanitizer()
+
     progress_bar = st.progress(0, text="Processing files...")
     total_files = len(uploaded_files)
     total_endpoints = 0
-    
+
     for i, uploaded_file in enumerate(uploaded_files):
         progress_bar.progress(
             (i + 1) / total_files,
             text=f"Processing: {uploaded_file.name}"
         )
-        
+
         try:
+            # Security validation
+            # 1. Validate filename
+            safe_filename = sanitizer.sanitize_filename(uploaded_file.name)
+            validator.validate_file_extension(safe_filename)
+
+            # 2. Validate file size
+            file_size = uploaded_file.size
+            validator.validate_file_size(file_size)
+
             # Read file content
             content = uploaded_file.read().decode("utf-8")
+
+            # 3. Validate content length
+            if len(content) > 10 * 1024 * 1024:  # 10MB content limit
+                st.error(f"❌ {safe_filename}: File content too large")
+                continue
             
             # Check if we can parse it
             if not parser.can_parse(content):
@@ -85,7 +133,7 @@ def process_uploaded_files(uploaded_files: list) -> None:
                 continue
             
             # Parse the spec
-            parsed_doc = parser.parse(content, source_file=uploaded_file.name)
+            parsed_doc = parser.parse(content, source_file=safe_filename)
             
             # Prepare documents for vector store
             documents = []
@@ -107,8 +155,10 @@ def process_uploaded_files(uploaded_files: list) -> None:
             vector_store.add_documents(documents)
             total_endpoints += len(parsed_doc.endpoints)
             
-            st.success(f"✅ Processed {uploaded_file.name}: {len(parsed_doc.endpoints)} endpoints")
-            
+            st.success(f"✅ Processed {safe_filename}: {len(parsed_doc.endpoints)} endpoints")
+
+        except ValidationError as e:
+            st.error(f"❌ Validation error for {uploaded_file.name}: {e.message}")
         except Exception as e:
             st.error(f"❌ Error processing {uploaded_file.name}: {str(e)}")
     
@@ -129,70 +179,231 @@ def clear_data() -> None:
     st.success("🗑️ All data cleared!")
 
 
-# ----- RAG Pipeline -----
+# -----  Agent Pipeline -----
+
+def _build_conversation_context(messages: list) -> str:
+    """
+    Build intelligent conversation context with first 3, summary, and last 3 exchanges.
+
+    Strategy:
+    - If <= 12 messages (6 exchanges): Include all
+    - If > 12 messages: First 6 + Summary of middle + Last 6
+
+    Args:
+        messages: List of conversation messages
+
+    Returns:
+        Formatted conversation context string
+    """
+    if len(messages) <= 1:
+        return ""
+
+    # If conversation is short (<=6 exchanges), include all
+    if len(messages) <= 12:
+        context_parts = []
+        for msg in messages:
+            role = msg.get("role", "")
+            content = msg.get("content", "")[:200]
+            if role == "user":
+                context_parts.append(f"User: {content}")
+            elif role == "assistant":
+                context_parts.append(f"Assistant: {content}")
+
+        if context_parts:
+            return "\n".join(context_parts) + "\n\nCurrent question: "
+
+    # For long conversations: First 3 + Summary + Last 3
+    else:
+        context_parts = []
+
+        # First 3 exchanges (6 messages)
+        first_messages = messages[:6]
+        context_parts.append("=== Initial Conversation ===")
+        for msg in first_messages:
+            role = msg.get("role", "")
+            content = msg.get("content", "")[:200]
+            if role == "user":
+                context_parts.append(f"User: {content}")
+            elif role == "assistant":
+                context_parts.append(f"Assistant: {content}")
+
+        # Summary of middle conversations
+        middle_messages = messages[6:-6]
+        if middle_messages:
+            summary = _summarize_conversation(middle_messages)
+            context_parts.append(f"\n=== Summary of {len(middle_messages)//2} middle exchanges ===")
+            context_parts.append(summary)
+
+        # Last 3 exchanges (6 messages)
+        last_messages = messages[-6:]
+        context_parts.append("\n=== Recent Conversation ===")
+        for msg in last_messages:
+            role = msg.get("role", "")
+            content = msg.get("content", "")[:200]
+            if role == "user":
+                context_parts.append(f"User: {content}")
+            elif role == "assistant":
+                context_parts.append(f"Assistant: {content}")
+
+        return "\n".join(context_parts) + "\n\nCurrent question: "
+
+
+def _summarize_conversation(messages: list) -> str:
+    """
+    Summarize middle conversation exchanges using LLM.
+
+    Args:
+        messages: List of messages to summarize
+
+    Returns:
+        Summary string
+    """
+    if not messages:
+        return "No middle conversation to summarize."
+
+    # Build conversation text
+    conversation_text = []
+    for msg in messages:
+        role = msg.get("role", "")
+        content = msg.get("content", "")
+        if role == "user":
+            conversation_text.append(f"User: {content}")
+        elif role == "assistant":
+            conversation_text.append(f"Assistant: {content}")
+
+    conversation = "\n".join(conversation_text)
+
+    # Use LLM to summarize
+    try:
+        llm_client = get_llm_client()
+        summary_prompt = f"""Summarize the following conversation exchanges concisely.
+Focus on key topics discussed, questions asked, and important context.
+Keep the summary under 150 words.
+
+Conversation:
+{conversation}
+
+Provide a brief summary:"""
+
+        summary = llm_client.generate(
+            prompt=summary_prompt,
+            system_prompt="You are a concise conversation summarizer. Extract key points and context.",
+            temperature=0.3,
+            max_tokens=300,
+        )
+
+        return summary.strip()
+
+    except Exception as e:
+        # Fallback: Simple summary
+        num_exchanges = len(messages) // 2
+        return f"The user asked {num_exchanges} questions about API endpoints, authentication, and code generation. The assistant provided relevant information from the documentation."
+
+
+def generate_response_with_agents(user_query: str) -> dict:
+    """
+    Generate a response using the Supervisor agent orchestration with security validation.
+
+    Args:
+        user_query: The user's question.
+
+    Returns:
+        Dict with response, sources, code_snippets, and agent metadata
+    """
+    # Set request ID for tracking
+    request_id = set_request_id()
+    logger = structlog.get_logger(__name__)
+    sanitizer = get_sanitizer()
+
+    try:
+        # Security: Sanitize user query
+        try:
+            safe_query = sanitizer.sanitize_query(user_query, max_length=2000)
+        except ValidationError as e:
+            logger.warning("query_validation_failed", error=e.message)
+            return {
+                "response": f"⚠️ Invalid query: {e.message}\n\nPlease rephrase your question without special characters or SQL keywords.",
+                "sources": [],
+                "code_snippets": [],
+                "error": {"message": e.message, "type": "validation_error"},
+                "processing_path": [],
+            }
+
+        supervisor = get_supervisor()
+
+        # Build intelligent conversation context
+        conversation_context = ""
+        if "messages" in st.session_state and len(st.session_state.messages) > 1:
+            conversation_context = _build_conversation_context(st.session_state.messages)
+
+        # Combine context with current query (use sanitized query)
+        contextualized_query = conversation_context + safe_query if conversation_context else safe_query
+
+        logger.info(
+            "user_query_received",
+            query_length=len(safe_query),
+            has_context=bool(conversation_context),
+        )
+
+        # Process query through supervisor
+        result = supervisor.process(contextualized_query)
+
+        # Extract response and metadata
+        response_data = {
+            "response": result.get("response", "No response generated."),
+            "sources": result.get("retrieved_documents", []),
+            "code_snippets": result.get("code_snippets", []),
+            "intent": result.get("intent_analysis", {}),
+            "processing_path": result.get("processing_path", []),
+            "error": result.get("error"),
+        }
+
+        logger.info(
+            "query_processed_successfully",
+            intent=result.get("intent_analysis", {}).get("intent"),
+            sources_count=len(response_data["sources"]),
+            code_snippets_count=len(response_data["code_snippets"]),
+        )
+
+        return response_data
+
+    except Exception as e:
+        logger.error(
+            "query_processing_failed",
+            error_type=type(e).__name__,
+            error_message=str(e),
+        )
+
+        return {
+            "response": f"❌ Error processing query: {str(e)}\n\nPlease make sure Ollama is running with the model loaded.",
+            "sources": [],
+            "code_snippets": [],
+            "error": {"message": str(e)},
+            "processing_path": [],
+        }
+
 
 def generate_response(user_query: str) -> Generator[str, None, None]:
     """
-    Generate a response to the user query using RAG.
-    
+    Generate a response to the user query using the agent system.
+
+    This is a compatibility wrapper that yields text chunks for the chat UI.
+
     Args:
         user_query: The user's question.
-        
+
     Yields:
         Response chunks for streaming.
     """
-    vector_store = get_vector_store()
-    llm_client = get_llm_client()
-    
-    # Get current settings from session state
-    sidebar_settings = st.session_state.get("sidebar_settings", {})
-    n_results = sidebar_settings.get("n_results", 5)
-    temperature = sidebar_settings.get("temperature", 0.7)
-    max_tokens = sidebar_settings.get("max_tokens", 2048)
-    
-    # Search for relevant context
-    search_results = vector_store.search(user_query, n_results=n_results)
-    
-    # Build context from search results
-    if search_results:
-        context_parts = []
-        for i, result in enumerate(search_results, 1):
-            context_parts.append(f"--- Document {i} (relevance: {result['score']:.0%}) ---\n{result['content']}")
-        
-        context = "\n\n".join(context_parts)
-    else:
-        context = "No relevant API documentation found in the knowledge base."
-    
-    # Build prompt
-    system_prompt = """You are an expert API Integration Assistant. Your role is to help developers understand and integrate APIs.
+    # Process with agents
+    result = generate_response_with_agents(user_query)
 
-Based on the provided API documentation context, answer the user's question accurately and helpfully.
+    # Store result in session state for rendering
+    st.session_state.last_agent_result = result
 
-Guidelines:
-- Be concise but thorough
-- Include code examples when relevant (use Python by default)
-- Reference specific endpoints, parameters, and response schemas from the context
-- If the context doesn't contain enough information, say so clearly
-- Format code blocks properly with appropriate language tags
-
-API Documentation Context:
-{context}
-""".format(context=context)
-
-    user_prompt = f"Question: {user_query}"
-    
-    # Stream response from LLM
-    try:
-        for chunk in llm_client.generate_stream(
-            prompt=user_prompt,
-            system_prompt=system_prompt,
-            temperature=temperature,
-            max_tokens=max_tokens,
-        ):
-            yield chunk
-            
-    except Exception as e:
-        yield f"\n\n❌ Error generating response: {str(e)}\n\nPlease make sure Ollama is running with the model loaded."
+    # Yield the response text
+    response = result.get("response", "")
+    yield response
 
 
 # ----- Main Application -----

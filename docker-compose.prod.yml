@@ -1,0 +1,87 @@
+version: '3.8'
+
+# ============================================================================
+# Production Docker Compose - Cloud Deployment with Groq
+# This configuration uses cloud LLM (Groq) instead of local Ollama
+# Suitable for production deployment where GPU is not available
+# ============================================================================
+
+services:
+  # ============================================================================
+  # API Integration Assistant - Main Application (Production)
+  # ============================================================================
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: api-assistant-app-prod
+    image: api-assistant:prod
+    ports:
+      - "${APP_PORT:-8501}:8501"
+    environment:
+      # Application settings
+      - APP_NAME=API Integration Assistant
+      - DEBUG=false
+      - LOG_LEVEL=INFO
+
+      # Use Groq for production (cloud LLM)
+      - LLM_PROVIDER=groq
+
+      # Groq API credentials (REQUIRED)
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - GROQ_REASONING_MODEL=${GROQ_REASONING_MODEL:-llama-3.3-70b-versatile}
+      - GROQ_CODE_MODEL=${GROQ_CODE_MODEL:-llama-3.3-70b-versatile}
+      - GROQ_GENERAL_MODEL=${GROQ_GENERAL_MODEL:-llama-3.3-70b-versatile}
+
+      # Embeddings
+      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-all-MiniLM-L6-v2}
+
+      # ChromaDB
+      - CHROMA_PERSIST_DIR=/app/data/chroma_db
+      - CHROMA_COLLECTION_NAME=api_docs
+
+      # Web search
+      - ENABLE_WEB_SEARCH=${ENABLE_WEB_SEARCH:-true}
+      - WEB_SEARCH_MIN_RELEVANCE=0.5
+      - WEB_SEARCH_MAX_RESULTS=5
+    volumes:
+      # Persistent data
+      - chroma_data:/app/data/chroma_db:rw
+      - app_logs:/app/logs:rw
+    networks:
+      - api-assistant-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '1'
+          memory: 2G
+
+# ============================================================================
+# Named Volumes for Data Persistence
+# ============================================================================
+volumes:
+  # ChromaDB vector store data
+  chroma_data:
+    driver: local
+
+  # Application logs
+  app_logs:
+    driver: local
+
+# ============================================================================
+# Network Configuration
+# ============================================================================
+networks:
+  api-assistant-network:
+    driver: bridge
+    name: api-assistant-prod-network

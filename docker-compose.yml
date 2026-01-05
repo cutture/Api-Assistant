@@ -1,0 +1,145 @@
+version: '3.8'
+
+services:
+  # ============================================================================
+  # API Integration Assistant - Main Application
+  # ============================================================================
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: api-assistant-app
+    image: api-assistant:latest
+    ports:
+      - "8501:8501"
+    environment:
+      # Application settings
+      - APP_NAME=API Integration Assistant
+      - DEBUG=false
+      - LOG_LEVEL=INFO
+
+      # LLM Provider (ollama or groq)
+      - LLM_PROVIDER=${LLM_PROVIDER:-ollama}
+
+      # Ollama settings (for local LLM)
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-deepseek-coder:6.7b}
+
+      # Groq settings (for cloud LLM)
+      - GROQ_API_KEY=${GROQ_API_KEY:-}
+      - GROQ_REASONING_MODEL=${GROQ_REASONING_MODEL:-llama-3.3-70b-versatile}
+      - GROQ_CODE_MODEL=${GROQ_CODE_MODEL:-llama-3.3-70b-versatile}
+      - GROQ_GENERAL_MODEL=${GROQ_GENERAL_MODEL:-llama-3.3-70b-versatile}
+
+      # Embeddings
+      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-all-MiniLM-L6-v2}
+
+      # ChromaDB
+      - CHROMA_PERSIST_DIR=/app/data/chroma_db
+      - CHROMA_COLLECTION_NAME=api_docs
+
+      # Web search
+      - ENABLE_WEB_SEARCH=${ENABLE_WEB_SEARCH:-true}
+      - WEB_SEARCH_MIN_RELEVANCE=0.5
+      - WEB_SEARCH_MAX_RESULTS=5
+    volumes:
+      # Persistent data
+      - chroma_data:/app/data/chroma_db
+      - app_logs:/app/logs
+
+      # Optional: Mount local .env file
+      # - ./.env:/app/.env:ro
+    depends_on:
+      ollama:
+        condition: service_healthy
+    networks:
+      - api-assistant-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # ============================================================================
+  # Ollama - Local LLM Server
+  # ============================================================================
+  ollama:
+    image: ollama/ollama:latest
+    container_name: api-assistant-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - api-assistant-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    # Optional: Enable GPU support (requires nvidia-docker)
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
+  # ============================================================================
+  # Ollama Model Puller - One-time service to download models
+  # ============================================================================
+  ollama-puller:
+    image: ollama/ollama:latest
+    container_name: api-assistant-ollama-puller
+    depends_on:
+      ollama:
+        condition: service_healthy
+    networks:
+      - api-assistant-network
+    environment:
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-deepseek-coder:6.7b}
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - |
+        echo "Pulling model: $${OLLAMA_MODEL}..."
+        ollama pull $${OLLAMA_MODEL} --host http://ollama:11434
+        echo "Model pulled successfully!"
+    restart: "no"
+
+# ============================================================================
+# Named Volumes for Data Persistence
+# ============================================================================
+volumes:
+  # ChromaDB vector store data
+  chroma_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data/chroma_db
+
+  # Application logs
+  app_logs:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./logs
+
+  # Ollama models and data
+  ollama_data:
+    driver: local
+
+# ============================================================================
+# Network Configuration
+# ============================================================================
+networks:
+  api-assistant-network:
+    driver: bridge
+    name: api-assistant-network

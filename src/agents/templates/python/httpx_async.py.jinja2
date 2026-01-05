@@ -1,0 +1,156 @@
+"""
+{{ description }}
+
+Generated async code for: {{ method }} {{ endpoint }}
+"""
+import asyncio
+import httpx
+{% if auth_type == "bearer" %}
+from typing import Optional, Dict, Any
+{% else %}
+from typing import Dict, Any
+{% endif %}
+
+
+async def {{ function_name }}(
+{%- if path_params %}
+    {% for param in path_params %}
+    {{ param.name }}: {{ param.python_type }},
+    {% endfor %}
+{%- endif %}
+{%- if method == "POST" or method == "PUT" or method == "PATCH" %}
+    data: Dict[str, Any],
+{%- endif %}
+{%- if query_params %}
+    {% for param in query_params %}
+    {{ param.name }}: {{ param.python_type }}{{ " = " + param.default if param.default else "" }},
+    {% endfor %}
+{%- endif %}
+{%- if auth_type == "bearer" %}
+    access_token: Optional[str] = None,
+{%- elif auth_type == "api_key" %}
+    api_key: Optional[str] = None,
+{%- endif %}
+    base_url: str = "{{ base_url }}"
+) -> dict:
+    """
+    {{ operation_description }}
+
+    Args:
+{%- if path_params %}
+    {% for param in path_params %}
+        {{ param.name }}: {{ param.description }}
+    {% endfor %}
+{%- endif %}
+{%- if method == "POST" or method == "PUT" or method == "PATCH" %}
+        data: Request body data
+{%- endif %}
+{%- if query_params %}
+    {% for param in query_params %}
+        {{ param.name }}: {{ param.description }}
+    {% endfor %}
+{%- endif %}
+{%- if auth_type == "bearer" %}
+        access_token: Bearer token for authentication
+{%- elif auth_type == "api_key" %}
+        api_key: API key for authentication
+{%- endif %}
+        base_url: API base URL
+
+    Returns:
+        Response data as dictionary
+
+    Raises:
+        httpx.HTTPStatusError: If the request fails
+    """
+    # Build URL
+{%- if path_params %}
+    url = f"{base_url}{{ endpoint_template }}"
+{%- else %}
+    url = f"{base_url}{{ endpoint }}"
+{%- endif %}
+
+    # Prepare headers
+    headers = {
+        "Accept": "application/json",
+{%- if method == "POST" or method == "PUT" or method == "PATCH" %}
+        "Content-Type": "application/json",
+{%- endif %}
+{%- if auth_type == "bearer" %}
+    }
+    if access_token:
+        headers["Authorization"] = f"Bearer {access_token}"
+{%- elif auth_type == "api_key" %}
+    }
+    if api_key:
+        headers["{{ api_key_header }}"] = api_key
+{%- else %}
+    }
+{%- endif %}
+
+{%- if query_params %}
+    # Prepare query parameters
+    params = {
+    {%- for param in query_params %}
+        "{{ param.name }}": {{ param.name }},
+    {%- endfor %}
+    }
+    # Remove None values
+    params = {k: v for k, v in params.items() if v is not None}
+
+{%- endif %}
+    # Make async request
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        response = await client.{{ method.lower() }}(
+            url,
+            headers=headers,
+{%- if method == "POST" or method == "PUT" or method == "PATCH" %}
+            json=data,
+{%- endif %}
+{%- if query_params %}
+            params=params,
+{%- endif %}
+        )
+
+        # Raise exception for error status codes
+        response.raise_for_status()
+
+        # Return JSON response
+        return response.json()
+
+
+async def main():
+    """Example usage"""
+{%- if method == "POST" or method == "PUT" or method == "PATCH" %}
+    example_data = {{ request_body_example | tojson }}
+{%- endif %}
+
+    try:
+        result = await {{ function_name }}(
+{%- if path_params %}
+            {% for param in path_params %}
+            {{ param.name }}={{ param.example }},
+            {% endfor %}
+{%- endif %}
+{%- if method == "POST" or method == "PUT" or method == "PATCH" %}
+            data=example_data,
+{%- endif %}
+{%- if query_params and query_params[0].example %}
+            {% for param in query_params[:1] %}
+            {{ param.name }}={{ param.example }},
+            {% endfor %}
+{%- endif %}
+{%- if auth_type == "bearer" %}
+            access_token="your_access_token_here"
+{%- elif auth_type == "api_key" %}
+            api_key="your_api_key_here"
+{%- endif %}
+        )
+        print("Success!")
+        print(result)
+    except httpx.HTTPStatusError as e:
+        print(f"Error: {e}")
+
+
+if __name__ == "__main__":
+    asyncio.run(main())

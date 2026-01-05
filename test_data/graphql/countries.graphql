@@ -1,0 +1,114 @@
+"""
+Countries GraphQL API
+"""
+type Query {
+  """
+  Get all countries
+  """
+  countries(filter: CountryFilterInput): [Country!]!
+
+  """
+  Get a specific country by code
+  """
+  country(code: ID!): Country
+
+  """
+  Get all continents
+  """
+  continents(filter: ContinentFilterInput): [Continent!]!
+
+  """
+  Get a specific continent by code
+  """
+  continent(code: ID!): Continent
+
+  """
+  Get all languages
+  """
+  languages(filter: LanguageFilterInput): [Language!]!
+
+  """
+  Get a specific language by code
+  """
+  language(code: ID!): Language
+}
+
+"""
+Country filter options
+"""
+input CountryFilterInput {
+  code: StringQueryOperatorInput
+  currency: StringQueryOperatorInput
+  continent: StringQueryOperatorInput
+}
+
+"""
+Continent filter options
+"""
+input ContinentFilterInput {
+  code: StringQueryOperatorInput
+}
+
+"""
+Language filter options
+"""
+input LanguageFilterInput {
+  code: StringQueryOperatorInput
+}
+
+"""
+String query operators
+"""
+input StringQueryOperatorInput {
+  eq: String
+  ne: String
+  in: [String]
+  nin: [String]
+  regex: String
+  glob: String
+}
+
+"""
+Country information
+"""
+type Country {
+  code: ID!
+  name: String!
+  native: String!
+  phone: String!
+  continent: Continent!
+  capital: String
+  currency: String
+  languages: [Language!]!
+  emoji: String!
+  emojiU: String!
+  states: [State!]!
+}
+
+"""
+Continent information
+"""
+type Continent {
+  code: ID!
+  name: String!
+  countries: [Country!]!
+}
+
+"""
+Language information
+"""
+type Language {
+  code: ID!
+  name: String
+  native: String
+  rtl: Boolean!
+}
+
+"""
+State information
+"""
+type State {
+  code: String
+  name: String!
+  country: Country!
+}

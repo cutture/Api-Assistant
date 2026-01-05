@@ -14,7 +14,7 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
+/lib/
 lib64/
 parts/
 sdist/
@@ -50,6 +50,11 @@ data/chroma_db/*
 data/uploads/*
 !data/uploads/.gitkeep
 
+# Kaggle dataset import
+data/kaggle_import/
+kaggle.json
+.kaggle/
+
 # Logs
 *.log
 logs/
@@ -72,3 +77,4 @@ htmlcov/
 
 # Jupyter
 .ipynb_checkpoints/
+node_modules/

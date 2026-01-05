@@ -1,0 +1,113 @@
+"""
+Sample GraphQL Schema for E-commerce API
+This demonstrates types and relationships for ER diagram generation
+"""
+
+type User {
+  id: ID!
+  username: String!
+  email: String!
+  createdAt: String!
+  orders: [Order!]!
+  profile: UserProfile
+}
+
+type UserProfile {
+  id: ID!
+  userId: ID!
+  firstName: String
+  lastName: String
+  phoneNumber: String
+  address: Address
+}
+
+type Address {
+  id: ID!
+  street: String!
+  city: String!
+  state: String!
+  zipCode: String!
+  country: String!
+}
+
+type Product {
+  id: ID!
+  name: String!
+  description: String
+  price: Float!
+  category: Category!
+  inventory: Inventory
+  reviews: [Review!]!
+}
+
+type Category {
+  id: ID!
+  name: String!
+  description: String
+  products: [Product!]!
+}
+
+type Inventory {
+  id: ID!
+  productId: ID!
+  quantity: Int!
+  warehouse: String!
+}
+
+type Order {
+  id: ID!
+  userId: ID!
+  user: User!
+  orderItems: [OrderItem!]!
+  totalAmount: Float!
+  status: OrderStatus!
+  createdAt: String!
+  shippingAddress: Address!
+}
+
+type OrderItem {
+  id: ID!
+  orderId: ID!
+  productId: ID!
+  product: Product!
+  quantity: Int!
+  price: Float!
+}
+
+type Review {
+  id: ID!
+  productId: ID!
+  userId: ID!
+  rating: Int!
+  comment: String
+  createdAt: String!
+}
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+type Query {
+  user(id: ID!): User
+  users: [User!]!
+  product(id: ID!): Product
+  products(categoryId: ID): [Product!]!
+  order(id: ID!): Order
+  orders(userId: ID): [Order!]!
+}
+
+type Mutation {
+  createUser(username: String!, email: String!): User!
+  createProduct(name: String!, price: Float!, categoryId: ID!): Product!
+  createOrder(userId: ID!, items: [OrderItemInput!]!): Order!
+  updateOrderStatus(orderId: ID!, status: OrderStatus!): Order!
+}
+
+input OrderItemInput {
+  productId: ID!
+  quantity: Int!
+}

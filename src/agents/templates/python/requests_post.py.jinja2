@@ -1,0 +1,134 @@
+"""
+{{ description }}
+
+Generated code for: {{ method }} {{ endpoint }}
+"""
+import requests
+{% if auth_type == "bearer" %}
+from typing import Optional, Dict, Any
+{% else %}
+from typing import Dict, Any
+{% endif %}
+
+
+def {{ function_name }}(
+{%- if path_params %}
+    {% for param in path_params %}
+    {{ param.name }}: {{ param.python_type }},
+    {% endfor %}
+{%- endif %}
+    data: Dict[str, Any],
+{%- if query_params %}
+    {% for param in query_params %}
+    {{ param.name }}: {{ param.python_type }}{{ " = " + param.default if param.default else "" }},
+    {% endfor %}
+{%- endif %}
+{%- if auth_type == "bearer" %}
+    access_token: Optional[str] = None,
+{%- elif auth_type == "api_key" %}
+    api_key: Optional[str] = None,
+{%- endif %}
+    base_url: str = "{{ base_url }}"
+) -> dict:
+    """
+    {{ operation_description }}
+
+    Args:
+{%- if path_params %}
+    {% for param in path_params %}
+        {{ param.name }}: {{ param.description }}
+    {% endfor %}
+{%- endif %}
+        data: Request body data
+{%- if query_params %}
+    {% for param in query_params %}
+        {{ param.name }}: {{ param.description }}
+    {% endfor %}
+{%- endif %}
+{%- if auth_type == "bearer" %}
+        access_token: Bearer token for authentication
+{%- elif auth_type == "api_key" %}
+        api_key: API key for authentication
+{%- endif %}
+        base_url: API base URL
+
+    Returns:
+        Response data as dictionary
+
+    Raises:
+        requests.exceptions.HTTPError: If the request fails
+    """
+    # Build URL
+{%- if path_params %}
+    url = f"{base_url}{{ endpoint_template }}"
+{%- else %}
+    url = f"{base_url}{{ endpoint }}"
+{%- endif %}
+
+    # Prepare headers
+    headers = {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+{%- if auth_type == "bearer" %}
+    }
+    if access_token:
+        headers["Authorization"] = f"Bearer {access_token}"
+{%- elif auth_type == "api_key" %}
+    }
+    if api_key:
+        headers["{{ api_key_header }}"] = api_key
+{%- else %}
+    }
+{%- endif %}
+
+{%- if query_params %}
+    # Prepare query parameters
+    params = {
+    {%- for param in query_params %}
+        "{{ param.name }}": {{ param.name }},
+    {%- endfor %}
+    }
+    # Remove None values
+    params = {k: v for k, v in params.items() if v is not None}
+
+{%- endif %}
+    # Make request
+    response = requests.post(
+        url,
+        headers=headers,
+        json=data,
+{%- if query_params %}
+        params=params,
+{%- endif %}
+        timeout=30
+    )
+
+    # Raise exception for error status codes
+    response.raise_for_status()
+
+    # Return JSON response
+    return response.json()
+
+
+if __name__ == "__main__":
+    # Example usage
+    example_data = {{ request_body_example | tojson }}
+
+    try:
+        result = {{ function_name }}(
+{%- if path_params %}
+            {% for param in path_params %}
+            {{ param.name }}={{ param.example }},
+            {% endfor %}
+{%- endif %}
+            data=example_data,
+{%- if auth_type == "bearer" %}
+            access_token="your_access_token_here"
+{%- elif auth_type == "api_key" %}
+            api_key="your_api_key_here"
+{%- endif %}
+        )
+        print("Success!")
+        print(result)
+    except requests.exceptions.HTTPError as e:
+        print(f"Error: {e}")

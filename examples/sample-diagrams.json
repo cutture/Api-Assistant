@@ -1,0 +1,303 @@
+{
+  "description": "Sample JSON payloads for diagram generation endpoints",
+  "api_base_url": "http://localhost:8000",
+
+  "examples": {
+    "1_sequence_diagram": {
+      "description": "Generate a sequence diagram from an endpoint document ID",
+      "endpoint": "POST /diagrams/sequence",
+      "payload": {
+        "endpoint_id": "746f91c9fb08c00763770e1ea23c9aaf",
+        "include_auth": true
+      }
+    },
+
+    "2_auth_flow_diagram": {
+      "description": "Generate an authentication flow diagram",
+      "endpoint": "POST /diagrams/auth",
+      "examples": {
+        "bearer_token": {
+          "auth_type": "bearer",
+          "endpoints": [
+            "/api/auth/login",
+            "/api/auth/refresh",
+            "/api/auth/logout"
+          ]
+        },
+        "oauth2": {
+          "auth_type": "oauth2",
+          "endpoints": [
+            "/oauth/authorize",
+            "/oauth/token",
+            "/oauth/revoke"
+          ]
+        },
+        "api_key": {
+          "auth_type": "apikey",
+          "endpoints": [
+            "/api/authenticate"
+          ]
+        },
+        "basic": {
+          "auth_type": "basic",
+          "endpoints": []
+        }
+      }
+    },
+
+    "3_er_diagram": {
+      "description": "Generate an Entity-Relationship diagram from GraphQL schema",
+      "endpoint": "POST /diagrams/er",
+      "payload": {
+        "schema_content": "type User {\n  id: ID!\n  email: String!\n  name: String!\n  posts: [Post!]!\n}\n\ntype Post {\n  id: ID!\n  title: String!\n  content: String!\n  author: User!\n  comments: [Comment!]!\n}\n\ntype Comment {\n  id: ID!\n  text: String!\n  author: User!\n  post: Post!\n}",
+        "include_types": ["User", "Post", "Comment"]
+      }
+    },
+
+    "4_api_overview_diagram": {
+      "description": "Generate an API overview diagram showing API structure and endpoint groupings",
+      "endpoint": "POST /diagrams/overview",
+      "IMPORTANT_FRONTEND_UI_NOTE": "In the web UI, enter 'api_title' in the separate 'API Title' input field. Enter ONLY the 'endpoints' array (without the wrapper) in the 'Endpoints (JSON)' textarea!",
+      "api_payload_format": {
+        "note": "This is the format for direct API calls (curl, Postman, etc.)",
+        "api_title": "User Management API",
+        "endpoints": "array_of_endpoint_objects"
+      },
+      "frontend_ui_usage": {
+        "step_1": "Enter in 'API Title' field: User Management API",
+        "step_2": "Enter in 'Endpoints (JSON)' textarea: ONLY the array below (lines starting with [ to ])"
+      },
+      "payload": {
+        "api_title": "User Management API",
+        "endpoints": [
+          {
+            "path": "/api/v1/users/{id}",
+            "method": "GET",
+            "summary": "Get User - Retrieves a single user by ID",
+            "description": "Retrieves user details including optional posts",
+            "tags": ["Users"]
+          },
+          {
+            "path": "/api/v1/users",
+            "method": "POST",
+            "summary": "Create User - Creates a new user",
+            "description": "Creates a new user with username, email, and password",
+            "tags": ["Users"]
+          },
+          {
+            "path": "/api/v1/users/{id}",
+            "method": "PUT",
+            "summary": "Update User - Updates user information",
+            "description": "Updates user profile details",
+            "tags": ["Users"]
+          },
+          {
+            "path": "/api/v1/users/{id}",
+            "method": "DELETE",
+            "summary": "Delete User - Removes a user",
+            "description": "Permanently deletes a user account",
+            "tags": ["Users"]
+          },
+          {
+            "path": "/api/v1/posts",
+            "method": "GET",
+            "summary": "List Posts - Retrieves paginated posts",
+            "description": "Returns a paginated list of posts with sorting options",
+            "tags": ["Posts"]
+          },
+          {
+            "path": "/api/v1/posts/{id}",
+            "method": "GET",
+            "summary": "Get Post - Retrieves a single post",
+            "description": "Returns detailed post information",
+            "tags": ["Posts"]
+          },
+          {
+            "path": "/api/v1/posts",
+            "method": "POST",
+            "summary": "Create Post - Creates a new post",
+            "description": "Creates a new blog post",
+            "tags": ["Posts"]
+          },
+          {
+            "path": "/api/v1/posts/{id}",
+            "method": "PUT",
+            "summary": "Update Post",
+            "tags": ["Posts"]
+          },
+          {
+            "path": "/api/v1/posts/{id}",
+            "method": "DELETE",
+            "summary": "Delete Post",
+            "tags": ["Posts"]
+          },
+          {
+            "path": "/api/v1/comments",
+            "method": "GET",
+            "summary": "List Comments - Retrieves comments",
+            "description": "Returns comments for posts",
+            "tags": ["Comments"]
+          },
+          {
+            "path": "/api/v1/comments/{id}",
+            "method": "GET",
+            "summary": "Get Comment",
+            "tags": ["Comments"]
+          },
+          {
+            "path": "/api/v1/comments",
+            "method": "POST",
+            "summary": "Create Comment",
+            "tags": ["Comments"]
+          },
+          {
+            "path": "/api/v1/auth/login",
+            "method": "POST",
+            "summary": "Login - User authentication",
+            "description": "Authenticates user and returns token",
+            "tags": ["Authentication"]
+          },
+          {
+            "path": "/api/v1/auth/logout",
+            "method": "POST",
+            "summary": "Logout - Invalidates session",
+            "description": "Logs out the current user",
+            "tags": ["Authentication"]
+          },
+          {
+            "path": "/api/v1/auth/register",
+            "method": "POST",
+            "summary": "Register - Creates new account",
+            "tags": ["Authentication"]
+          },
+          {
+            "path": "/api/v1/auth/refresh",
+            "method": "POST",
+            "summary": "Refresh Token",
+            "tags": ["Authentication"]
+          }
+        ]
+      },
+      "alternative_minimal_example": {
+        "api_title": "Simple API",
+        "endpoints": [
+          {
+            "path": "/users",
+            "method": "GET",
+            "tags": ["Users"]
+          },
+          {
+            "path": "/users/{id}",
+            "method": "GET",
+            "tags": ["Users"]
+          },
+          {
+            "path": "/posts",
+            "method": "GET",
+            "tags": ["Posts"]
+          }
+        ]
+      },
+      "COPY_THIS_FOR_FRONTEND_UI": {
+        "instructions": "For the web UI at /diagrams, copy ONLY the array below into the 'Endpoints (JSON)' textarea",
+        "endpoints_array_to_paste": [
+          {
+            "path": "/api/v1/users/{id}",
+            "method": "GET",
+            "summary": "Get User - Retrieves a single user by ID",
+            "description": "Retrieves user details including optional posts",
+            "tags": ["Users"]
+          },
+          {
+            "path": "/api/v1/users",
+            "method": "POST",
+            "summary": "Create User - Creates a new user",
+            "description": "Creates a new user with username, email, and password",
+            "tags": ["Users"]
+          },
+          {
+            "path": "/api/v1/posts",
+            "method": "GET",
+            "summary": "List Posts - Retrieves paginated posts",
+            "description": "Returns a paginated list of posts with sorting options",
+            "tags": ["Posts"]
+          },
+          {
+            "path": "/api/v1/auth/login",
+            "method": "POST",
+            "summary": "Login - User authentication",
+            "description": "Authenticates user and returns token",
+            "tags": ["Authentication"]
+          }
+        ]
+      }
+    }
+  },
+
+  "field_descriptions": {
+    "api_overview": {
+      "required_fields": {
+        "api_title": "The name of your API (e.g., 'User Management API')",
+        "endpoints": "Array of endpoint objects"
+      },
+      "endpoint_fields": {
+        "path": "(Required) The endpoint path (e.g., '/api/v1/users')",
+        "method": "(Optional) HTTP method - defaults to 'GET' (GET, POST, PUT, DELETE, PATCH)",
+        "summary": "(Optional) Brief description shown in diagram",
+        "description": "(Optional) Detailed description",
+        "tags": "(Optional) Array of category tags to group endpoints (e.g., ['Users', 'Posts'])"
+      },
+      "not_needed": [
+        "name",
+        "parameters",
+        "request_body",
+        "responses",
+        "authentication",
+        "rate_limits",
+        "base_url",
+        "version"
+      ]
+    }
+  },
+
+  "testing_guide": {
+    "using_curl": {
+      "1_sequence_diagram": "curl -X POST 'http://localhost:8000/diagrams/sequence' -H 'Content-Type: application/json' -d '{\"endpoint_id\": \"746f91c9fb08c00763770e1ea23c9aaf\", \"include_auth\": true}'",
+
+      "2_auth_flow": "curl -X POST 'http://localhost:8000/diagrams/auth' -H 'Content-Type: application/json' -d '{\"auth_type\": \"bearer\", \"endpoints\": [\"/api/auth/login\"]}'",
+
+      "3_er_diagram": "curl -X POST 'http://localhost:8000/diagrams/er' -H 'Content-Type: application/json' -d @examples/sample-diagrams.json",
+
+      "4_api_overview": "curl -X POST 'http://localhost:8000/diagrams/overview' -H 'Content-Type: application/json' -d '{\"api_title\": \"My API\", \"endpoints\": [{\"path\": \"/users\", \"method\": \"GET\", \"tags\": [\"Users\"]}]}'"
+    },
+
+    "using_frontend": {
+      "1": "Navigate to http://localhost:3000/diagrams",
+      "2": "Select diagram type: 'API Overview'",
+      "3": "Copy JSON from this file's 'api_overview_diagram' example",
+      "4": "Paste into the JSON input field",
+      "5": "Click 'Generate Diagram'",
+      "6": "View the Mermaid diagram output"
+    }
+  },
+
+  "common_mistakes": {
+    "api_overview": [
+      {
+        "mistake": "Including 'name' field instead of 'summary'",
+        "wrong": "{\"name\": \"Get User\"}",
+        "correct": "{\"summary\": \"Get User\"}"
+      },
+      {
+        "mistake": "Including request/response details",
+        "wrong": "{\"parameters\": {...}, \"responses\": {...}}",
+        "correct": "Only include: path, method, summary, description, tags"
+      },
+      {
+        "mistake": "Not using tags to group endpoints",
+        "issue": "Results in unorganized diagram",
+        "fix": "Add tags array to group related endpoints: {\"tags\": [\"Users\"]}"
+      }
+    ]
+  }
+}

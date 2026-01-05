@@ -114,6 +114,7 @@ class ParsedEndpoint:
         Generate metadata for vector store indexing.
         """
         return {
+            "source": "openapi",  # Add source field for filtering
             "path": self.path,
             "method": self.method.upper(),
             "operation_id": self.operation_id,

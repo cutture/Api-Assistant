@@ -11,7 +11,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Optional, TypedDict
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class QueryIntent(str, Enum):
@@ -42,12 +42,13 @@ class QueryIntent(str, Enum):
 
 class AgentType(str, Enum):
     """Types of agents in the system."""
-    
+
     QUERY_ANALYZER = "query_analyzer"
     RAG_AGENT = "rag_agent"
     CODE_GENERATOR = "code_generator"
     DOC_ANALYZER = "doc_analyzer"
     SUPERVISOR = "supervisor"
+    CUSTOM = "custom"  # For custom agents like gap analysis
 
 
 class ConfidenceLevel(str, Enum):
@@ -74,8 +75,7 @@ class RetrievedDocument(BaseModel):
     )
     doc_id: str = Field(default="", description="Document ID in vector store")
 
-    class Config:
-        frozen = False
+    model_config = ConfigDict(frozen=False)
 
 
 class SourceCitation(BaseModel):

@@ -1,0 +1,21 @@
+# Development Dockerfile for Next.js application
+# This is optimized for hot-reloading during development
+
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install dependencies
+COPY package.json package-lock.json* ./
+RUN npm ci
+
+# Copy application code
+COPY . .
+
+EXPOSE 3000
+
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+
+# Run in development mode with hot-reload
+CMD ["npm", "run", "dev"]
