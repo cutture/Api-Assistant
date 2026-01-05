@@ -99,7 +99,7 @@ export async function clearAllDocuments(): Promise<ApiResponse<{ deleted_count: 
   if (!allDocsResponse.data || allDocsResponse.data.length === 0) {
     return {
       data: { deleted_count: 0, not_found_count: 0 },
-      error: null,
+      status: 200,
     };
   }
 
@@ -107,7 +107,23 @@ export async function clearAllDocuments(): Promise<ApiResponse<{ deleted_count: 
   const docIds = allDocsResponse.data.map(doc => doc.id);
 
   // Bulk delete all documents
-  return bulkDeleteDocuments(docIds);
+  const deleteResponse = await bulkDeleteDocuments(docIds);
+
+  // Transform response to match expected return type
+  if (deleteResponse.data) {
+    return {
+      data: {
+        deleted_count: deleteResponse.data.deleted_count,
+        not_found_count: 0, // bulkDeleteDocuments doesn't track not_found
+      },
+      status: deleteResponse.status,
+    };
+  }
+
+  return {
+    error: deleteResponse.error,
+    status: deleteResponse.status,
+  };
 }
 
 /**
