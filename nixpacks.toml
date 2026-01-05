@@ -1,0 +1,15 @@
+# Railway Nixpacks Configuration
+# Forces Railway to use Nixpacks instead of Docker
+# This reduces image size from 8.4GB to ~2GB
+
+[phases.setup]
+nixPkgs = ["python311", "gcc"]
+
+[phases.install]
+cmds = ["pip install --no-cache-dir -r requirements.txt"]
+
+[phases.build]
+cmds = []
+
+[start]
+cmd = "uvicorn src.api.app:app --host 0.0.0.0 --port $PORT"

@@ -2,6 +2,10 @@
 # .dockerignore - Exclude unnecessary files from Docker build context
 # ============================================================================
 
+# Frontend (not needed for backend deployment)
+frontend/
+node_modules/
+
 # Python cache and bytecode
 __pycache__/
 *.py[cod]
