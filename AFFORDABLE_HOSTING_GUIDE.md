@@ -42,29 +42,109 @@ This guide covers affordable hosting options with generous free tiers and simple
 
 ### A. Deploy Backend to Railway
 
-**1. Install Railway CLI**
+#### 🎯 Quick Overview
+
+**What we'll do:**
+1. Create Railway account → Get $5 free credit
+2. Connect GitHub repo or use CLI → Deploy backend
+3. Configure start command → `uvicorn src.api.app:app --host 0.0.0.0 --port $PORT`
+4. Add environment variables → API keys, secrets, LLM config
+5. Add persistent volume → `/app/data` for ChromaDB storage
+6. Get public URL → Test backend is live
+
+**Time required:** 15-20 minutes
+**Cost:** Free (uses $5 credit, ~500 hours/month)
+
+---
+
+#### Prerequisites
+
+Before deploying, ensure you have:
+- ✅ `requirements.txt` file in your project root
+- ✅ Your code pushed to GitHub (for Method 1) or committed locally (for Method 2)
+- ✅ Python 3.11+ specified (Railway will auto-detect)
+
+---
+
+#### Method 1: Deploy from GitHub (Recommended - Easier)
+
+**Step 1: Create Railway Account**
+1. Go to https://railway.app
+2. Click **"Start a New Project"**
+3. Sign up with GitHub (recommended for easier deployment)
+4. You'll get **$5 free credit** to start with
+
+**Step 2: Push Your Code to GitHub (if not already)**
+```bash
+cd /home/user/Api-Assistant
+
+# Initialize git if not already done
+git init
+git add .
+git commit -m "Initial commit"
+
+# Create a new repository on GitHub, then:
+git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO.git
+git branch -M main
+git push -u origin main
+```
+
+**Step 3: Create New Railway Project from GitHub**
+1. In Railway dashboard, click **"New Project"**
+2. Select **"Deploy from GitHub repo"**
+3. Authorize Railway to access your GitHub
+4. Select your repository (e.g., `YOUR_USERNAME/Api-Assistant`)
+5. Railway will detect it's a Python project
+
+**Step 4: Configure Service Settings**
+1. Railway will create a service automatically
+2. Click on the service card to open it
+3. Go to **"Settings"** tab (inside the service)
+4. Under **"Deploy"** section:
+   - **Root Directory:** Leave as `/` (or set to backend folder if you have one)
+   - **Build Command:** `pip install -r requirements.txt`
+   - **Start Command:** `uvicorn src.api.app:app --host 0.0.0.0 --port $PORT`
+5. Under **"Networking"**:
+   - Click **"Generate Domain"** to get a public URL
+   - Copy this URL (e.g., `https://api-assistant-backend-production-xxxx.up.railway.app`)
+
+---
+
+#### Method 2: Deploy via Railway CLI (Alternative)
+
+**Step 1: Install Railway CLI**
 ```bash
 npm i -g @railway/cli
 ```
 
-**2. Initialize Railway**
+**Step 2: Login and Initialize**
 ```bash
 cd /home/user/Api-Assistant
 
-# Login
+# Login to Railway
 railway login
 
 # Create new project
 railway init
-# Name: api-assistant-backend
+# Enter project name: api-assistant-backend
+# This creates a new project and links your local directory
 ```
 
-**3. Configure Environment Variables**
+**Step 3: Generate Domain**
+```bash
+# Generate a public domain for your service
+railway domain
+# Copy the generated URL
+```
 
-In Railway dashboard (https://railway.app):
-- Go to your project
-- Click "Variables" tab
-- Add all from your `.env` file:
+---
+
+**Step 5: Configure Environment Variables**
+
+1. In Railway dashboard, click on your backend service
+2. Click the **"Variables"** tab
+3. Click **"New Variable"**
+4. Add the following variables one by one:
 
 ```bash
 # CRITICAL
@@ -92,16 +172,40 @@ DEBUG=false
 LOG_LEVEL=INFO
 ```
 
-**4. Add Volume for Persistent Storage**
+**Step 6: Add Volume for Persistent Storage**
 
-Railway dashboard:
-- Go to "Settings" → "Volumes"
-- Click "New Volume"
-- Mount path: `/app/data`
-- Size: 1GB (free tier)
+⚠️ **CRITICAL**: Without a volume, all uploaded documents will be lost on every redeploy!
 
-**5. Deploy**
+**Via Railway Dashboard:**
+1. Go to your Railway dashboard (not Project Settings)
+2. Click on your **backend service** (the FastAPI app)
+3. Click the **"Settings"** tab (inside the service)
+4. Scroll down to **"Volumes"** section
+5. Click **"+ New Volume"** or **"Add Volume"**
+6. Configure:
+   - Mount path: `/app/data`
+   - Size: 1GB (free tier)
+7. Click "Add" - Railway will automatically redeploy
 
+**Via Railway CLI (Alternative):**
+```bash
+railway volume add --mount-path /app/data --size 1
+```
+
+**Without Volume:**
+- Default: ~10GB ephemeral (temporary) storage
+- Data is **deleted on every deployment/restart**
+- Not suitable for production use
+
+**Step 7: Deploy Your Application**
+
+**If using GitHub method:**
+- Railway automatically deploys when you connect the repo
+- Every git push to main branch will trigger auto-deployment
+- Go to **"Deployments"** tab to see build logs
+- Wait for deployment to complete (status: "Success")
+
+**If using CLI method:**
 ```bash
 # Add Procfile (if not exists)
 echo "web: uvicorn src.api.app:app --host 0.0.0.0 --port \$PORT" > Procfile
@@ -109,11 +213,77 @@ echo "web: uvicorn src.api.app:app --host 0.0.0.0 --port \$PORT" > Procfile
 # Deploy
 railway up
 
-# Get your URL
-railway domain
+# Check deployment status
+railway status
 ```
 
-**Railway will give you a URL like:** `https://api-assistant-backend-production-xxxx.up.railway.app`
+**Step 8: Get Your Backend URL**
+
+1. Go to your service in Railway dashboard
+2. Click **"Settings"** tab
+3. Under **"Networking"**, you'll see your public domain
+4. Copy the URL (e.g., `https://api-assistant-backend-production-xxxx.up.railway.app`)
+5. Test it by visiting: `https://your-url.railway.app/health`
+   - Should return: `{"status": "healthy"}`
+
+**Your Railway backend is now live! 🎉**
+
+---
+
+#### Railway UI Navigation Guide
+
+**Understanding Railway's Structure:**
+```
+Railway Dashboard
+├── Projects (top level)
+│   └── Your Project (e.g., "api-assistant-backend")
+│       └── Services (your deployed apps)
+│           └── Backend Service ← Click here to configure
+│               ├── Deployments tab (view build logs)
+│               ├── Variables tab (environment variables)
+│               ├── Metrics tab (CPU, RAM usage)
+│               ├── Logs tab (runtime logs)
+│               └── Settings tab (volumes, networking, commands)
+│                   ├── Deploy section (build/start commands)
+│                   ├── Networking section (generate domain)
+│                   └── Volumes section (persistent storage)
+```
+
+**Important:**
+- ⚠️ **Project Settings** (gear icon in sidebar) ≠ **Service Settings**
+- Always click on your **service card/box** first, then access settings inside it
+- Volumes are in **Service Settings**, not Project Settings
+
+---
+
+#### Common Railway Deployment Issues
+
+**Issue 1: "Build failed" or "Deploy failed"**
+- **Solution:** Check "Deployments" tab → Click failed deployment → View logs
+- Common causes:
+  - Missing `requirements.txt`
+  - Wrong start command
+  - Missing environment variables
+
+**Issue 2: "Application failed to respond"**
+- **Solution:** Ensure start command uses `--port $PORT` (Railway sets PORT variable)
+- Correct: `uvicorn src.api.app:app --host 0.0.0.0 --port $PORT`
+- Wrong: `uvicorn src.api.app:app --port 8000`
+
+**Issue 3: "Can't find Volumes option"**
+- **Solution:**
+  1. Click on your **service** (the box/card with your app name)
+  2. Inside the service, click **"Settings"** tab
+  3. Scroll down to **"Volumes"** section
+  - If still not visible, use CLI: `railway volume add --mount-path /app/data --size 1`
+
+**Issue 4: "No public URL/domain"**
+- **Solution:** Go to service Settings → Networking → Click "Generate Domain"
+
+**Issue 5: "Environment variables not working"**
+- **Solution:** After adding variables, Railway auto-redeploys. Wait for new deployment to finish.
+
+---
 
 ### B. Deploy Frontend to Vercel
 
