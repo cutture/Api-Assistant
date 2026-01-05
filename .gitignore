@@ -81,3 +81,6 @@ node_modules/
 
 # Legacy Streamlit code (replaced by Next.js frontend)
 legacy_streamlit_backup/
+
+# Session data (runtime generated)
+data/sessions.json
