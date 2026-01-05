@@ -94,11 +94,28 @@ LOG_LEVEL=INFO
 
 **4. Add Volume for Persistent Storage**
 
-Railway dashboard:
-- Go to "Settings" → "Volumes"
-- Click "New Volume"
-- Mount path: `/app/data`
-- Size: 1GB (free tier)
+⚠️ **CRITICAL**: Without a volume, all uploaded documents will be lost on every redeploy!
+
+**Via Railway Dashboard:**
+1. Go to your Railway dashboard (not Project Settings)
+2. Click on your **backend service** (the FastAPI app)
+3. Click the **"Settings"** tab (inside the service)
+4. Scroll down to **"Volumes"** section
+5. Click **"+ New Volume"** or **"Add Volume"**
+6. Configure:
+   - Mount path: `/app/data`
+   - Size: 1GB (free tier)
+7. Click "Add" - Railway will automatically redeploy
+
+**Via Railway CLI (Alternative):**
+```bash
+railway volume add --mount-path /app/data --size 1
+```
+
+**Without Volume:**
+- Default: ~10GB ephemeral (temporary) storage
+- Data is **deleted on every deployment/restart**
+- Not suitable for production use
 
 **5. Deploy**
 
