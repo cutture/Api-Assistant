@@ -11,7 +11,7 @@ The API Integration Assistant uses a multi-agent architecture built on LangGraph
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                         USER INTERFACE                          │
-│                      (Streamlit Web App)                        │
+│                    (Next.js Web Application)                    │
 └────────────────────────────┬────────────────────────────────────┘
                              │
                              │ User Query

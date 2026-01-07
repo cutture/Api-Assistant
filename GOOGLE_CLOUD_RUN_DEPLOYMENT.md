@@ -512,12 +512,13 @@ gcloud run deploy api-assistant \
     --image us-east1-docker.pkg.dev/PROJECT_ID/api-assistant-repo/api-assistant:v1 \
     --platform managed \
     --region us-east1 \
+    --port 8000 \
     --allow-unauthenticated \
     --memory 2Gi \
     --cpu 2 \
     --timeout 300 \
     --max-instances 10 \
-    --set-env-vars "SECRET_KEY=CHANGE_THIS_TO_A_RANDOM_SECRET_12345"
+    --set-env-vars "SECRET_KEY=CHANGE_THIS_TO_A_RANDOM_SECRET_12345,PORT=8000"
 ```
 
 **What each option means:**
@@ -525,6 +526,7 @@ gcloud run deploy api-assistant \
 - `--image`: The Docker image to deploy (from Artifact Registry)
 - `--platform managed`: Use fully managed Cloud Run (not GKE)
 - `--region us-east1`: Deploy to US East Coast (change to your region)
+- `--port 8000`: The port your application listens on (FastAPI default)
 - `--allow-unauthenticated`: Allow public access (no Google login required)
 - `--memory 2Gi`: Allocate 2 GB of RAM (ChromaDB needs memory)
 - `--cpu 2`: Allocate 2 CPU cores

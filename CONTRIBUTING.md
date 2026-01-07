@@ -96,8 +96,11 @@ cp .env.example .env
 ### Running the Application
 
 ```bash
-# Start the application
-streamlit run src/main.py
+# Start the backend
+uvicorn src.api.app:app --reload --port 8000
+
+# In a separate terminal, start the frontend
+cd frontend && npm run dev
 ```
 
 ### Running Tests
@@ -174,9 +177,9 @@ Closes #123
 ```
 
 ```
-fix(ui): Resolve Streamlit key conflict in sources section
+fix(ui): Resolve React key conflict in sources section
 
-Fixed duplicate widget keys when rendering sources across multiple
+Fixed duplicate keys when rendering sources across multiple
 messages in chat history.
 
 Fixes #456

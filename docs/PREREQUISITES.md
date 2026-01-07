@@ -1,16 +1,15 @@
 # Prerequisites & Setup Guide
 
-This guide covers all prerequisites and setup instructions for developing and running the API Integration Assistant, including both the current backend/Streamlit UI and the new Next.js frontend.
+This guide covers all prerequisites and setup instructions for developing and running the API Integration Assistant.
 
 ## Table of Contents
 
 1. [System Requirements](#system-requirements)
 2. [Backend Setup (Required)](#backend-setup-required)
-3. [Current Streamlit UI Setup](#current-streamlit-ui-setup)
-4. [New Next.js Frontend Setup](#new-nextjs-frontend-setup)
-5. [Development Tools](#development-tools)
-6. [Environment Configuration](#environment-configuration)
-7. [Verification](#verification)
+3. [Next.js Frontend Setup](#nextjs-frontend-setup)
+4. [Development Tools](#development-tools)
+5. [Environment Configuration](#environment-configuration)
+6. [Verification](#verification)
 
 ---
 
@@ -44,7 +43,7 @@ This guide covers all prerequisites and setup instructions for developing and ru
 
 ## Backend Setup (Required)
 
-The FastAPI backend must be running for both the current Streamlit UI and the new Next.js frontend to function.
+The FastAPI backend must be running for the Next.js frontend to function.
 
 ### 1. Install Python
 
@@ -112,42 +111,7 @@ python api_assistant_cli.py info version
 
 ---
 
-## Current Streamlit UI Setup
-
-The current UI is included with the backend dependencies. No additional setup required.
-
-### Running Streamlit UI
-
-```bash
-# Ensure virtual environment is activated
-source .venv/bin/activate  # Linux/macOS
-.venv\Scripts\Activate.ps1  # Windows PowerShell
-
-# Start Streamlit
-# Linux/macOS:
-PYTHONPATH=. streamlit run src/main.py
-
-# Windows PowerShell:
-$env:PYTHONPATH = "."; streamlit run src/main.py
-```
-
-**Expected Output**:
-```
-You can now view your Streamlit app in your browser.
-
-Local URL: http://localhost:8501
-Network URL: http://192.168.x.x:8501
-```
-
-**Troubleshooting**:
-- Port 8501 already in use: `streamlit run src/main.py --server.port 8502`
-- PYTHONPATH errors: Run from project root directory
-
----
-
-## New Next.js Frontend Setup
-
-This section covers setup for the new Next.js UI being developed as part of the UI replacement plan.
+## Next.js Frontend Setup
 
 ### 1. Install Node.js and npm
 
@@ -187,25 +151,14 @@ npm install -g yarn
 yarn --version
 ```
 
-### 3. Initialize Next.js Project (Week 1 Task)
-
-This will be done as part of Week 1 implementation:
+### 3. Install Frontend Dependencies
 
 ```bash
-# From project root
-npx create-next-app@latest frontend \
-  --typescript \
-  --tailwind \
-  --app \
-  --src-dir \
-  --import-alias "@/*" \
-  --no-eslint
-
 cd frontend
 npm install
 ```
 
-**Project Structure** (will be created):
+**Project Structure**:
 ```
 frontend/
 ├── src/
@@ -219,21 +172,14 @@ frontend/
 └── next.config.js
 ```
 
-### 4. Install Frontend Dependencies (Week 1 Task)
+### 4. Run Frontend Development Server
 
 ```bash
 cd frontend
-
-# Core dependencies
-npm install axios zustand @tanstack/react-query
-
-# shadcn/ui setup
-npx shadcn-ui@latest init
-npx shadcn-ui@latest add button input card dialog toast
-
-# Dev dependencies
-npm install -D @types/node @typescript-eslint/parser
+npm run dev
 ```
+
+Open http://localhost:3000 in your browser.
 
 ---
 
@@ -359,9 +305,9 @@ which python
 # Expected: /path/to/Api-Assistant/.venv/bin/python
 
 # ✅ 3. Dependencies installed
-pip list | grep streamlit
 pip list | grep langchain
 pip list | grep chromadb
+pip list | grep fastapi
 # Expected: All packages present
 
 # ✅ 4. CLI working
@@ -371,14 +317,9 @@ python api_assistant_cli.py info version
 # ✅ 5. Parse test file
 python api_assistant_cli.py parse file test_data/openapi/jsonplaceholder.yaml
 # Expected: Successfully parsed X endpoints
-
-# ✅ 6. Streamlit starts
-PYTHONPATH=. streamlit run src/main.py &
-# Expected: Server starts on http://localhost:8501
-# Kill with: pkill -f streamlit
 ```
 
-### Frontend Verification Checklist (After Week 1 Setup)
+### Frontend Verification Checklist
 
 ```bash
 # ✅ 1. Node.js version
@@ -435,16 +376,16 @@ python -m venv .venv
 
 ### Issue 2: Port conflicts
 
-**Problem**: Port 8501 (Streamlit) or 8000 (FastAPI) already in use
+**Problem**: Port 3000 (Next.js) or 8000 (FastAPI) already in use
 
 **Solution**:
 ```bash
 # Find process using port
-lsof -i :8501  # Linux/macOS
-netstat -ano | findstr :8501  # Windows
+lsof -i :3000  # Linux/macOS
+netstat -ano | findstr :3000  # Windows
 
 # Kill process or use different port
-streamlit run src/main.py --server.port 8502
+cd frontend && npm run dev -- -p 3001
 ```
 
 ### Issue 3: ChromaDB initialization fails
@@ -496,9 +437,9 @@ ollama list
 
 After completing prerequisites:
 
-1. ✅ **Backend Ready**: Run `python api_assistant_cli.py info version`
-2. ✅ **Streamlit Ready**: Run `PYTHONPATH=. streamlit run src/main.py`
-3. ⏳ **Week 1 Implementation**: Initialize Next.js project (see `docs/UI_REPLACEMENT_PLAN.md`)
+1. ✅ **Backend Ready**: Run `uvicorn src.api.app:app --reload --port 8000`
+2. ✅ **Frontend Ready**: Run `cd frontend && npm run dev`
+3. Open http://localhost:3000 in your browser
 
 ---
 

@@ -15,10 +15,13 @@ tests/
 │   └── test_integration.py
 ├── test_core/            # Core functionality tests
 │   └── test_monitoring.py
-├── test_e2e/             # End-to-end integration tests (Day 12)
+├── test_e2e/             # End-to-end integration tests
 │   └── test_full_pipeline.py
-└── test_ui/              # UI component tests
-    └── test_streamlit_components.py
+├── test_api/             # REST API tests
+├── test_cli/             # CLI command tests
+├── test_parsers/         # API parser tests
+├── test_diagrams/        # Diagram generation tests
+└── test_sessions/        # Session management tests
 ```
 
 ## Running Tests
@@ -51,9 +54,6 @@ pytest tests/test_agents/ -v
 
 # Run only E2E tests
 pytest tests/test_e2e/ -v
-
-# Run only UI tests
-pytest tests/test_ui/ -v
 
 # Run specific test file
 pytest tests/test_e2e/test_full_pipeline.py -v
@@ -117,39 +117,6 @@ pytest -m "not slow" -v
    - Processing path tracking
    - Intent metadata return
    - Sources metadata return
-
-### UI Component Tests (`test_ui/test_streamlit_components.py`)
-
-**20 tests covering:**
-
-1. **Message Dataclass** (2 tests)
-   - Basic message creation
-   - Message with agent metadata
-
-2. **Agent Icon Mapping** (5 tests)
-   - All agent types
-   - Unknown agent fallback
-
-3. **Sources Rendering** (4 tests)
-   - Unique widget keys across messages
-   - Empty sources handling
-   - Relevance score display
-   - Content preview
-
-4. **Code Snippets Rendering** (3 tests)
-   - Code display with syntax highlighting
-   - Empty snippets handling
-   - Multiple languages
-
-5. **Agent Metadata Display** (4 tests)
-   - Intent analysis visualization
-   - Processing path display
-   - Empty data handling
-   - Structured metadata
-
-6. **Widget Key Uniqueness** (2 tests)
-   - Global key uniqueness across chat history
-   - No key conflicts
 
 ### Week 1 Integration Tests (`test_agents/test_integration.py`)
 
@@ -231,11 +198,6 @@ def mock_vector_store(self):
     ]
     return store
 
-# Mock Streamlit functions
-with patch('streamlit.expander'), \
-     patch('streamlit.write') as mock_write:
-    render_function()
-    mock_write.assert_called()
 ```
 
 ## Continuous Integration
@@ -296,16 +258,16 @@ pytest tests/test_e2e/ -v
 ## Test Metrics
 
 Current test coverage:
-- **Total Tests**: 57+ comprehensive tests
+- **Total Tests**: 831+ comprehensive tests
 - **Agent Tests**: 15+ tests
 - **E2E Tests**: 22 tests
-- **UI Tests**: 20 tests
+- **API Tests**: 50+ tests
+- **Parser Tests**: 30+ tests
 - **Coverage Target**: >80%
 
 ## Future Test Improvements
 
 - [ ] Add performance benchmarks
 - [ ] Add load testing for concurrent requests
-- [ ] Add visual regression tests for UI
 - [ ] Add mutation testing
 - [ ] Increase coverage to 90%+

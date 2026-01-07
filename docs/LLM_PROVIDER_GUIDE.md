@@ -146,6 +146,6 @@ Popular models you can use:
 
 ## Important Notes
 
-- After changing `.env`, **restart the Streamlit application** for changes to take effect
+- After changing `.env`, **restart the backend server** for changes to take effect
 - If you see errors about model not found, check that the model name is correct and currently available on Groq
 - The default configuration uses `llama-3.3-70b-versatile` for all agent types, which works well for all tasks
