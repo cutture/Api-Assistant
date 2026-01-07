@@ -161,20 +161,23 @@ class ChatService:
             # Step 5: Generate LLM response
             system_prompt = self._build_system_prompt(context)
 
-            # Build messages for chat
+            # Build messages for chat with full conversation history
             messages = []
 
-            # Add conversation history if provided
+            # Add system prompt first
+            messages.append({"role": "system", "content": system_prompt})
+
+            # Add conversation history if provided (last 10 messages for context)
             if conversation_history:
-                messages.extend(conversation_history[-10:])  # Last 10 messages
+                messages.extend(conversation_history[-10:])
 
-            # Add current message
+            # Add current user message
             user_prompt = self._build_user_prompt(user_message, context)
+            messages.append({"role": "user", "content": user_prompt})
 
-            # Generate response
-            response_text = self.llm_client.generate(
-                prompt=user_prompt,
-                system_prompt=system_prompt,
+            # Generate response using chat() which properly handles conversation history
+            response_text = self.llm_client.chat(
+                messages=messages,
                 temperature=0.7,
                 max_tokens=2048,
                 timeout_seconds=120,
@@ -250,10 +253,22 @@ class ChatService:
             system_prompt = self._build_system_prompt(context)
             user_prompt = self._build_user_prompt(user_message, context)
 
-            # Stream response
-            for chunk in self.llm_client.generate_stream(
-                prompt=user_prompt,
-                system_prompt=system_prompt,
+            # Build messages for chat with full conversation history
+            messages = []
+
+            # Add system prompt first
+            messages.append({"role": "system", "content": system_prompt})
+
+            # Add conversation history if provided (last 10 messages for context)
+            if conversation_history:
+                messages.extend(conversation_history[-10:])
+
+            # Add current user message
+            messages.append({"role": "user", "content": user_prompt})
+
+            # Stream response using chat_stream() which properly handles conversation history
+            for chunk in self.llm_client.chat_stream(
+                messages=messages,
                 temperature=0.7,
                 max_tokens=2048,
             ):
