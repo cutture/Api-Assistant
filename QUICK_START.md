@@ -383,30 +383,27 @@ python api_assistant_cli.py info formats
 
 ---
 
-## 🖥️ Streamlit UI (Recommended)
+## 🖥️ Web UI (Recommended)
 
-The UI provides access to ALL features including those not available in CLI:
+The Next.js frontend provides access to ALL features including those not available in CLI.
 
-### Start the UI
+### Start the Application
 
-**Windows PowerShell:**
-```powershell
-$env:PYTHONPATH = "."; streamlit run src/main.py
-```
-
-**Linux/Mac:**
+**Terminal 1 - Backend:**
 ```bash
-PYTHONPATH=. streamlit run src/main.py
+uvicorn src.api.app:app --reload --port 8000
 ```
 
-**Or use different port:**
+**Terminal 2 - Frontend:**
 ```bash
-PYTHONPATH=. streamlit run src/main.py --server.port 8502
+cd frontend && npm run dev
 ```
+
+Open http://localhost:3000 in your browser.
 
 ### UI Features (Not in CLI)
 
-The Streamlit UI has features that are NOT available in the CLI:
+The web UI has features that are NOT available in the CLI:
 
 ✅ **Hybrid Search** - Combine vector + BM25 search
 ✅ **Re-ranking** - Cross-encoder re-ranking for better results
@@ -416,6 +413,9 @@ The Streamlit UI has features that are NOT available in the CLI:
 ✅ **Faceted Search** - Browse by categories
 ✅ **Interactive Chat** - Natural language queries
 ✅ **Visual Analytics** - Charts and statistics
+✅ **Diagram Generation** - All 4 diagram types with live preview
+✅ **Session Management** - Create, update, delete sessions
+✅ **Settings Page** - Configure LLM providers and search defaults
 
 ---
 
@@ -487,8 +487,8 @@ python api_assistant_cli.py export documents test_data/exports/all_docs.json
 
 ## 🎯 Feature Availability Matrix
 
-| Feature | CLI | Streamlit UI |
-|---------|-----|--------------|
+| Feature | CLI | Web UI |
+|---------|-----|--------|
 | Parse OpenAPI/GraphQL/Postman | ✅ | ✅ |
 | Basic Vector Search | ✅ | ✅ |
 | Hybrid Search (Vector + BM25) | ❌ | ✅ |
@@ -504,14 +504,14 @@ python api_assistant_cli.py export documents test_data/exports/all_docs.json
 | Interactive Chat | ❌ | ✅ |
 | Visual Analytics | ❌ | ✅ |
 
-**Recommendation**: Use Streamlit UI for full feature access. Use CLI for automation and scripting.
+**Recommendation**: Use the Web UI for full feature access. Use CLI for automation and scripting.
 
 ---
 
 ## 🐛 Troubleshooting
 
 ### Error: "No such option: --hybrid"
-**Solution**: This feature is only available in the Streamlit UI, not the CLI.
+**Solution**: This feature is only available in the Web UI, not the CLI.
 
 ### Error: "No such command 'generate'"
 **Solution**: Use commands directly under `diagram`:
@@ -532,15 +532,15 @@ python api_assistant_cli.py parse file your_file.yaml --add
 ## 📚 Next Steps
 
 1. ✅ **Run the quick test workflow** above to verify everything works
-2. ✅ **Start the Streamlit UI** for full feature access
-3. ✅ **Read TESTING_GUIDE.md** for comprehensive UI testing workflows
+2. ✅ **Start the Web UI** for full feature access
+3. ✅ **Read TESTING_GUIDE.md** for comprehensive testing workflows
 4. ✅ **Upload your own API specs** for real-world testing
 
 ---
 
 ## 🔗 Resources
 
-- **Full Testing Guide**: `TESTING_GUIDE.md` (UI workflows and advanced scenarios)
+- **Full Testing Guide**: `TESTING_GUIDE.md` (Testing workflows and advanced scenarios)
 - **Test Data**: `test_data/README.md` (Sample API specifications)
 - **Main Documentation**: `README.md` (Project overview)
 - **View Diagrams**: https://mermaid.live (Paste `.mmd` file content)
@@ -549,4 +549,4 @@ python api_assistant_cli.py parse file your_file.yaml --add
 
 **Happy Testing!** 🎉
 
-For advanced features like hybrid search, re-ranking, query expansion, and code generation, use the Streamlit UI.
+For advanced features like hybrid search, re-ranking, query expansion, and code generation, use the Web UI.

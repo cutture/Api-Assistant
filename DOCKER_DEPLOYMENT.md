@@ -62,7 +62,7 @@ mkdir -p data/chroma_db logs
 docker-compose -f docker-compose.prod.yml up -d
 
 # 4. Access the application
-open http://localhost:8501
+open http://localhost:3000
 ```
 
 ---
@@ -72,7 +72,8 @@ open http://localhost:8501
 ### Development Setup (docker-compose.yml)
 
 **Includes:**
-- Main application (Streamlit)
+- FastAPI backend
+- Next.js frontend
 - Ollama (local LLM server)
 - ChromaDB (embedded in app)
 
@@ -85,7 +86,8 @@ docker-compose up -d
 ### Production Setup (docker-compose.prod.yml)
 
 **Includes:**
-- Main application (Streamlit)
+- FastAPI backend
+- Next.js frontend
 - Groq cloud LLM integration
 - ChromaDB (embedded in app)
 
@@ -145,7 +147,8 @@ WEB_SEARCH_MAX_RESULTS=5
 
 | Service | Default Port | Environment Variable |
 |---------|--------------|---------------------|
-| Streamlit App | 8501 | `APP_PORT` |
+| FastAPI Backend | 8000 | `API_PORT` |
+| Next.js Frontend | 3000 | `FRONTEND_PORT` |
 | Ollama | 11434 | N/A |
 
 ---
@@ -230,14 +233,18 @@ docker inspect --format='{{range .State.Health.Log}}{{.Output}}{{end}}' api-assi
 
 | Service | Health Check | Interval |
 |---------|--------------|----------|
-| App | `http://localhost:8501/_stcore/health` | 30s |
+| Backend | `http://localhost:8000/health` | 30s |
+| Frontend | `http://localhost:3000` | 30s |
 | Ollama | `http://localhost:11434/api/tags` | 30s |
 
 ### Manual Health Check
 
 ```bash
-# Check Streamlit app
-curl -f http://localhost:8501/_stcore/health
+# Check FastAPI backend
+curl -f http://localhost:8000/health
+
+# Check Next.js frontend
+curl -f http://localhost:3000
 
 # Check Ollama
 curl -f http://localhost:11434/api/tags
