@@ -211,9 +211,12 @@ Docker is the tool that packages your application into a container.
    - Wait for it to enable
 
    c. **Enable Cloud Build API:**
-   - Search for: `Cloud Build API`
-   - Click on it
-   - Click **"Enable"**
+   - Click the hamburger menu (☰) in the top-left corner
+   - Scroll down to **"APIs & Services"**
+   - Click **"Library"**
+   - In the Library search box, type: `Cloud Build`
+   - Look for **"Cloud Build API"** with the Google Cloud icon
+   - Click on it and then click **"Enable"**
 
 **✅ Checkpoint:** You now have a project with Cloud Run, Artifact Registry, and Cloud Build enabled.
 
