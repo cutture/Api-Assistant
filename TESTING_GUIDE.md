@@ -2,40 +2,39 @@
 
 Version 1.0.0 - Production Testing Workflows
 
-## ⚠️ IMPORTANT: Feature Availability
+## Feature Availability
 
-**The current Streamlit UI is minimal. Most features are in CLI or backend only!**
-
-| Feature | CLI | Streamlit UI | Backend API |
-|---------|-----|--------------|-------------|
-| Basic Vector Search | ✅ | ✅ (via chat) | ✅ |
-| **Hybrid Search (Vector + BM25)** | ❌ | ❌ | ✅ |
-| **Cross-encoder Re-ranking** | ❌ | ❌ | ✅ |
-| **Query Expansion** | ❌ | ❌ | ✅ |
-| **Code Generation** | ❌ | ✅ (via chat) | ✅ |
-| **Advanced AND/OR/NOT Filters** | ❌ | ❌ | ✅ |
-| **Faceted Search** | ❌ | ❌ | ✅ |
-| Simple Filters (method, source) | ✅ | ❌ | ✅ |
-| Diagram Generation | ✅ | ❌ | ✅ |
-| Session Management | ✅ | ❌ | ✅ |
-| Data Export | ✅ | ❌ | ✅ |
+| Feature | CLI | Web UI | Backend API |
+|---------|-----|--------|-------------|
+| Basic Vector Search | ✅ | ✅ | ✅ |
+| Hybrid Search (Vector + BM25) | ❌ | ✅ | ✅ |
+| Cross-encoder Re-ranking | ❌ | ✅ | ✅ |
+| Query Expansion | ❌ | ✅ | ✅ |
+| Code Generation | ❌ | ✅ | ✅ |
+| Advanced AND/OR/NOT Filters | ❌ | ✅ | ✅ |
+| Faceted Search | ❌ | ✅ | ✅ |
+| Simple Filters (method, source) | ✅ | ✅ | ✅ |
+| Diagram Generation | ✅ | ✅ | ✅ |
+| Session Management | ✅ | ✅ | ✅ |
+| Data Export | ✅ | ✅ | ✅ |
 | Interactive Chat | ❌ | ✅ | ✅ |
-| File Upload (OpenAPI) | ✅ | ✅ | ✅ |
-| File Upload (GraphQL/Postman) | ✅ | ❌ | ✅ |
+| File Upload (All formats) | ✅ | ✅ | ✅ |
 
-**📌 Recommendation**:
-- **For testing most features**: Use the CLI (see [CLI Testing Workflows](#cli-testing-workflows))
-- **For chat/interactive queries**: Use the Streamlit UI (see [UI Testing Workflows](#ui-testing-workflows))
-- **For full feature access**: Wait for new Next.js UI (see `docs/UI_REPLACEMENT_PLAN.md`)
+**📌 Recommendations**:
+- **For interactive testing**: Use the Web UI (http://localhost:3000)
+- **For automation/scripting**: Use the CLI
+- **For API integration**: Use the Backend API directly
 
-**🚀 Start Streamlit UI**:
+**🚀 Start the Application**:
 ```bash
-# Linux/Mac
-PYTHONPATH=. streamlit run src/main.py
+# Terminal 1 - Backend
+uvicorn src.api.app:app --reload --port 8000
 
-# Windows PowerShell
-$env:PYTHONPATH = "."; streamlit run src/main.py
+# Terminal 2 - Frontend
+cd frontend && npm run dev
 ```
+
+Open http://localhost:3000 in your browser.
 
 ---
 
@@ -1065,9 +1064,7 @@ Create `test_data/postman/reqres_collection.json`:
 
 ## CLI Testing Workflows
 
-> **⚠️ IMPORTANT**: The CLI has LIMITED features. For hybrid search, re-ranking, query expansion, code generation, and advanced filtering, use the [Streamlit UI](#ui-testing-workflows).
->
-> **Start UI**: `PYTHONPATH=. streamlit run src/main.py`
+> **Note**: The CLI provides basic search and automation capabilities. For advanced features like hybrid search, re-ranking, query expansion, and code generation, use the [Web UI](#web-ui-testing-workflows) at http://localhost:3000.
 
 ### Workflow 1: Parse and Index API Specifications
 
@@ -1117,7 +1114,7 @@ python api_assistant_cli.py search query "user" --source openapi --limit 3
 python api_assistant_cli.py search query "data" --method POST --source openapi --limit 5
 ```
 
-**Note**: For complex AND/OR/NOT filters, use the Streamlit UI.
+**Note**: For complex AND/OR/NOT filters, use the Web UI or API directly.
 
 ### Workflow 4: Diagram Generation
 
@@ -1304,60 +1301,23 @@ python api_assistant_cli.py info formats                     # Supported formats
 
 ---
 
-## ⚠️ IMPORTANT: Current UI Limitations
+## Web UI Testing Workflows
 
-**The current Streamlit UI is minimal and does NOT include most advanced features.**
+The Next.js frontend provides full access to all backend features.
 
-**Currently Available in Streamlit UI:**
-- ✅ **File Upload** (OpenAPI/Swagger only, via sidebar)
-- ✅ **Interactive Chat** (Natural language queries)
-- ✅ **Code Generation** (via chat responses)
-- ✅ **Basic Settings** (Model selection, temperature)
-
-**NOT Available in Current UI (Backend Implemented, No Frontend):**
-- ❌ **Hybrid Search Toggle** (uses vector search only)
-- ❌ **Cross-encoder Re-ranking Toggle**
-- ❌ **Query Expansion Toggle**
-- ❌ **Advanced Filtering UI** (method/source filters)
-- ❌ **Faceted Search Interface**
-- ❌ **GraphQL/Postman Upload** (backend supports, UI doesn't)
-- ❌ **Session Management UI**
-- ❌ **Diagram Generation UI**
-- ❌ **Search Interface** (only chat available)
-- ❌ **Document Management** (view/delete indexed docs)
-
-**📌 To use the current Streamlit UI:**
+### Starting the Web UI
 
 ```bash
-# Linux/Mac
-PYTHONPATH=. streamlit run src/main.py
+# Terminal 1 - Start Backend
+uvicorn src.api.app:app --reload --port 8000
 
-# Windows PowerShell
-$env:PYTHONPATH = "."; streamlit run src/main.py
+# Terminal 2 - Start Frontend
+cd frontend && npm run dev
+
+# Expected: Browser opens at http://localhost:3000
 ```
 
-**⚠️ Note:** A new Next.js UI is being developed to expose all backend features. See `docs/UI_REPLACEMENT_PLAN.md` for details.
-
-
-## UI Testing Workflows (Current Streamlit UI)
-
-> **⚠️ DISCLAIMER:** These workflows describe the CURRENT minimal Streamlit UI.
-> A new Next.js UI with full feature parity is under development.
-> See `docs/UI_REPLACEMENT_PLAN.md` for details.
-
-### Starting the Streamlit UI
-
-```bash
-# Windows PowerShell
-$env:PYTHONPATH = "."; streamlit run src/main.py
-
-# Linux/Mac
-PYTHONPATH=. streamlit run src/main.py
-
-# Expected: Browser opens at http://localhost:8501
-```
-
-### Workflow 1: Document Upload and Chat (Current UI)
+### Workflow 1: Document Upload and Chat
 
 **What You'll See:**
 - Single page with chat interface (main area)
@@ -1403,39 +1363,45 @@ PYTHONPATH=. streamlit run src/main.py
 - Chat provides intelligent answers about your APIs
 - Code generation works via chat
 
-**Limitations** (Features NOT in current UI):
-- ❌ Cannot view list of indexed documents
-- ❌ Cannot delete individual documents (use CLI: `collection clear`)
-- ❌ Cannot toggle search modes or advanced features
-- ❌ Cannot upload GraphQL/Postman (UI only shows OpenAPI/Swagger)
-- ❌ No filtering, faceted search, or session management UI
+### Workflow 2: Advanced Search Features
 
-### Additional Features (Use CLI or Await New UI)
+The Web UI provides access to all advanced search features:
 
-The current Streamlit UI does not provide interfaces for the following features. Please use the CLI workflows described earlier in this guide:
+1. Navigate to the **Search** page
+2. Enter your search query
+3. Toggle search options:
+   - **Hybrid Search** - Combines vector + keyword search
+   - **Re-ranking** - Improves result relevance
+   - **Query Expansion** - Adds related terms
+4. Apply filters:
+   - Method filter (GET, POST, PUT, DELETE)
+   - Source filter (openapi, graphql, postman)
+   - Advanced boolean filters
 
-**Features Available via CLI Only:**
-- ✅ **Advanced Search** - Use CLI `search` command with `--method`, `--source` filters
-- ✅ **Diagram Generation** - Use CLI `diagram` command for sequence/ER/overview/auth diagrams
-- ✅ **Session Management** - Use CLI `session` commands for create/list/stats/delete
-- ✅ **Data Export** - Use CLI `export` command
-- ✅ **GraphQL/Postman Upload** - Use CLI `parse` command with `--format` flag
-- ✅ **Collection Management** - Use CLI `collection` commands
+### Workflow 3: Diagram Generation
 
-**Features Not Currently Available (Backend Implemented, Awaiting UI):**
-- ⏳ **Hybrid Search Toggle** - Backend ready, no UI controls
-- ⏳ **Re-ranking Toggle** - Backend ready, no UI controls
-- ⏳ **Query Expansion** - Backend ready, no UI controls
-- ⏳ **Advanced AND/OR/NOT Filtering** - Backend ready, no UI builder
-- ⏳ **Faceted Search** - Backend ready, no UI interface
-- ⏳ **Visual Analytics** - Backend ready, no dashboard
+1. Navigate to the **Diagrams** page
+2. Select diagram type:
+   - Sequence diagram
+   - ER diagram
+   - Auth flow diagram
+   - API overview
+3. Upload or select an API specification
+4. View and download the generated Mermaid diagram
 
-**📢 Coming Soon:**
-A new Next.js UI is under development to expose all backend features with a modern, professional interface.
+### Workflow 4: Session Management
 
-**Progress:** See `docs/UI_REPLACEMENT_PLAN.md` for full implementation plan and timeline.
+1. Navigate to the **Sessions** page
+2. View active sessions
+3. Create new sessions with TTL
+4. Manage conversation history
 
-**For now:** Use the [CLI Testing Workflows](#cli-testing-workflows) section above to access all advanced features through the command line.
+### Workflow 5: Settings Configuration
+
+1. Navigate to the **Settings** page
+2. Configure LLM provider (Ollama or Groq)
+3. Set default search options
+4. Manage application preferences
 
 ---
 
@@ -1455,7 +1421,7 @@ python api_assistant_cli.py search query "country information" --limit 3
 # Expected: Country type and queries
 ```
 
-**UI Support**: ❌ Current Streamlit UI does not support GraphQL uploads. Use CLI only.
+**Web UI**: Navigate to Chat page and upload `.graphql` files via the file upload area.
 
 ### Feature 2: Postman Collection Parsing
 
@@ -1471,7 +1437,7 @@ python api_assistant_cli.py search query "list users" --limit 3
 # Expected: Postman requests with descriptions
 ```
 
-**UI Support**: ❌ Current Streamlit UI does not support Postman uploads. Use CLI only.
+**Web UI**: Navigate to Chat page and upload Postman JSON collection files via the file upload area.
 
 ### Feature 3: Multi-API Search
 
@@ -1515,7 +1481,7 @@ python api_assistant_cli.py session stats
 python api_assistant_cli.py session info <SESSION_ID> --history
 ```
 
-**UI Support**: ❌ Current Streamlit UI does not have session management UI. Use CLI only.
+**Web UI**: Navigate to Sessions page to manage sessions with a full UI.
 
 ### Feature 5: Advanced Search Features
 
@@ -1523,9 +1489,9 @@ python api_assistant_cli.py session info <SESSION_ID> --history
 
 **Backend Status**: ✅ Fully implemented in FastAPI backend
 **CLI Support**: ❌ Not available in CLI (search is basic vector only)
-**UI Support**: ❌ Not available in current Streamlit UI (no toggles or controls)
+**Web UI**: ✅ Full support on the Search page with toggles for all features
 
-**To test these features**: Wait for the new Next.js UI (see `docs/UI_REPLACEMENT_PLAN.md`) or directly test the FastAPI backend:
+**To test via API directly**:
 
 ```bash
 # Test backend directly with curl/httpx
@@ -1838,30 +1804,32 @@ python api_assistant_cli.py parse file test_data/openapi/jsonplaceholder.yaml --
    python api_assistant_cli.py session export --name "my_session" --output session_backup.json
    ```
 
-### Issue 6: UI not starting
+### Issue 6: Frontend not starting
 
-**Symptoms**: Streamlit won't launch
+**Symptoms**: Next.js frontend won't launch
 
 **Solutions**:
 
-1. **Check Python path**:
+1. **Ensure backend is running first**:
    ```bash
-   # Windows
-   $env:PYTHONPATH = "."; python -m streamlit run src/main.py
-
-   # Linux/Mac
-   PYTHONPATH=. python -m streamlit run src/main.py
+   uvicorn src.api.app:app --reload --port 8000
    ```
 
-2. **Verify dependencies**:
+2. **Install frontend dependencies**:
    ```bash
-   pip install -r requirements.txt
+   cd frontend
+   npm install
    ```
 
 3. **Check port availability**:
    ```bash
-   # Use different port
-   PYTHONPATH=. streamlit run src/main.py --server.port 8502
+   # Use different port if 3000 is taken
+   cd frontend && npm run dev -- -p 3001
+   ```
+
+4. **Check Node.js version**:
+   ```bash
+   node --version  # Should be 18+
    ```
 
 ---
@@ -1893,15 +1861,14 @@ python api_assistant_cli.py session create --name "<name>"
 python api_assistant_cli.py batch export --format json --output <file>
 ```
 
-### Most Common UI Actions (Current Streamlit UI)
+### Most Common Web UI Actions
 
-1. **Upload & Index**: Sidebar → 📄 API Documentation → Upload files → 🔄 Process Files
-2. **Chat**: Main area → Type question in chat input → Get AI response
-3. **Settings**: Sidebar → Adjust model, temperature, max tokens
-4. **Clear Data**: Sidebar → 🗑️ Clear button → Confirms and clears session state
-5. **Refresh**: Sidebar → 🔍 Refresh button → Reloads the UI
-
-**Note**: Advanced features (Search UI, Diagram Generator, Code Generator, Export) are not available in current UI. Use CLI or wait for new Next.js UI.
+1. **Chat**: Navigate to Chat page → Type question → Get AI response with code generation
+2. **Search**: Navigate to Search page → Enter query → Toggle hybrid/rerank/expand options
+3. **Diagrams**: Navigate to Diagrams page → Select type → Generate Mermaid diagrams
+4. **Sessions**: Navigate to Sessions page → Create/manage user sessions
+5. **Settings**: Navigate to Settings page → Configure LLM provider and preferences
+6. **Upload**: Use file upload in Chat or Search pages to index new APIs
 
 ---
 
