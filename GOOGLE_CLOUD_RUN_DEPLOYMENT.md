@@ -521,7 +521,7 @@ gcloud run deploy api-assistant \
     --cpu 2 \
     --timeout 300 \
     --max-instances 10 \
-    --set-env-vars "SECRET_KEY=CHANGE_THIS_TO_A_RANDOM_SECRET_12345,PORT=8000"
+    --set-env-vars "SECRET_KEY=CHANGE_THIS_TO_A_RANDOM_SECRET_12345"
 ```
 
 **What each option means:**
