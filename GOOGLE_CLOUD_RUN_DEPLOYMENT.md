@@ -17,9 +17,11 @@ This guide provides **exact step-by-step instructions** for deploying the API In
 9. [Step 7: Deploy to Cloud Run](#step-7-deploy-to-cloud-run)
 10. [Step 8: Configure Environment Variables](#step-8-configure-environment-variables)
 11. [Step 9: Test Your Deployment](#step-9-test-your-deployment)
-12. [Step 10: Set Up Custom Domain (Optional)](#step-10-set-up-custom-domain-optional)
-13. [Troubleshooting](#troubleshooting)
-14. [Managing Costs](#managing-costs)
+12. [Step 10: Deploy Frontend to Vercel](#step-10-deploy-frontend-to-vercel)
+13. [Step 11: Connect Frontend and Backend](#step-11-connect-frontend-and-backend)
+14. [Step 12: Set Up Custom Domain (Optional)](#step-12-set-up-custom-domain-optional)
+15. [Troubleshooting](#troubleshooting)
+16. [Managing Costs](#managing-costs)
 
 ---
 
@@ -521,7 +523,7 @@ gcloud run deploy api-assistant \
     --cpu 2 \
     --timeout 300 \
     --max-instances 10 \
-    --set-env-vars "SECRET_KEY=CHANGE_THIS_TO_A_RANDOM_SECRET_12345,PORT=8000"
+    --set-env-vars "SECRET_KEY=CHANGE_THIS_TO_A_RANDOM_SECRET_12345"
 ```
 
 **What each option means:**
@@ -730,7 +732,210 @@ You should see the FastAPI Swagger UI with all available endpoints.
 
 ---
 
-## Step 10: Set Up Custom Domain (Optional)
+## Step 10: Deploy Frontend to Vercel
+
+Now that your backend is running on Cloud Run, let's deploy the Next.js frontend to Vercel (free tier).
+
+### A. Create a Vercel Account
+
+1. **Go to Vercel:**
+   - Open your browser and visit: https://vercel.com
+   - Click **"Sign Up"** in the top right
+
+2. **Sign up with GitHub (Recommended):**
+   - Click **"Continue with GitHub"**
+   - Authorize Vercel to access your GitHub account
+   - This makes deployment automatic when you push code
+
+   **Alternative:** You can also sign up with GitLab, Bitbucket, or email.
+
+3. **Complete the setup:**
+   - Enter your name
+   - Select "Hobby" for the free tier
+   - Click **"Continue"**
+
+**✅ Checkpoint:** You should now be on the Vercel dashboard.
+
+### B. Push Your Code to GitHub (If Not Already Done)
+
+If your code isn't already on GitHub:
+
+1. **Create a new repository on GitHub:**
+   - Go to: https://github.com/new
+   - Repository name: `api-assistant` (or your preferred name)
+   - Choose **Public** or **Private**
+   - Click **"Create repository"**
+
+2. **Push your local code to GitHub:**
+   ```bash
+   cd /path/to/Api-Assistant
+   git remote add origin https://github.com/YOUR_USERNAME/api-assistant.git
+   git branch -M main
+   git push -u origin main
+   ```
+
+   **Replace `YOUR_USERNAME`** with your GitHub username.
+
+### C. Import Your Project to Vercel
+
+1. **Click "Add New..." on the Vercel dashboard:**
+   - Click **"Add New..."** button
+   - Select **"Project"**
+
+2. **Import your Git repository:**
+   - You'll see a list of your GitHub repositories
+   - Find and click **"Import"** next to your `api-assistant` repository
+   - If you don't see it, click **"Adjust GitHub App Permissions"** to grant access
+
+3. **Configure the project:**
+
+   **Project Name:**
+   - Enter: `api-assistant-frontend` (or any name you prefer)
+
+   **Framework Preset:**
+   - Vercel should auto-detect **Next.js** - if not, select it manually
+
+   **Root Directory:**
+   - Click **"Edit"** next to Root Directory
+   - Select: `frontend`
+   - Click **"Continue"**
+
+   This is important because your Next.js app is in the `frontend` folder, not the root.
+
+4. **Configure Environment Variables:**
+
+   Click **"Environment Variables"** to expand the section, then add:
+
+   | Name | Value |
+   |------|-------|
+   | `NEXT_PUBLIC_API_BASE_URL` | `https://YOUR_CLOUD_RUN_URL` |
+   | `NEXT_PUBLIC_ENABLE_DEBUG` | `false` |
+   | `NEXT_PUBLIC_ENABLE_ANALYTICS` | `false` |
+
+   **⚠️ IMPORTANT:** Replace `YOUR_CLOUD_RUN_URL` with your actual Cloud Run URL from Step 7.
+
+   Example: `https://api-assistant-abc123-uc.a.run.app`
+
+   **How to add each variable:**
+   - Enter the **Name** (e.g., `NEXT_PUBLIC_API_BASE_URL`)
+   - Enter the **Value** (e.g., `https://api-assistant-abc123-uc.a.run.app`)
+   - Click **"Add"**
+   - Repeat for each variable
+
+5. **Deploy:**
+   - Click **"Deploy"**
+   - Wait for the build to complete (2-5 minutes)
+   - You'll see build logs in real-time
+
+6. **Get your frontend URL:**
+   - Once deployed, you'll see: **"Congratulations! Your project has been deployed"**
+   - Your frontend URL will be something like: `https://api-assistant-frontend.vercel.app`
+   - Click **"Continue to Dashboard"** to see your deployment
+
+**✅ Checkpoint:** Your frontend is now deployed on Vercel!
+
+### D. Test Your Frontend
+
+1. **Open your frontend URL:**
+   - Click the URL shown on Vercel (e.g., `https://api-assistant-frontend.vercel.app`)
+   - Or open it in a new browser tab
+
+2. **Verify the application loads:**
+   - You should see the API Assistant interface
+   - The page should load without errors
+
+3. **Test the connection to your backend:**
+   - Try using the search feature or uploading a document
+   - If you see errors, check the next section for troubleshooting
+
+---
+
+## Step 11: Connect Frontend and Backend
+
+Now we need to update your Cloud Run backend to accept requests from your Vercel frontend.
+
+### A. Update Cloud Run CORS Settings
+
+Your backend needs to allow requests from your Vercel domain. Update the environment variables:
+
+```bash
+gcloud run services update api-assistant \
+    --region asia-east1 \
+    --update-env-vars "FRONTEND_URL=https://api-assistant-frontend.vercel.app"
+```
+
+**⚠️ Replace the values:**
+- **`asia-east1`** - Your Cloud Run region
+- **`https://api-assistant-frontend.vercel.app`** - Your actual Vercel URL
+
+### B. Complete Backend Configuration
+
+Now run the full environment variable update with all settings:
+
+```bash
+gcloud run services update api-assistant \
+    --region asia-east1 \
+    --update-env-vars "\
+SECRET_KEY=YOUR_GENERATED_SECRET_KEY,\
+GROQ_API_KEY=YOUR_GROQ_API_KEY,\
+FRONTEND_URL=https://api-assistant-frontend.vercel.app,\
+EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2,\
+LLM_PROVIDER=groq,\
+GROQ_MODEL=mixtral-8x7b-32768,\
+ENABLE_QUERY_EXPANSION=true,\
+LOG_LEVEL=INFO"
+```
+
+**⚠️ Replace:**
+1. **`YOUR_GENERATED_SECRET_KEY`** - Generate with: `python3 -c "import secrets; print(secrets.token_urlsafe(32))"`
+2. **`YOUR_GROQ_API_KEY`** - Get free at https://console.groq.com
+3. **`https://api-assistant-frontend.vercel.app`** - Your actual Vercel URL
+4. **`asia-east1`** - Your Cloud Run region
+
+### C. Test the Full Application
+
+1. **Open your Vercel frontend URL**
+
+2. **Test document upload:**
+   - Navigate to the documents section
+   - Upload a test file
+   - Verify it appears in the document list
+
+3. **Test search:**
+   - Use the search functionality
+   - Verify results are returned from your backend
+
+4. **Test chat (if configured with Groq):**
+   - Open the chat interface
+   - Ask a question about your uploaded documents
+   - Verify you get AI-powered responses
+
+### D. Automatic Deployments
+
+Vercel automatically deploys when you push to GitHub:
+
+1. **Make changes to your frontend code locally**
+
+2. **Commit and push:**
+   ```bash
+   cd /path/to/Api-Assistant
+   git add .
+   git commit -m "Update frontend"
+   git push origin main
+   ```
+
+3. **Vercel automatically:**
+   - Detects the push
+   - Builds your application
+   - Deploys to production
+
+You can view deployment status at: https://vercel.com/dashboard
+
+**✅ Checkpoint:** Your full-stack application is deployed! Frontend on Vercel, Backend on Cloud Run.
+
+---
+
+## Step 12: Set Up Custom Domain (Optional)
 
 If you want to use your own domain instead of the `*.run.app` URL:
 
