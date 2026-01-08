@@ -861,8 +861,10 @@ Your backend needs to allow requests from your Vercel domain. Update the environ
 ```bash
 gcloud run services update api-assistant \
     --region asia-east1 \
-    --update-env-vars "FRONTEND_URL=https://api-assistant-frontend.vercel.app"
+    --update-env-vars "ALLOWED_ORIGINS=https://api-assistant-frontend.vercel.app"
 ```
+
+**⚠️ IMPORTANT:** The environment variable is `ALLOWED_ORIGINS`, NOT `FRONTEND_URL`.
 
 **⚠️ Replace the values:**
 - **`asia-east1`** - Your Cloud Run region
@@ -878,10 +880,10 @@ gcloud run services update api-assistant \
     --update-env-vars "\
 SECRET_KEY=YOUR_GENERATED_SECRET_KEY,\
 GROQ_API_KEY=YOUR_GROQ_API_KEY,\
-FRONTEND_URL=https://api-assistant-frontend.vercel.app,\
+ALLOWED_ORIGINS=https://api-assistant-frontend.vercel.app,\
 EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2,\
 LLM_PROVIDER=groq,\
-GROQ_MODEL=mixtral-8x7b-32768,\
+GROQ_MODEL=llama-3.3-70b-versatile,\
 ENABLE_QUERY_EXPANSION=true,\
 LOG_LEVEL=INFO"
 ```
@@ -889,7 +891,7 @@ LOG_LEVEL=INFO"
 **⚠️ Replace:**
 1. **`YOUR_GENERATED_SECRET_KEY`** - Generate with: `python3 -c "import secrets; print(secrets.token_urlsafe(32))"`
 2. **`YOUR_GROQ_API_KEY`** - Get free at https://console.groq.com
-3. **`https://api-assistant-frontend.vercel.app`** - Your actual Vercel URL
+3. **`https://api-assistant-frontend.vercel.app`** - Your actual Vercel URL (for `ALLOWED_ORIGINS`)
 4. **`asia-east1`** - Your Cloud Run region
 
 ### C. Test the Full Application
