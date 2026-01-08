@@ -35,10 +35,11 @@ LABEL version="0.2.0"
 # Set environment variables (no hardcoded PORT - let Railway set it dynamically)
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    PATH="/opt/venv/bin:$PATH"
+    PATH="/opt/venv/bin:$PATH" \
+    HF_HOME="/home/appuser/.cache/huggingface"
 
 # Create non-root user
-RUN groupadd -r appuser && useradd -r -g appuser -u 1000 appuser
+RUN groupadd -r appuser && useradd -r -g appuser -u 1000 -m appuser
 
 # Install runtime dependencies only
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -56,8 +57,8 @@ COPY . .
 RUN chown -R appuser:appuser /app
 
 # Create necessary directories with proper permissions
-RUN mkdir -p /app/data/chroma_db /app/logs && \
-    chown -R appuser:appuser /app/data /app/logs
+RUN mkdir -p /app/data/chroma_db /app/logs /home/appuser/.cache/huggingface && \
+    chown -R appuser:appuser /app/data /app/logs /home/appuser
 
 # Switch to non-root user
 USER appuser
