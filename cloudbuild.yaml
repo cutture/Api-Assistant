@@ -24,6 +24,7 @@ steps:
       - 'build-image'
 
   # Step 3: Deploy to Cloud Run
+  # Uses gen2 execution environment for Cloud Storage FUSE support
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'gcloud'
     args:
@@ -47,6 +48,8 @@ steps:
       - '--max-instances'
       - '10'
       - '--allow-unauthenticated'
+      - '--execution-environment'
+      - 'gen2'
     id: 'deploy-cloud-run'
     waitFor:
       - 'push-image'
