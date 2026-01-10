@@ -18,7 +18,8 @@ from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile, sta
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from src.api.auth import verify_api_key
+from src.api.auth import verify_api_key, get_current_user_optional, CurrentUser
+from src.api.auth_router import router as auth_router, init_auth_db
 
 from src.api.models import (
     AddDocumentsRequest,
@@ -120,6 +121,17 @@ def create_app(
             allow_methods=["*"],
             allow_headers=["*"],
         )
+
+    # Include authentication router
+    app.include_router(auth_router)
+
+    # Add startup event for database initialization
+    @app.on_event("startup")
+    async def startup_event():
+        """Initialize services on application startup."""
+        logger.info("Initializing authentication database...")
+        await init_auth_db()
+        logger.info("Application startup complete")
 
     # Initialize services
     vector_store = VectorStore(
@@ -786,11 +798,15 @@ def create_app(
         status_code=status.HTTP_201_CREATED,
         tags=["Sessions"],
     )
-    async def create_session(request: CreateSessionRequest):
+    async def create_session(
+        request: CreateSessionRequest,
+        current_user: CurrentUser = Depends(get_current_user_optional),
+    ):
         """
         Create a new user session.
 
         Creates an isolated session with user-specific settings and conversation history.
+        If authenticated, the session is automatically linked to the user.
         """
         try:
             # Convert Pydantic model to dataclass
@@ -811,8 +827,11 @@ def create_app(
                     custom_metadata=request.settings.custom_metadata,
                 )
 
+            # Use authenticated user_id if available, otherwise use request.user_id
+            user_id = current_user.user_id if current_user.is_authenticated else request.user_id
+
             session = session_manager.create_session(
-                user_id=request.user_id,
+                user_id=user_id,
                 ttl_minutes=request.ttl_minutes,
                 settings=settings,
                 collection_name=request.collection_name,
@@ -822,7 +841,7 @@ def create_app(
             session_dict = session.to_dict()
             api_session = Session(**session_dict)
 
-            logger.info("Session created via API", session_id=session.session_id)
+            logger.info("Session created via API", session_id=session.session_id, user_id=user_id)
 
             return CreateSessionResponse(session=api_session)
         except Exception as e:
@@ -894,11 +913,14 @@ def create_app(
     async def list_sessions(
         user_id: Optional[str] = None,
         status_filter: Optional[SessionStatus] = None,
+        current_user: CurrentUser = Depends(get_current_user_optional),
     ):
         """
-        List all sessions with optional filters.
+        List sessions with optional filters.
 
-        Filter by user_id or status to get specific sessions.
+        If authenticated, only returns the user's own sessions.
+        Admins or API key users can filter by any user_id.
+        Guests see only their current guest sessions.
         """
         try:
             from src.sessions.session_manager import SessionStatus as BackendSessionStatus
@@ -907,8 +929,19 @@ def create_app(
             if status_filter:
                 backend_status = BackendSessionStatus(status_filter.value)
 
+            # Determine which user_id to filter by
+            effective_user_id = user_id
+            if current_user.is_authenticated and current_user.auth_method == "jwt":
+                # JWT authenticated users can only see their own sessions
+                # unless they provided a specific user_id and it matches theirs
+                if user_id is None or user_id == current_user.user_id:
+                    effective_user_id = current_user.user_id
+                elif not current_user.is_guest:
+                    # Non-guest authenticated user trying to access other user's sessions
+                    effective_user_id = current_user.user_id  # Force to own sessions
+
             sessions = session_manager.list_sessions(
-                user_id=user_id,
+                user_id=effective_user_id,
                 status=backend_status,
             )
 

@@ -72,6 +72,40 @@ class Settings(BaseSettings):
         description="Require API key authentication for all endpoints"
     )
 
+    # ----- JWT Authentication -----
+    jwt_secret_key: str = Field(
+        default="",
+        description="Secret key for JWT signing (defaults to secret_key if not set)"
+    )
+    jwt_algorithm: str = Field(default="HS256")
+    jwt_access_token_expire_minutes: int = Field(default=30)
+    jwt_refresh_token_expire_days: int = Field(default=7)
+
+    # ----- OAuth - Google -----
+    google_client_id: str = Field(
+        default="",
+        description="Google OAuth Client ID"
+    )
+    google_client_secret: str = Field(
+        default="",
+        description="Google OAuth Client Secret"
+    )
+
+    # ----- Email Verification -----
+    smtp_host: str = Field(default="smtp.gmail.com")
+    smtp_port: int = Field(default=587)
+    smtp_user: str = Field(default="")
+    smtp_password: str = Field(default="")
+    email_from: str = Field(default="noreply@api-assistant.com")
+    verification_token_expire_hours: int = Field(default=24)
+
+    # ----- Password Requirements -----
+    password_min_length: int = Field(default=8)
+    password_require_uppercase: bool = Field(default=True)
+    password_require_lowercase: bool = Field(default=True)
+    password_require_digit: bool = Field(default=True)
+    password_require_special: bool = Field(default=True)
+
     @property
     def allowed_extensions_list(self) -> list[str]:
         """Get allowed extensions as a list."""
@@ -91,6 +125,11 @@ class Settings(BaseSettings):
     def max_upload_size_bytes(self) -> int:
         """Get max upload size in bytes."""
         return self.max_upload_size_mb * 1024 * 1024
+
+    @property
+    def effective_jwt_secret(self) -> str:
+        """Get JWT secret key, falling back to secret_key if not set."""
+        return self.jwt_secret_key or self.secret_key
 
     @property
     def chroma_persist_path(self) -> Path:
