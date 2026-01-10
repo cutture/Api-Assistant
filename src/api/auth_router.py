@@ -159,32 +159,43 @@ async def register(
         )
 
     user_service = UserService(db)
+    settings = get_settings()
 
     try:
-        # Create user (unverified)
+        # Auto-verify if skip_email_verification is enabled (for local dev)
+        auto_verify = settings.skip_email_verification
+
+        # Create user
         user = await user_service.create_user(
             email=request.email,
             password=request.password,
             name=request.name,
-            is_verified=False,
+            is_verified=auto_verify,
         )
 
-        # Create verification token
-        verification_token = await user_service.create_verification_token(
-            user_id=user.id,
-            token_type="email_verification",
-        )
+        requires_verification = not auto_verify
+        message = "Registration successful."
 
-        # TODO: Send verification email
-        # In production, send email with verification link containing token
-        logger.info(f"User registered: {user.email}, verification token: {verification_token.token}")
+        if requires_verification:
+            # Create verification token
+            verification_token = await user_service.create_verification_token(
+                user_id=user.id,
+                token_type="email_verification",
+            )
+            # TODO: Send verification email
+            # In production, send email with verification link containing token
+            logger.info(f"User registered: {user.email}, verification token: {verification_token.token}")
+            message = "Registration successful. Please check your email to verify your account."
+        else:
+            logger.info(f"User registered and auto-verified: {user.email}")
+            message = "Registration successful. You can now log in."
 
         return RegisterResponse(
             success=True,
-            message="Registration successful. Please check your email to verify your account.",
+            message=message,
             user_id=user.id,
             email=user.email,
-            requires_verification=True,
+            requires_verification=requires_verification,
         )
 
     except ValueError as e:
@@ -210,6 +221,7 @@ async def login(
     Returns JWT tokens for authentication.
     """
     user_service = UserService(db)
+    settings = get_settings()
 
     # Authenticate user
     user = await user_service.authenticate_user(
@@ -223,14 +235,12 @@ async def login(
             detail="Invalid email or password",
         )
 
-    # Check if email is verified
-    if not user.is_verified:
+    # Check if email is verified (skip if skip_email_verification is enabled)
+    if not user.is_verified and not settings.skip_email_verification:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Email not verified. Please check your email for verification link.",
         )
-
-    settings = get_settings()
 
     # Create tokens
     access_token = create_access_token(user_id=user.id, email=user.email)

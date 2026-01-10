@@ -98,6 +98,10 @@ class Settings(BaseSettings):
     smtp_password: str = Field(default="")
     email_from: str = Field(default="noreply@api-assistant.com")
     verification_token_expire_hours: int = Field(default=24)
+    skip_email_verification: bool = Field(
+        default=False,
+        description="Skip email verification requirement (for local development only)"
+    )
 
     # ----- Password Requirements -----
     password_min_length: int = Field(default=8)
