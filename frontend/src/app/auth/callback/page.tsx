@@ -4,7 +4,7 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { handleOAuthCallback } from "@/lib/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,8 +20,17 @@ export default function OAuthCallbackPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
+  // Ref to prevent double execution in React StrictMode
+  const isProcessing = useRef(false);
+
   useEffect(() => {
     const processCallback = async () => {
+      // Prevent double execution in React StrictMode
+      if (isProcessing.current) {
+        return;
+      }
+      isProcessing.current = true;
+
       const code = searchParams.get("code");
       const oauthState = searchParams.get("state");
       const errorParam = searchParams.get("error");
