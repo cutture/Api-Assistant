@@ -861,8 +861,10 @@ Your backend needs to allow requests from your Vercel domain. Update the environ
 ```bash
 gcloud run services update api-assistant \
     --region asia-east1 \
-    --update-env-vars "FRONTEND_URL=https://api-assistant-frontend.vercel.app"
+    --update-env-vars "ALLOWED_ORIGINS=https://api-assistant-frontend.vercel.app"
 ```
+
+**⚠️ IMPORTANT:** The environment variable is `ALLOWED_ORIGINS`, NOT `FRONTEND_URL`.
 
 **⚠️ Replace the values:**
 - **`asia-east1`** - Your Cloud Run region
@@ -878,10 +880,10 @@ gcloud run services update api-assistant \
     --update-env-vars "\
 SECRET_KEY=YOUR_GENERATED_SECRET_KEY,\
 GROQ_API_KEY=YOUR_GROQ_API_KEY,\
-FRONTEND_URL=https://api-assistant-frontend.vercel.app,\
+ALLOWED_ORIGINS=https://api-assistant-frontend.vercel.app,\
 EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2,\
 LLM_PROVIDER=groq,\
-GROQ_MODEL=mixtral-8x7b-32768,\
+GROQ_MODEL=llama-3.3-70b-versatile,\
 ENABLE_QUERY_EXPANSION=true,\
 LOG_LEVEL=INFO"
 ```
@@ -889,7 +891,7 @@ LOG_LEVEL=INFO"
 **⚠️ Replace:**
 1. **`YOUR_GENERATED_SECRET_KEY`** - Generate with: `python3 -c "import secrets; print(secrets.token_urlsafe(32))"`
 2. **`YOUR_GROQ_API_KEY`** - Get free at https://console.groq.com
-3. **`https://api-assistant-frontend.vercel.app`** - Your actual Vercel URL
+3. **`https://api-assistant-frontend.vercel.app`** - Your actual Vercel URL (for `ALLOWED_ORIGINS`)
 4. **`asia-east1`** - Your Cloud Run region
 
 ### C. Test the Full Application
@@ -1047,56 +1049,93 @@ You need to set up persistent storage for ChromaDB. See below.
 
 **Problem:** Cloud Run containers are stateless. When a container restarts, all data in ChromaDB is lost.
 
-**Solution Options:**
+**Solution:** Use Google Cloud Storage (GCS) with Cloud Storage FUSE to mount a bucket as a filesystem.
 
-### Option 1: Cloud Storage (Recommended for Development)
+### Cost Estimate
 
-Cloud Run doesn't directly support persistent volumes like Railway. You need to:
+| Component | Monthly Cost |
+|-----------|--------------|
+| Cloud Storage (10 GB) | ~$0.20 |
+| Storage operations | ~$0.01-0.05 |
+| **Total** | **~$0.25/month** |
 
-1. **Use Cloud Storage for ChromaDB:**
-   - Modify your code to store ChromaDB data in Google Cloud Storage
-   - This requires code changes to use `chromadb-cloud` or custom storage backend
+### Step 1: Create a GCS Bucket
 
-2. **Or use Cloud SQL for PostgreSQL:**
-   - Use ChromaDB with PostgreSQL backend instead of local files
-   - More complex but production-ready
+```bash
+gcloud storage buckets create gs://YOUR_PROJECT_ID-chroma-data \
+    --location=asia-east1 \
+    --uniform-bucket-level-access
+```
 
-### Option 2: Cloud Filestore (Paid, More Expensive)
+**Replace `YOUR_PROJECT_ID`** with your actual project ID (e.g., `api-assistant-483620`).
 
-1. **Create a Filestore instance:**
+### Step 2: Grant Cloud Run Access to the Bucket
+
+First, find your compute service account:
+
+```bash
+gcloud iam service-accounts list
+```
+
+Look for: `PROJECT_NUMBER-compute@developer.gserviceaccount.com`
+
+Then grant access:
+
+```bash
+gcloud storage buckets add-iam-policy-binding gs://YOUR_PROJECT_ID-chroma-data \
+    --member="serviceAccount:YOUR_PROJECT_NUMBER-compute@developer.gserviceaccount.com" \
+    --role="roles/storage.objectAdmin"
+```
+
+### Step 3: Add Volume Mount to Cloud Run
+
+```bash
+gcloud beta run services update api-assistant \
+    --region asia-east1 \
+    --add-volume=name=chroma-volume,type=cloud-storage,bucket=YOUR_PROJECT_ID-chroma-data \
+    --add-volume-mount=volume=chroma-volume,mount-path=/mnt/chroma_data
+```
+
+### Step 4: Update ChromaDB Path Environment Variable
+
+```bash
+gcloud run services update api-assistant \
+    --region asia-east1 \
+    --update-env-vars "CHROMA_PERSIST_DIR=/mnt/chroma_data/chroma_db"
+```
+
+### Step 5: Upload Existing Data (Optional)
+
+If you have existing local ChromaDB data to upload:
+
+```bash
+gcloud storage cp -r data/chroma_db gs://YOUR_PROJECT_ID-chroma-data/
+```
+
+### Step 6: Test Persistence
+
+1. **Upload a document** via the frontend
+2. **Restart the service:**
    ```bash
-   gcloud filestore instances create chroma-storage \
-       --zone=us-east1-b \
-       --tier=BASIC_HDD \
-       --file-share=name="chromadb",capacity=1TB \
-       --network=name="default"
+   gcloud run services update api-assistant --region asia-east1 --update-labels="restart=test"
    ```
+3. **Verify** the document still exists after restart
 
-2. **Mount in Cloud Run:**
-   - Currently in beta, requires VPC connector
-   - More complex setup
+**✅ Checkpoint:** Your data now persists across container restarts!
 
-### Option 3: External Vector Database (Recommended for Production)
+### How It Works
 
-Use a managed vector database instead of ChromaDB:
-
-- **Pinecone** (has free tier)
-- **Weaviate Cloud** (has free tier)
-- **Qdrant Cloud** (has free tier)
-
-**This requires code changes** but provides better scalability and persistence.
-
-### Recommended Approach
-
-For **testing/development:**
-- Accept that data will reset on each deployment
-- Upload test documents after each deployment
-
-For **production:**
-- Migrate to Pinecone (free tier: 1M vectors, ~$0/month)
-- Or use Cloud SQL with ChromaDB PostgreSQL backend
-
-**Would you like help setting up one of these options?**
+```
+User uploads document
+        ↓
+Cloud Run container processes it
+        ↓
+ChromaDB writes to /mnt/chroma_data/chroma_db
+        ↓
+GCS FUSE syncs to Google Cloud Storage bucket
+        ↓
+Data persists even when container restarts!
+```
 
 ---
 

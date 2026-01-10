@@ -57,8 +57,9 @@ COPY . .
 RUN chown -R appuser:appuser /app
 
 # Create necessary directories with proper permissions
-RUN mkdir -p /app/data/chroma_db /app/logs /home/appuser/.cache/huggingface && \
-    chown -R appuser:appuser /app/data /app/logs /home/appuser
+# /mnt/chroma_data is the mount point for GCS FUSE (Cloud Storage)
+RUN mkdir -p /app/data/chroma_db /app/logs /home/appuser/.cache/huggingface /mnt/chroma_data && \
+    chown -R appuser:appuser /app/data /app/logs /home/appuser /mnt/chroma_data
 
 # Switch to non-root user
 USER appuser
