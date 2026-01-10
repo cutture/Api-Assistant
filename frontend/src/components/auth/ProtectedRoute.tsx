@@ -10,14 +10,20 @@ import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import { Loader2 } from "lucide-react";
 
+// Public routes that don't require authentication
+const PUBLIC_ROUTES = ["/login", "/register", "/auth/callback"];
+
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isGuest, isLoading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
+  // Check if current path is a public route
+  const isPublicRoute = PUBLIC_ROUTES.some(route => pathname.startsWith(route));
+
   useEffect(() => {
-    // Don't redirect if already on login page
-    if (pathname === "/login") {
+    // Don't redirect if on a public route
+    if (isPublicRoute) {
       return;
     }
 
@@ -25,7 +31,7 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
     if (!isLoading && !isAuthenticated && !isGuest) {
       router.push("/login");
     }
-  }, [isAuthenticated, isGuest, isLoading, pathname, router]);
+  }, [isAuthenticated, isGuest, isLoading, pathname, router, isPublicRoute]);
 
   // Show loading state while checking authentication
   if (isLoading) {
@@ -39,8 +45,8 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // If on login page, show it
-  if (pathname === "/login") {
+  // If on a public route, show it
+  if (isPublicRoute) {
     return <>{children}</>;
   }
 
