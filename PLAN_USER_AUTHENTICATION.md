@@ -1,5 +1,19 @@
 # User Authentication Implementation Plan
 
+## Confirmed Decisions (APPROVED)
+
+| Decision | Choice |
+|----------|--------|
+| **Database** | SQLite (stored at `/mnt/chroma_data/users.db`) |
+| **OAuth Providers** | Google only (for now) |
+| **Guest Mode** | Keep - allow unauthenticated access |
+| **Email Verification** | Required |
+| **Password Rules** | Min 8 chars, 1 lowercase, 1 uppercase, 1 special char, 1 number |
+| **API Access** | Available for both guests and authenticated users |
+| **CLI Support** | Full API functionality via command line |
+
+---
+
 ## Current State Summary
 
 | Component | Status | Notes |
@@ -21,7 +35,7 @@
 ┌─────────────────────────────────────────────────────────────────┐
 │                         Frontend (Next.js)                       │
 ├─────────────────────────────────────────────────────────────────┤
-│  Login Page ──► OAuth Buttons (Google, GitHub, Microsoft)        │
+│  Login Page ──► OAuth Button (Google) + Email/Password           │
 │       │                                                          │
 │       ▼                                                          │
 │  AuthContext ──► JWT Token Storage (httpOnly cookie or memory)   │
@@ -299,40 +313,38 @@ JWT_SECRET_KEY: "<generate-secure-random-key>"
 JWT_ACCESS_TOKEN_EXPIRE_MINUTES: 30
 JWT_REFRESH_TOKEN_EXPIRE_DAYS: 7
 
-# OAuth - Google
+# OAuth - Google (Only provider for now)
 GOOGLE_CLIENT_ID: "<from-google-console>"
 GOOGLE_CLIENT_SECRET: "<from-google-console>"
 
-# OAuth - GitHub
-GITHUB_CLIENT_ID: "<from-github-settings>"
-GITHUB_CLIENT_SECRET: "<from-github-settings>"
-
-# OAuth - Microsoft
-MICROSOFT_CLIENT_ID: "<from-azure-portal>"
-MICROSOFT_CLIENT_SECRET: "<from-azure-portal>"
+# Email Verification (Required)
+SMTP_HOST: "smtp.gmail.com"
+SMTP_PORT: 587
+SMTP_USER: "<your-email>"
+SMTP_PASSWORD: "<app-password>"
+EMAIL_FROM: "noreply@your-domain.com"
+VERIFICATION_TOKEN_EXPIRE_HOURS: 24
 ```
 
 ---
 
 ## OAuth Provider Setup (User Action Required)
 
-### Google OAuth
+### Google OAuth (Selected)
 1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Create OAuth 2.0 credentials
-3. Add authorized redirect URI: `https://your-backend.run.app/auth/oauth/google/callback`
-4. Copy Client ID and Secret
+2. Navigate to APIs & Services > Credentials
+3. Create OAuth 2.0 credentials (Web Application)
+4. Add authorized JavaScript origins:
+   - `http://localhost:3000` (development)
+   - `https://your-frontend.vercel.app` (production)
+5. Add authorized redirect URIs:
+   - `http://localhost:8000/auth/oauth/google/callback` (development)
+   - `https://your-backend.run.app/auth/oauth/google/callback` (production)
+6. Copy Client ID and Client Secret
 
-### GitHub OAuth
-1. Go to [GitHub Developer Settings](https://github.com/settings/developers)
-2. Create new OAuth App
-3. Set callback URL: `https://your-backend.run.app/auth/oauth/github/callback`
-4. Copy Client ID and Secret
-
-### Microsoft OAuth
-1. Go to [Azure Portal](https://portal.azure.com/)
-2. Register new application in Azure AD
-3. Add redirect URI: `https://your-backend.run.app/auth/oauth/microsoft/callback`
-4. Create client secret and copy values
+### Future OAuth Providers (Not Implemented Yet)
+- GitHub OAuth - Can be added later
+- Microsoft OAuth - Can be added later
 
 ---
 
@@ -403,21 +415,57 @@ Current State ──► Phase 1 ──► Phase 2 ──► Phase 3 ──► Ph
 
 ---
 
-## Questions for Approval
+## Password Validation Rules
 
-1. **Database Choice**: SQLite (simple) or PostgreSQL (scalable)?
-2. **OAuth Providers**: All three (Google, GitHub, Microsoft) or start with subset?
-3. **Guest Mode**: Keep guest access for unauthenticated users or require login?
-4. **Email Verification**: Implement email verification flow or skip for MVP?
-5. **Password Requirements**: Minimum length, complexity rules?
+```python
+# Password must contain:
+- Minimum 8 characters
+- At least 1 lowercase letter (a-z)
+- At least 1 uppercase letter (A-Z)
+- At least 1 special character (!@#$%^&*()_+-=[]{}|;:,.<>?)
+- At least 1 number (0-9)
+
+# Regex pattern:
+^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]).{8,}$
+```
 
 ---
 
-## Approval Checklist
+## Guest Mode & API Access
 
-- [ ] Database choice confirmed
-- [ ] OAuth providers selected
-- [ ] Guest mode decision made
-- [ ] Ready to proceed with implementation
+### Access Levels
+| User Type | Session Access | Document Access | Chat Access | API Access |
+|-----------|---------------|-----------------|-------------|------------|
+| **Guest** | Own session only | Shared/public docs | Full | Full (rate limited) |
+| **Authenticated** | Own sessions | Own + shared docs | Full | Full |
 
-**Awaiting your approval before starting implementation.**
+### CLI Support
+All API endpoints work via command line:
+```bash
+# Guest access (no auth)
+curl -X POST http://localhost:8000/chat -d '{"message": "hello"}'
+
+# Authenticated access (JWT token)
+curl -X POST http://localhost:8000/chat \
+  -H "Authorization: Bearer <token>" \
+  -d '{"message": "hello"}'
+
+# API key access (existing)
+curl -X POST http://localhost:8000/chat \
+  -H "X-API-Key: your-api-key" \
+  -d '{"message": "hello"}'
+```
+
+---
+
+## Approval Status
+
+### Decisions Confirmed ✅
+- [x] Database: **SQLite**
+- [x] OAuth: **Google only**
+- [x] Guest mode: **Keep enabled**
+- [x] Email verification: **Required**
+- [x] Password rules: **8 chars, mixed case, special, number**
+
+### Implementation Status
+**APPROVED - Implementation in progress**

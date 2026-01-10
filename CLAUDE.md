@@ -51,7 +51,16 @@ Api-Assistant/
 │   ├── api/                  # FastAPI routes & models
 │   │   ├── app.py           # Main app (entry point)
 │   │   ├── models.py        # Pydantic request/response models
-│   │   └── auth.py          # API key authentication
+│   │   ├── auth.py          # JWT/API key authentication middleware
+│   │   └── auth_router.py   # Authentication endpoints (/auth/*)
+│   ├── auth/                # Authentication services
+│   │   ├── password.py      # Password hashing (bcrypt)
+│   │   ├── jwt.py           # JWT token handling
+│   │   ├── user_service.py  # User CRUD operations
+│   │   └── oauth.py         # Google OAuth implementation
+│   ├── database/            # SQLAlchemy database
+│   │   ├── models.py        # User, OAuthAccount, Token models
+│   │   └── connection.py    # Database connection setup
 │   ├── agents/              # LangGraph multi-agent system
 │   │   ├── supervisor.py    # Agent orchestrator
 │   │   ├── query_analyzer.py
@@ -78,13 +87,18 @@ Api-Assistant/
 ├── frontend/                # Next.js frontend
 │   ├── src/
 │   │   ├── app/            # Pages (chat, search, sessions, diagrams)
+│   │   │   ├── login/      # Login page with OAuth
+│   │   │   ├── register/   # Registration page
+│   │   │   └── auth/callback/ # OAuth callback handler
 │   │   ├── components/     # React components
 │   │   ├── hooks/          # React Query hooks
-│   │   ├── lib/api/        # API clients
+│   │   ├── lib/
+│   │   │   ├── api/        # API clients with JWT
+│   │   │   └── contexts/   # AuthContext for auth state
 │   │   └── stores/         # Zustand stores
 │   └── e2e/                # Playwright tests
 ├── tests/                   # Backend tests (831+ tests)
-├── data/                    # ChromaDB storage
+├── data/                    # ChromaDB + SQLite storage
 ├── Dockerfile              # Multi-stage Docker build
 ├── cloudbuild.yaml         # Cloud Build CI/CD
 ├── requirements.txt        # Python dependencies
@@ -98,10 +112,15 @@ Api-Assistant/
 | File | Purpose |
 |------|---------|
 | `src/api/app.py` | FastAPI app entry point, all routes |
+| `src/api/auth.py` | JWT and API key authentication middleware |
+| `src/api/auth_router.py` | Authentication API endpoints (/auth/*) |
 | `src/config.py` | Environment configuration (Pydantic Settings) |
 | `src/agents/supervisor.py` | LangGraph agent orchestrator |
 | `src/core/vector_store.py` | ChromaDB vector store operations |
-| `frontend/src/lib/api/client.ts` | Axios API client with interceptors |
+| `src/database/models.py` | SQLAlchemy User and OAuth models |
+| `src/auth/user_service.py` | User CRUD and authentication logic |
+| `frontend/src/lib/api/client.ts` | Axios API client with JWT interceptors |
+| `frontend/src/lib/contexts/AuthContext.tsx` | React auth state management |
 | `Dockerfile` | Production Docker image |
 | `cloudbuild.yaml` | Cloud Build CI/CD pipeline |
 | `env.example.yaml` | Environment variables template |
@@ -128,9 +147,22 @@ Api-Assistant/
 ### Chat
 - `POST /chat` - AI chat with RAG, file uploads, URL scraping
 
+### Authentication
+- `POST /auth/register` - Create new user account
+- `POST /auth/login` - Login with email/password
+- `POST /auth/logout` - Logout (client-side token deletion)
+- `POST /auth/refresh` - Refresh JWT access token
+- `GET /auth/me` - Get current user profile
+- `GET /auth/password-requirements` - Get password rules
+- `POST /auth/verify-email` - Verify email with token
+- `POST /auth/resend-verification` - Resend verification email
+- `GET /auth/oauth/google` - Initiate Google OAuth
+- `GET /auth/oauth/google/callback` - Google OAuth callback
+- `POST /auth/guest` - Create guest session
+
 ### Sessions
-- `POST /sessions` - Create session
-- `GET /sessions` - List sessions
+- `POST /sessions` - Create session (auto-links to authenticated user)
+- `GET /sessions` - List sessions (filtered by user if authenticated)
 - `GET /sessions/{id}` - Get session
 - `PATCH /sessions/{id}` - Update session
 - `DELETE /sessions/{id}` - Delete session
@@ -255,6 +287,29 @@ Query → Query Expansion → BM25 Search ─┐
 ```
 Upload → ChromaDB → /mnt/chroma_data → GCS FUSE → Cloud Storage Bucket
 ```
+
+### User Authentication Flow
+```
+User → Login Page → Email/Password OR Google OAuth
+           ↓
+    Backend /auth/* endpoints
+           ↓
+    JWT Token Generation
+           ↓
+    Frontend stores tokens (localStorage)
+           ↓
+    API requests include Authorization: Bearer <token>
+           ↓
+    Backend validates JWT → Returns user-specific data
+```
+
+### Authentication Methods
+| Method | Use Case | Token Type |
+|--------|----------|------------|
+| Email/Password | User registration & login | JWT (access + refresh) |
+| Google OAuth | Social login | JWT (access + refresh) |
+| API Key | CLI/Programmatic access | X-API-Key header |
+| Guest | Anonymous access | JWT (guest token) |
 
 ---
 

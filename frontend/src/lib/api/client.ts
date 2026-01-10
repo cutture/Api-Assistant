@@ -30,9 +30,30 @@ const apiClient: AxiosInstance = axios.create({
   },
 });
 
+// Token storage key (must match AuthContext)
+const TOKEN_STORAGE_KEY = "auth_tokens";
+
+/**
+ * Get stored access token
+ */
+function getStoredAccessToken(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const tokens = localStorage.getItem(TOKEN_STORAGE_KEY);
+    if (tokens) {
+      const parsed = JSON.parse(tokens);
+      return parsed.access_token || null;
+    }
+  } catch {
+    // Ignore parse errors
+  }
+  return null;
+}
+
 /**
  * Request interceptor
  * - Add timestamps for debugging
+ * - Add JWT token for authentication
  * - Log requests in development
  * - Handle FormData Content-Type automatically
  */
@@ -41,8 +62,14 @@ apiClient.interceptors.request.use(
     // Add request timestamp
     config.headers["X-Request-Time"] = new Date().toISOString();
 
-    // Add API key if configured (for production authentication)
-    if (API_KEY) {
+    // Add JWT token if available (takes priority over API key)
+    const accessToken = getStoredAccessToken();
+    if (accessToken) {
+      config.headers["Authorization"] = `Bearer ${accessToken}`;
+    }
+
+    // Add API key if configured (fallback for non-authenticated requests)
+    if (API_KEY && !accessToken) {
       config.headers["X-API-Key"] = API_KEY;
     }
 
@@ -56,6 +83,7 @@ apiClient.interceptors.request.use(
       console.log(`[API Request] ${config.method?.toUpperCase()} ${config.url}`, {
         params: config.params,
         data: config.data instanceof FormData ? "[FormData]" : config.data,
+        hasToken: !!accessToken,
         apiKeyConfigured: !!API_KEY,
       });
     }
