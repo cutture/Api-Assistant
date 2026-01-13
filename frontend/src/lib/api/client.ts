@@ -161,14 +161,14 @@ apiClient.interceptors.response.use(
     // No retry, handle error
     const apiError = handleApiError(error);
 
-    // Log in development
+    // Log in development (use console.warn for expected errors to avoid error overlay)
     if (process.env.NEXT_PUBLIC_ENABLE_DEBUG === "true") {
-      console.error("[API Error]", {
+      // Use warn for client errors (4xx), error for server errors (5xx)
+      const logFn = apiError.status >= 500 ? console.error : console.warn;
+      logFn("[API Error]", {
         message: apiError.message,
         status: apiError.status,
         url: error.config?.url,
-        details: apiError.details,
-        retries: config._retryCount || 0,
       });
     }
 
