@@ -148,7 +148,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       );
     } catch (error: any) {
-      const message = error.response?.data?.detail || "Login failed. Please check your credentials.";
+      // API client transforms errors to have message directly
+      const message = error.message || error.response?.data?.detail || "Invalid email or password";
       throw new Error(message);
     }
   };
@@ -159,11 +160,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const response = await apiClient.post("/auth/register", { email, password, name });
       return { requiresVerification: response.data.requires_verification };
     } catch (error: any) {
-      const detail = error.response?.data?.detail;
+      // API client transforms errors - check both formats
+      const detail = error.details?.detail || error.response?.data?.detail;
       if (typeof detail === "object" && detail.errors) {
         throw new Error(detail.errors.join(". "));
       }
-      throw new Error(detail || "Registration failed. Please try again.");
+      // Use error.message from API client transformation
+      throw new Error(error.message || detail || "Registration failed. Please try again.");
     }
   };
 
