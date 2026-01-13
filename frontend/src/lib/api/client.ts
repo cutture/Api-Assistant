@@ -185,8 +185,20 @@ function handleApiError(error: AxiosError): ApiError {
     const status = error.response.status;
     const data = error.response.data as any;
 
+    // Extract message from various possible formats
+    let message = getDefaultErrorMessage(status);
+    if (data) {
+      if (typeof data.detail === "string") {
+        message = data.detail;
+      } else if (typeof data.detail === "object" && data.detail?.message) {
+        message = data.detail.message;
+      } else if (typeof data.message === "string") {
+        message = data.message;
+      }
+    }
+
     return {
-      message: data?.detail || data?.message || getDefaultErrorMessage(status),
+      message,
       status,
       code: data?.code,
       details: data,
@@ -216,8 +228,8 @@ function handleApiError(error: AxiosError): ApiError {
 function getDefaultErrorMessage(status: number): string {
   const messages: Record<number, string> = {
     400: "Bad request. Please check your input.",
-    401: "Unauthorized. API key required or invalid.",
-    403: "Forbidden. Invalid API key or insufficient permissions.",
+    401: "Invalid email or password.",
+    403: "Access denied. Please verify your email or check your permissions.",
     404: "Resource not found.",
     408: "Request timeout. Please try again.",
     409: "Conflict. The resource already exists or conflicts with current state.",
