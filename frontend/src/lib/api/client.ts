@@ -30,9 +30,30 @@ const apiClient: AxiosInstance = axios.create({
   },
 });
 
+// Token storage key (must match AuthContext)
+const TOKEN_STORAGE_KEY = "auth_tokens";
+
+/**
+ * Get stored access token
+ */
+function getStoredAccessToken(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const tokens = localStorage.getItem(TOKEN_STORAGE_KEY);
+    if (tokens) {
+      const parsed = JSON.parse(tokens);
+      return parsed.access_token || null;
+    }
+  } catch {
+    // Ignore parse errors
+  }
+  return null;
+}
+
 /**
  * Request interceptor
  * - Add timestamps for debugging
+ * - Add JWT token for authentication
  * - Log requests in development
  * - Handle FormData Content-Type automatically
  */
@@ -41,8 +62,14 @@ apiClient.interceptors.request.use(
     // Add request timestamp
     config.headers["X-Request-Time"] = new Date().toISOString();
 
-    // Add API key if configured (for production authentication)
-    if (API_KEY) {
+    // Add JWT token if available (takes priority over API key)
+    const accessToken = getStoredAccessToken();
+    if (accessToken) {
+      config.headers["Authorization"] = `Bearer ${accessToken}`;
+    }
+
+    // Add API key if configured (fallback for non-authenticated requests)
+    if (API_KEY && !accessToken) {
       config.headers["X-API-Key"] = API_KEY;
     }
 
@@ -56,6 +83,7 @@ apiClient.interceptors.request.use(
       console.log(`[API Request] ${config.method?.toUpperCase()} ${config.url}`, {
         params: config.params,
         data: config.data instanceof FormData ? "[FormData]" : config.data,
+        hasToken: !!accessToken,
         apiKeyConfigured: !!API_KEY,
       });
     }
@@ -133,14 +161,14 @@ apiClient.interceptors.response.use(
     // No retry, handle error
     const apiError = handleApiError(error);
 
-    // Log in development
+    // Log in development (use console.warn for expected errors to avoid error overlay)
     if (process.env.NEXT_PUBLIC_ENABLE_DEBUG === "true") {
-      console.error("[API Error]", {
+      // Use warn for client errors (4xx), error for server errors (5xx)
+      const logFn = apiError.status >= 500 ? console.error : console.warn;
+      logFn("[API Error]", {
         message: apiError.message,
         status: apiError.status,
         url: error.config?.url,
-        details: apiError.details,
-        retries: config._retryCount || 0,
       });
     }
 
@@ -157,8 +185,20 @@ function handleApiError(error: AxiosError): ApiError {
     const status = error.response.status;
     const data = error.response.data as any;
 
+    // Extract message from various possible formats
+    let message = getDefaultErrorMessage(status);
+    if (data) {
+      if (typeof data.detail === "string") {
+        message = data.detail;
+      } else if (typeof data.detail === "object" && data.detail?.message) {
+        message = data.detail.message;
+      } else if (typeof data.message === "string") {
+        message = data.message;
+      }
+    }
+
     return {
-      message: data?.detail || data?.message || getDefaultErrorMessage(status),
+      message,
       status,
       code: data?.code,
       details: data,
@@ -188,8 +228,8 @@ function handleApiError(error: AxiosError): ApiError {
 function getDefaultErrorMessage(status: number): string {
   const messages: Record<number, string> = {
     400: "Bad request. Please check your input.",
-    401: "Unauthorized. API key required or invalid.",
-    403: "Forbidden. Invalid API key or insufficient permissions.",
+    401: "Invalid email or password.",
+    403: "Access denied. Please verify your email or check your permissions.",
     404: "Resource not found.",
     408: "Request timeout. Please try again.",
     409: "Conflict. The resource already exists or conflicts with current state.",
