@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, LogIn, UserCircle, Mail } from "lucide-react";
+import { Loader2, LogIn, UserCircle, Mail, AlertCircle } from "lucide-react";
 
 // Google icon component
 function GoogleIcon({ className }: { className?: string }) {
@@ -32,6 +32,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
   const { login, continueAsGuest, loginWithGoogle } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
@@ -39,6 +40,7 @@ export default function LoginPage() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setLoginError(null);
 
     try {
       await login(email, password);
@@ -48,11 +50,7 @@ export default function LoginPage() {
       });
       router.push("/");
     } catch (error: any) {
-      toast({
-        title: "Login failed",
-        description: error.message || "Invalid credentials",
-        variant: "destructive",
-      });
+      setLoginError(error.message || "Invalid email or password");
     } finally {
       setIsLoading(false);
     }
@@ -60,21 +58,19 @@ export default function LoginPage() {
 
   const handleGoogleLogin = async () => {
     setIsGoogleLoading(true);
+    setLoginError(null);
     try {
       await loginWithGoogle();
       // Will redirect to Google, so we don't need to do anything here
     } catch (error: any) {
-      toast({
-        title: "Google login failed",
-        description: error.message || "Failed to connect to Google",
-        variant: "destructive",
-      });
+      setLoginError(error.message || "Failed to connect to Google");
       setIsGoogleLoading(false);
     }
   };
 
   const handleGuestAccess = async () => {
     setIsLoading(true);
+    setLoginError(null);
     try {
       await continueAsGuest();
       toast({
@@ -91,6 +87,17 @@ export default function LoginPage() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Clear error when user starts typing
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setEmail(e.target.value);
+    if (loginError) setLoginError(null);
+  };
+
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPassword(e.target.value);
+    if (loginError) setLoginError(null);
   };
 
   return (
@@ -144,7 +151,7 @@ export default function LoginPage() {
                   type="email"
                   placeholder="you@example.com"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={handleEmailChange}
                   required
                   disabled={isLoading || isGoogleLoading}
                 />
@@ -157,11 +164,19 @@ export default function LoginPage() {
                   type="password"
                   placeholder="Enter your password"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={handlePasswordChange}
                   required
                   disabled={isLoading || isGoogleLoading}
                 />
               </div>
+
+              {/* Inline Error Message */}
+              {loginError && (
+                <div className="flex items-center gap-2 p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
+                  <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                  <span>{loginError}</span>
+                </div>
+              )}
 
               <Button type="submit" className="w-full" disabled={isLoading || isGoogleLoading}>
                 {isLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
