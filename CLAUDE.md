@@ -2,6 +2,24 @@
 
 This file provides Claude with context about the Intelligent Coding Agent project for efficient assistance.
 
+---
+
+## Basic Rules to Follow for Development
+
+1. **Think First, Read Code:** Always think through the problem first and read the codebase for relevant files before making changes.
+
+2. **Verify Major Changes:** Before making any major changes, check in with the user to verify the plan.
+
+3. **Explain Changes:** At every step, provide a high-level explanation of what changes were made.
+
+4. **Keep It Simple:** Make every task and code change as simple as possible. Avoid massive or complex changes. Every change should impact as little code as possible. Simplicity is paramount.
+
+5. **Maintain Architecture Documentation:** Keep a documentation file that describes how the architecture of the app works inside and out. See `docs/planning/02-implementation-plan.md` for current architecture.
+
+6. **No Speculation:** Never speculate about code you have not opened. If a specific file is referenced, you MUST read it before answering. Investigate and read relevant files BEFORE answering questions about the codebase. Never make claims about code without investigating first - provide grounded, hallucination-free answers.
+
+---
+
 ## Project Overview
 
 **Intelligent Self-Validating Coding Agent** - An AI-powered coding assistant that generates, executes, validates, and delivers production-ready code through an iterative refinement loop with container-based execution.
