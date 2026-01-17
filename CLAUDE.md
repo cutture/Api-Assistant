@@ -1,21 +1,35 @@
 # CLAUDE.md - Project Reference for Claude AI
 
-This file provides Claude with context about the Api-Assistant project for efficient assistance.
+This file provides Claude with context about the Intelligent Coding Agent project for efficient assistance.
 
 ## Project Overview
 
-**API Integration Assistant** - An AI-powered assistant that helps developers understand, document, and generate code for API integrations using advanced multi-agent orchestration and hybrid search.
+**Intelligent Self-Validating Coding Agent** - An AI-powered coding assistant that generates, executes, validates, and delivers production-ready code through an iterative refinement loop with container-based execution.
 
-**Version:** 1.0.0 (Production Ready)
-**Status:** Production/Stable
+**Version:** 2.0.0 (In Development)
+**Status:** Transforming from API Assistant to Coding Agent
+**Previous:** API Integration Assistant v1.0.0
 
 ### Key Capabilities
-- Parse API specifications (OpenAPI, GraphQL, Postman, PDF, Markdown)
-- Intelligent Q&A about APIs with source citations
-- Multi-language code generation (Python, JS, TS, Java, Go, etc.)
-- Documentation quality analysis and gap detection
-- Visual diagram generation (sequence, auth flow, ER, overview)
-- Persistent chat sessions with conversation history
+- Multi-language code generation (Python, JS, TS, Java, Go, C#)
+- Container-based code execution with automated testing
+- Self-validating loop (5 retries with multi-signal validation)
+- Artifact management (uploads, generated files, downloadable outputs)
+- GitHub integration (read-only for context, PR-only in v2)
+- Cost-optimized LLM routing (Ollama → Groq → Premium)
+- Three output modes: inline snippets, ZIP bundles, GitHub PRs
+- Persistent chat sessions with execution history
+
+### Transformation Notes
+**Removed Features:**
+- Document upload/listing pages (replaced by artifacts)
+- Mermaid diagram generation
+- OpenAPI/GraphQL parsing (minimal kept for context)
+
+**Repurposed:**
+- ChromaDB: Now stores artifacts and code context
+- Sessions: Now include execution history
+- RAG Agent: Now retrieves code context
 
 ---
 
@@ -370,7 +384,109 @@ Frontend served globally via Vercel CDN
 
 ## Version History
 
-- **v1.0.0** (Dec 2025) - Production release with full feature set
-- Multi-agent system, hybrid search, Next.js frontend
-- Cloud Run + Vercel deployment
-- GCS FUSE for persistent storage
+- **v2.0.0** (Jan 2026) - Intelligent Self-Validating Coding Agent (in development)
+  - Container-based code execution with Cloud Run Jobs
+  - Artifact system replacing document management
+  - GitHub integration (read-only)
+  - LLM routing for cost optimization
+  - ZIP bundle and snippet delivery
+
+- **v1.0.0** (Dec 2025) - API Integration Assistant
+  - Multi-agent system, hybrid search, Next.js frontend
+  - Cloud Run + Vercel deployment
+  - GCS FUSE for persistent storage
+
+---
+
+## Future Roadmap & Migration Triggers
+
+This section documents planned features and the conditions that should trigger their implementation.
+
+### Migration: Microservice Architecture
+
+**Current State:** Extended multi-agent system (monolith)
+**Target State:** Separate coding-agent microservice
+
+**Trigger Conditions (implement when ANY occurs):**
+1. Daily code executions exceed 500
+2. Execution container costs exceed $100/month
+3. Main API latency increases >200ms due to execution load
+4. Need independent scaling of execution vs chat
+
+**Implementation Reference:** See `docs/planning/02-implementation-plan.md` Section 8
+
+---
+
+### Feature: PR-Only Git Integration (v2)
+
+**Current State:** Read-only repository access
+**Target State:** Create branches and PRs with generated code
+
+**Trigger Conditions (implement when ANY occurs):**
+1. User requests reach 50+ for PR creation feature
+2. Competitive pressure (other tools offer this)
+3. Enterprise customer explicitly requires it
+
+**Implementation Steps:**
+1. Add 'repo' write scope to GitHub OAuth
+2. Implement branch creation from generated code
+3. Implement PR creation via GitHub API
+4. Add PR preview and review UI in frontend
+5. Add merge conflict detection and resolution hints
+
+---
+
+### Feature: GitLab & Bitbucket Support
+
+**Current State:** GitHub only
+**Target State:** GitLab, Bitbucket, and generic Git support
+
+**Trigger Conditions:**
+- GitLab: 20+ user requests OR enterprise customer requirement
+- Bitbucket: Enterprise customer requirement
+- Self-hosted Git: Enterprise/on-premise deployment need
+
+**Implementation Steps:**
+1. Abstract GitHubService to generic GitProvider interface
+2. Implement GitLabProvider with OAuth and API
+3. Implement BitbucketProvider with OAuth and API
+4. Add provider selection dropdown in settings UI
+5. Update RepoSelector component for multi-provider
+
+---
+
+### Feature: Premium LLM Tier (Claude/GPT-4)
+
+**Current State:** Groq + Ollama only
+**Target State:** Add Claude and GPT-4 for complex tasks
+
+**Trigger Conditions:**
+1. Complex task success rate falls below 80%
+2. User feedback indicates quality issues on complex code
+3. Enterprise customers require specific model support
+
+**Implementation:**
+1. Add Anthropic API client
+2. Add OpenAI API client
+3. Update LLM router for complexity > 6 tasks
+4. Add user preference for premium models
+5. Implement cost tracking and billing alerts
+
+---
+
+### Recommended Ollama Models
+
+For local code generation, install these models:
+
+```bash
+# Primary (recommended)
+ollama pull deepseek-coder-v2:16b    # Best quality/speed (12GB VRAM)
+
+# Alternatives by VRAM
+ollama pull qwen2.5-coder:7b          # 6GB VRAM - lightweight
+ollama pull codellama:13b             # 10GB VRAM - good balance
+ollama pull llama3.1:8b               # 6GB VRAM - fast general
+
+# High-end (if available)
+ollama pull codellama:34b             # 24GB VRAM - highest quality
+```
