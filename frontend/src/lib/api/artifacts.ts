@@ -4,7 +4,7 @@
  * Provides methods for artifact management operations.
  */
 
-import { apiClient } from "./client";
+import apiClient from "./client";
 
 // Types
 export interface Artifact {

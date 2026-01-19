@@ -2,7 +2,7 @@
  * Security API client for vulnerability scanning.
  */
 
-import { apiClient } from './client';
+import apiClient from './client';
 
 export interface Vulnerability {
   type: string;

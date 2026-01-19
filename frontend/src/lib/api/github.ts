@@ -2,7 +2,7 @@
  * GitHub API client.
  */
 
-import { apiClient } from './client';
+import apiClient from './client';
 
 export interface GitHubConnectionStatus {
   connected: boolean;

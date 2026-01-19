@@ -4,7 +4,7 @@
  * Provides methods for screenshot and UI testing operations.
  */
 
-import { apiClient } from "./client";
+import apiClient from "./client";
 
 // Types
 export interface Viewport {

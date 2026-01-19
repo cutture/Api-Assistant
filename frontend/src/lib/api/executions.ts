@@ -4,7 +4,7 @@
  * Provides methods for code execution operations.
  */
 
-import { apiClient } from "./client";
+import apiClient from "./client";
 
 // Types
 export interface ExecuteRequest {

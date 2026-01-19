@@ -369,7 +369,7 @@ export function DatabaseQueryBuilder({
         {onExecute && (
           <button
             onClick={handleExecute}
-            disabled={!query.trim() || (validation && !validation.is_valid)}
+            disabled={!query.trim() || (validation !== null && !validation.is_valid)}
             className={cn(
               'flex items-center gap-2 px-3 py-1.5 rounded-md text-sm ml-auto',
               'bg-green-600 text-white',

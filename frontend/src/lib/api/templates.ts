@@ -2,7 +2,7 @@
  * Templates API client.
  */
 
-import { apiClient } from './client';
+import apiClient from './client';
 
 export interface TemplateParameter {
   name: string;

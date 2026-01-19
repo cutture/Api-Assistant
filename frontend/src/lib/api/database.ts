@@ -2,7 +2,7 @@
  * Database API client.
  */
 
-import { apiClient } from './client';
+import apiClient from './client';
 
 export type DatabaseType = 'postgresql' | 'mysql' | 'sqlite' | 'mongodb';
 export type RiskLevel = 'low' | 'medium' | 'high' | 'critical';
