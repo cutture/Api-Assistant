@@ -83,6 +83,13 @@ from src.core.advanced_filtering import (
     combine_filters,
     compute_facets,
 )
+from src.core.llm_router import (
+    LLMRouter,
+    ComplexityTier,
+    ComplexityAnalysis,
+    RouterResult,
+    get_llm_router,
+)
 
 __all__ = [
     "EmbeddingService",
@@ -153,4 +160,10 @@ __all__ = [
     "get_validator",
     "get_sanitizer",
     "get_rate_limiter",
+    # LLM Router
+    "LLMRouter",
+    "ComplexityTier",
+    "ComplexityAnalysis",
+    "RouterResult",
+    "get_llm_router",
 ]

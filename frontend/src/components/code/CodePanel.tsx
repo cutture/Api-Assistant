@@ -1,0 +1,244 @@
+/**
+ * CodePanel Component
+ *
+ * Displays generated code with syntax highlighting, copy button,
+ * and download functionality.
+ */
+
+"use client";
+
+import { useState, useCallback } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Copy,
+  Check,
+  Download,
+  FileCode,
+  FlaskConical,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+
+interface CodeFile {
+  filename: string;
+  language: string;
+  code: string;
+  description?: string;
+  dependencies?: string[];
+}
+
+interface CodePanelProps {
+  files: CodeFile[];
+  tests?: string;
+  language: string;
+  className?: string;
+}
+
+export function CodePanel({ files, tests, language, className }: CodePanelProps) {
+  const [copiedFile, setCopiedFile] = useState<string | null>(null);
+  const [showTests, setShowTests] = useState(false);
+  const [activeTab, setActiveTab] = useState(files[0]?.filename || "main");
+
+  const copyToClipboard = useCallback(async (code: string, filename: string) => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopiedFile(filename);
+      setTimeout(() => setCopiedFile(null), 2000);
+    } catch (err) {
+      console.error("Failed to copy:", err);
+    }
+  }, []);
+
+  const downloadFile = useCallback((code: string, filename: string) => {
+    const blob = new Blob([code], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, []);
+
+  const downloadAll = useCallback(() => {
+    // For now, download each file individually
+    // TODO: Create ZIP bundle in production
+    files.forEach((file) => {
+      downloadFile(file.code, file.filename);
+    });
+    if (tests) {
+      downloadFile(tests, `test_${files[0]?.filename || "main"}`);
+    }
+  }, [files, tests, downloadFile]);
+
+  const getLanguageColor = (lang: string) => {
+    const colors: Record<string, string> = {
+      python: "bg-blue-500",
+      javascript: "bg-yellow-500",
+      typescript: "bg-blue-600",
+      java: "bg-orange-500",
+      go: "bg-cyan-500",
+      csharp: "bg-purple-500",
+      rust: "bg-orange-600",
+    };
+    return colors[lang] || "bg-gray-500";
+  };
+
+  return (
+    <Card className={cn("overflow-hidden", className)}>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <div className="flex items-center gap-2">
+          <FileCode className="h-5 w-5" />
+          <CardTitle className="text-lg">Generated Code</CardTitle>
+          <Badge variant="outline" className={cn("text-white", getLanguageColor(language))}>
+            {language}
+          </Badge>
+        </div>
+        <div className="flex items-center gap-2">
+          {files.length > 1 && (
+            <Badge variant="secondary">{files.length} files</Badge>
+          )}
+          <Button variant="outline" size="sm" onClick={downloadAll}>
+            <Download className="h-4 w-4 mr-1" />
+            Download
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent className="p-0">
+        {files.length === 1 ? (
+          // Single file view
+          <CodeBlock
+            code={files[0].code}
+            filename={files[0].filename}
+            language={language}
+            isCopied={copiedFile === files[0].filename}
+            onCopy={() => copyToClipboard(files[0].code, files[0].filename)}
+            onDownload={() => downloadFile(files[0].code, files[0].filename)}
+          />
+        ) : (
+          // Multi-file tabbed view
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <div className="border-b px-4">
+              <TabsList className="h-10 w-full justify-start bg-transparent">
+                {files.map((file) => (
+                  <TabsTrigger
+                    key={file.filename}
+                    value={file.filename}
+                    className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none"
+                  >
+                    {file.filename}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </div>
+            {files.map((file) => (
+              <TabsContent key={file.filename} value={file.filename} className="m-0">
+                <CodeBlock
+                  code={file.code}
+                  filename={file.filename}
+                  language={language}
+                  description={file.description}
+                  isCopied={copiedFile === file.filename}
+                  onCopy={() => copyToClipboard(file.code, file.filename)}
+                  onDownload={() => downloadFile(file.code, file.filename)}
+                />
+              </TabsContent>
+            ))}
+          </Tabs>
+        )}
+
+        {/* Tests section */}
+        {tests && (
+          <div className="border-t">
+            <button
+              onClick={() => setShowTests(!showTests)}
+              className="flex w-full items-center justify-between px-4 py-2 hover:bg-muted/50"
+            >
+              <div className="flex items-center gap-2">
+                <FlaskConical className="h-4 w-4" />
+                <span className="text-sm font-medium">Tests</span>
+              </div>
+              {showTests ? (
+                <ChevronUp className="h-4 w-4" />
+              ) : (
+                <ChevronDown className="h-4 w-4" />
+              )}
+            </button>
+            {showTests && (
+              <CodeBlock
+                code={tests}
+                filename={`test_${files[0]?.filename || "main"}`}
+                language={language}
+                isCopied={copiedFile === "tests"}
+                onCopy={() => copyToClipboard(tests, "tests")}
+                onDownload={() => downloadFile(tests, `test_${files[0]?.filename || "main"}`)}
+              />
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+interface CodeBlockProps {
+  code: string;
+  filename: string;
+  language: string;
+  description?: string;
+  isCopied: boolean;
+  onCopy: () => void;
+  onDownload: () => void;
+}
+
+function CodeBlock({
+  code,
+  filename,
+  language,
+  description,
+  isCopied,
+  onCopy,
+  onDownload,
+}: CodeBlockProps) {
+  return (
+    <div className="relative">
+      {description && (
+        <div className="px-4 py-2 text-sm text-muted-foreground bg-muted/30">
+          {description}
+        </div>
+      )}
+      <div className="absolute right-2 top-2 z-10 flex gap-1">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-8 w-8 p-0 opacity-70 hover:opacity-100"
+          onClick={onCopy}
+        >
+          {isCopied ? (
+            <Check className="h-4 w-4 text-green-500" />
+          ) : (
+            <Copy className="h-4 w-4" />
+          )}
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-8 w-8 p-0 opacity-70 hover:opacity-100"
+          onClick={onDownload}
+        >
+          <Download className="h-4 w-4" />
+        </Button>
+      </div>
+      <pre className="overflow-x-auto bg-muted/50 p-4 text-sm">
+        <code className={`language-${language}`}>{code}</code>
+      </pre>
+    </div>
+  );
+}
+
+export default CodePanel;

@@ -19,6 +19,7 @@ from fastapi.responses import JSONResponse
 
 from src.api.auth import verify_api_key, get_current_user_optional, CurrentUser
 from src.api.auth_router import router as auth_router, init_auth_db
+from src.api.execute_router import router as execute_router
 
 from src.api.models import (
     AddMessageRequest,
@@ -104,6 +105,9 @@ def create_app(
 
     # Include authentication router
     app.include_router(auth_router)
+
+    # Include execute router for code generation
+    app.include_router(execute_router)
 
     # Add startup event for database initialization
     @app.on_event("startup")

@@ -81,6 +81,26 @@ This file provides Claude with context about the Intelligent Coding Agent projec
 - Sessions: Will include execution history in Phase 2
 - RAG Agent: Now retrieves code context
 
+### Transformation Notes (Phase 2 In Progress)
+**New Backend Features:**
+- Database tables for code execution (Artifact, CodeExecution, ExecutionAttempt)
+- LLM Router service (`src/core/llm_router.py`) for cost-optimized routing
+- Enhanced Code Generator agent (`src/agents/code_generator.py`)
+- Test Generator agent (`src/agents/test_generator.py`)
+- Validation Loop orchestrator (`src/agents/validator.py`)
+- Execute API endpoints (`/execute/*`)
+- Execution Service (`src/services/execution_service.py`) for local/Cloud Run execution
+
+**New Frontend Features:**
+- CodePanel component for displaying generated code
+- ExecutionStatus component for showing execution progress
+- Executions API client
+
+**Config Changes:**
+- Added execution settings (max_retries, timeout, daily_limit)
+- Added artifact storage settings
+- Added Cloud Run Jobs configuration
+
 ---
 
 ## Tech Stack

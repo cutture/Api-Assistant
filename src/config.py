@@ -110,6 +110,23 @@ class Settings(BaseSettings):
     password_require_digit: bool = Field(default=True)
     password_require_special: bool = Field(default=True)
 
+    # ----- Code Execution Settings -----
+    environment: str = Field(default="local")  # "local" or "production"
+    execution_max_retries: int = Field(default=5)
+    execution_timeout_seconds: int = Field(default=120)
+    execution_daily_limit: int = Field(default=100)
+
+    # ----- Artifact Storage -----
+    artifact_storage_path: str = Field(default="./data/artifacts")
+    artifact_max_size_mb: int = Field(default=50)
+    artifact_retention_days: int = Field(default=30)
+    gcs_bucket_name: str = Field(default="")
+    gcs_artifact_prefix: str = Field(default="artifacts/")
+
+    # ----- Cloud Run Jobs (for code execution) -----
+    cloud_run_project: str = Field(default="")
+    cloud_run_region: str = Field(default="asia-east1")
+
     @property
     def allowed_extensions_list(self) -> list[str]:
         """Get allowed extensions as a list."""
@@ -139,6 +156,16 @@ class Settings(BaseSettings):
     def chroma_persist_path(self) -> Path:
         """Get ChromaDB persist directory as Path object."""
         return Path(self.chroma_persist_dir)
+
+    @property
+    def artifact_storage_dir(self) -> Path:
+        """Get artifact storage directory as Path object."""
+        return Path(self.artifact_storage_path)
+
+    @property
+    def artifact_max_size_bytes(self) -> int:
+        """Get max artifact size in bytes."""
+        return self.artifact_max_size_mb * 1024 * 1024
 
 
 # Global settings instance (singleton pattern)
