@@ -100,16 +100,16 @@ Transform the existing **API Integration Assistant** into an **Intelligent Self-
 
 ## 2. Storage Architecture
 
-### Clear Role Definition
+### Environment-Specific Storage
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                        STORAGE ARCHITECTURE                              │
+│                   LOCAL DEVELOPMENT STORAGE                              │
 └─────────────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
 │     SQLite      │     │   Filesystem    │     │    ChromaDB     │
-│   (Structured)  │     │    (Files)      │     │   (Semantic)    │
+│ /data/app.db    │     │ /data/artifacts │     │ /data/chroma    │
 └────────┬────────┘     └────────┬────────┘     └────────┬────────┘
          │                       │                       │
          ▼                       ▼                       ▼
@@ -122,6 +122,54 @@ Transform the existing **API Integration Assistant** into an **Intelligent Self-
 │ • GitHub tokens │     │ • Screenshots   │     │   context       │
 │ • Repo contexts │     │ • Preview apps  │     │ • Code snippets │
 └─────────────────┘     └─────────────────┘     └─────────────────┘
+
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│                   PRODUCTION STORAGE (Cloud Run)                         │
+└─────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│     SQLite      │     │  Cloud Storage  │     │    ChromaDB     │
+│  (GCS FUSE)     │     │   (GCS API)     │     │  (GCS FUSE)     │
+│ /mnt/data/app.db│     │ gs://bucket/    │     │/mnt/chroma_data │
+└────────┬────────┘     └────────┬────────┘     └────────┬────────┘
+         │                       │                       │
+         ▼                       ▼                       ▼
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│ Small file,     │     │ Direct API for  │     │ Existing FUSE   │
+│ FUSE is OK      │     │ better perf on  │     │ mount setup     │
+│                 │     │ large files     │     │                 │
+└─────────────────┘     └─────────────────┘     └─────────────────┘
+```
+
+### Why Different Approaches?
+
+| Storage | Local | Production | Reason |
+|---------|-------|------------|--------|
+| **SQLite** | Filesystem | GCS FUSE | Small file, infrequent writes - FUSE works fine |
+| **Artifacts** | Filesystem | GCS Direct API | Large files, frequent uploads - API is faster |
+| **ChromaDB** | Filesystem | GCS FUSE | Already configured, works well for vector DB |
+
+### Storage Service Abstraction
+
+```python
+# src/services/storage_service.py
+class StorageService:
+    def save_artifact(self, user_id: str, artifact_id: str, file: bytes) -> str:
+        if settings.environment == "local":
+            # Local: save to filesystem
+            path = f"/data/artifacts/{user_id}/{artifact_id}/"
+            return self._save_to_filesystem(path, file)
+        else:
+            # Production: upload to GCS via API
+            gcs_path = f"artifacts/{user_id}/{artifact_id}/"
+            return self._upload_to_gcs(gcs_path, file)
+
+    def get_artifact(self, user_id: str, artifact_id: str) -> bytes:
+        if settings.environment == "local":
+            return self._read_from_filesystem(...)
+        else:
+            return self._download_from_gcs(...)
 ```
 
 ### SQLite Responsibilities
@@ -131,12 +179,16 @@ Transform the existing **API Integration Assistant** into an **Intelligent Self-
 - Execution history and attempt logs
 - Repository connection metadata
 
-### Filesystem Responsibilities
-- Actual file content storage
+### Artifact File Storage
+**Local Development:**
 - Path: `/data/artifacts/{user_id}/{artifact_id}/`
-- Uploaded files, generated code, ZIP bundles
-- Screenshots from browser sandbox
-- Temporary preview app files
+- Direct filesystem access
+
+**Production (Cloud Run):**
+- Bucket: `gs://{project}-artifacts/`
+- Path: `artifacts/{user_id}/{artifact_id}/`
+- Access via Cloud Storage Python SDK
+- Signed URLs for downloads
 
 ### ChromaDB Responsibilities (Semantic Code Search)
 **Primary Purpose:** Enable natural language code search
@@ -1499,19 +1551,35 @@ docker/
 ### Appendix A: Environment Variables
 
 ```bash
+# ===========================================
+# LOCAL DEVELOPMENT (.env)
+# ===========================================
+
 # Existing (keep)
 SECRET_KEY=xxx
 GROQ_API_KEY=xxx
 LLM_PROVIDER=groq
-CHROMA_PERSIST_DIR=/data/chroma
+ENVIRONMENT=local
 
-# Database
+# Database & Storage (local paths)
 DATABASE_URL=sqlite:///data/app.db
-
-# Artifact Storage (filesystem, not GCS)
+CHROMA_PERSIST_DIR=/data/chroma
 ARTIFACT_STORAGE_PATH=/data/artifacts
 ARTIFACT_MAX_SIZE_MB=50
 ARTIFACT_RETENTION_DAYS=30
+
+# ===========================================
+# PRODUCTION (Cloud Run env vars)
+# ===========================================
+
+# ENVIRONMENT=production
+# DATABASE_URL=sqlite:///mnt/data/app.db
+# CHROMA_PERSIST_DIR=/mnt/chroma_data/chroma_db
+
+# GCS for Artifacts (production only)
+# GCS_BUCKET_NAME=your-project-artifacts
+# GCS_ARTIFACT_PREFIX=artifacts/
+# Use Application Default Credentials (ADC) on Cloud Run
 
 # Execution
 EXECUTION_MAX_RETRIES=5
