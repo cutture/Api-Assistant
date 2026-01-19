@@ -1,17 +1,21 @@
 """
 Database connection and session management.
 Uses SQLAlchemy async for non-blocking database operations.
+Also provides synchronous session support for cleanup tasks.
 """
 
 import os
+from contextlib import contextmanager
 from pathlib import Path
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Generator
 
+from sqlalchemy import create_engine
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
     create_async_engine,
 )
+from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from src.database.models import Base
@@ -56,6 +60,64 @@ AsyncSessionLocal = async_sessionmaker(
     autocommit=False,
     autoflush=False,
 )
+
+
+# ----- Synchronous Database Connection -----
+# Used for cleanup tasks and background jobs that don't need async
+
+def get_sync_database_url() -> str:
+    """Get the synchronous database URL."""
+    # Check for cloud storage path first (GCS FUSE mount)
+    cloud_path = os.getenv("CHROMA_PERSIST_DIR", "")
+    if cloud_path and cloud_path.startswith("/mnt/"):
+        db_dir = Path(cloud_path).parent
+        db_path = db_dir / "users.db"
+    else:
+        db_dir = Path("./data")
+        db_path = db_dir / "users.db"
+
+    db_dir.mkdir(parents=True, exist_ok=True)
+    return f"sqlite:///{db_path}"
+
+
+SYNC_DATABASE_URL = get_sync_database_url()
+
+sync_engine = create_engine(
+    SYNC_DATABASE_URL,
+    echo=os.getenv("DEBUG", "false").lower() == "true",
+    connect_args={"check_same_thread": False},
+    poolclass=StaticPool,
+)
+
+SyncSessionLocal = sessionmaker(
+    bind=sync_engine,
+    class_=Session,
+    expire_on_commit=False,
+    autocommit=False,
+    autoflush=False,
+)
+
+
+@contextmanager
+def get_db_session() -> Generator[Session, None, None]:
+    """
+    Get a synchronous database session as a context manager.
+    Used for cleanup tasks and background jobs.
+
+    Example:
+        with get_db_session() as db:
+            db.execute(query)
+            db.commit()
+    """
+    session = SyncSessionLocal()
+    try:
+        yield session
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
 
 
 async def init_db() -> None:
