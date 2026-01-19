@@ -195,6 +195,44 @@ This file provides Claude with context about the Intelligent Coding Agent projec
 - POST /mocks/generate/crud - Generate CRUD endpoints
 - POST /mocks/generate/openapi - Generate from OpenAPI spec
 
+### Transformation Notes (Phase 6 Complete)
+**New Backend Services:**
+- Template Service (`src/services/template_service.py`) - Code template library with built-in templates
+- Quality Service (`src/services/quality_service.py`) - Code quality scoring algorithm
+
+**New API Routers:**
+- Template Router (`src/api/template_router.py`) - /templates/* endpoints
+
+**New Frontend Features:**
+- TemplateSelector component - Template browsing, filtering, and rendering UI
+- QualityScore component - Quality score visualization with detailed metrics
+- Templates API client - Template CRUD and rendering
+
+**Template Library Features:**
+- Built-in templates for REST API, Authentication, Database models, Testing
+- Support for Python, JavaScript, TypeScript, Java, Go, C#
+- Template parameters with placeholders ({{param}})
+- Custom template creation by users
+- Template usage tracking
+
+**Quality Score Features:**
+- Multi-factor quality scoring (0-100)
+- Complexity metrics (cyclomatic complexity, nesting depth, function length)
+- Documentation coverage analysis
+- Test coverage estimation
+- Integration with lint and security scan results
+- Actionable recommendations
+
+**API Endpoints Added:**
+- GET /templates - List templates with filtering
+- GET /templates/categories - Get template categories
+- GET /templates/languages - Get supported languages
+- GET /templates/{id} - Get template details
+- POST /templates - Create custom template
+- PATCH /templates/{id} - Update custom template
+- DELETE /templates/{id} - Delete custom template
+- POST /templates/{id}/render - Render template with parameters
+
 ---
 
 ## Tech Stack

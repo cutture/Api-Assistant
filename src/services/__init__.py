@@ -13,6 +13,8 @@ This package contains service modules for:
 - Live preview management
 - Security scanning (vulnerability detection)
 - Mock API server management
+- Code templates library
+- Code quality scoring
 """
 
 from src.services.web_search import WebSearchService, get_web_search_service
@@ -82,6 +84,23 @@ from src.services.mock_service import (
     MockRequestLog,
     get_mock_service,
 )
+from src.services.template_service import (
+    TemplateService,
+    CodeTemplate,
+    TemplateParameter,
+    TemplateCategory,
+    TemplateLanguage,
+    get_template_service,
+)
+from src.services.quality_service import (
+    QualityService,
+    QualityScore,
+    QualityLevel,
+    ComplexityMetrics,
+    DocumentationMetrics,
+    TestMetrics,
+    get_quality_service,
+)
 
 __all__ = [
     "WebSearchService",
@@ -142,4 +161,19 @@ __all__ = [
     "MockStatus",
     "MockRequestLog",
     "get_mock_service",
+    # Templates
+    "TemplateService",
+    "CodeTemplate",
+    "TemplateParameter",
+    "TemplateCategory",
+    "TemplateLanguage",
+    "get_template_service",
+    # Quality
+    "QualityService",
+    "QualityScore",
+    "QualityLevel",
+    "ComplexityMetrics",
+    "DocumentationMetrics",
+    "TestMetrics",
+    "get_quality_service",
 ]
