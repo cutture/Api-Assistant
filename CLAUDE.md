@@ -81,7 +81,7 @@ This file provides Claude with context about the Intelligent Coding Agent projec
 - Sessions: Will include execution history in Phase 2
 - RAG Agent: Now retrieves code context
 
-### Transformation Notes (Phase 2 In Progress)
+### Transformation Notes (Phase 2 Complete)
 **New Backend Features:**
 - Database tables for code execution (Artifact, CodeExecution, ExecutionAttempt)
 - LLM Router service (`src/core/llm_router.py`) for cost-optimized routing
@@ -100,6 +100,31 @@ This file provides Claude with context about the Intelligent Coding Agent projec
 - Added execution settings (max_retries, timeout, daily_limit)
 - Added artifact storage settings
 - Added Cloud Run Jobs configuration
+
+### Transformation Notes (Phase 3 Complete)
+**New Backend Services:**
+- Artifact Service (`src/services/artifact_service.py`) - Storage abstraction for local/GCS
+- ZIP Service (`src/services/zip_service.py`) - Bundle generation for code downloads
+- Cleanup Service (`src/services/cleanup_service.py`) - Scheduled cleanup for expired artifacts
+- Artifacts API Router (`src/api/artifact_router.py`) - /artifacts/* endpoints
+
+**New Frontend Features:**
+- ArtifactList component - Displays and manages user artifacts
+- ArtifactUpload component - Drag-and-drop file upload
+- Artifacts page (`/artifacts`) - Full artifact management UI
+- ZIP download functionality in CodePanel
+- Missing UI components: Collapsible, Progress, Table
+
+**New Dependencies:**
+- Frontend: jszip for client-side ZIP creation
+- Frontend: @radix-ui/react-collapsible, @radix-ui/react-progress
+
+**API Endpoints Added:**
+- POST /artifacts/upload - Upload artifacts
+- GET /artifacts - List artifacts with filtering
+- GET /artifacts/{id} - Get artifact metadata
+- GET /artifacts/{id}/download - Download artifact file
+- DELETE /artifacts/{id} - Delete artifact
 
 ---
 
