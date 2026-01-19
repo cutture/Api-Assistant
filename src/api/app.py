@@ -26,6 +26,7 @@ from src.api.preview_router import router as preview_router
 from src.api.security_router import router as security_router
 from src.api.mock_router import router as mock_router
 from src.api.template_router import router as template_router
+from src.api.database_router import router as database_router
 
 from src.api.models import (
     AddMessageRequest,
@@ -132,6 +133,9 @@ def create_app(
 
     # Include template router for code templates
     app.include_router(template_router)
+
+    # Include database router for query generation
+    app.include_router(database_router)
 
     # Add startup event for database initialization
     @app.on_event("startup")

@@ -15,6 +15,7 @@ This package contains service modules for:
 - Mock API server management
 - Code templates library
 - Code quality scoring
+- Database query generation
 """
 
 from src.services.web_search import WebSearchService, get_web_search_service
@@ -101,6 +102,25 @@ from src.services.quality_service import (
     TestMetrics,
     get_quality_service,
 )
+from src.services.database_service import (
+    DatabaseService,
+    DatabaseType,
+    QueryType,
+    QueryRisk,
+    QueryValidationResult,
+    QueryExplanation,
+    GeneratedQuery,
+    get_database_service,
+)
+from src.services.language_service import (
+    LanguageService,
+    Language,
+    LanguageConfig,
+    TestTemplate,
+    LintRule,
+    GeneratedTest,
+    get_language_service,
+)
 
 __all__ = [
     "WebSearchService",
@@ -176,4 +196,21 @@ __all__ = [
     "DocumentationMetrics",
     "TestMetrics",
     "get_quality_service",
+    # Database
+    "DatabaseService",
+    "DatabaseType",
+    "QueryType",
+    "QueryRisk",
+    "QueryValidationResult",
+    "QueryExplanation",
+    "GeneratedQuery",
+    "get_database_service",
+    # Language
+    "LanguageService",
+    "Language",
+    "LanguageConfig",
+    "TestTemplate",
+    "LintRule",
+    "GeneratedTest",
+    "get_language_service",
 ]
