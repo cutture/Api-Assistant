@@ -1,13 +1,41 @@
-# 🚀 Enterprise API Integration Assistant
+# 🚀 Intelligent Self-Validating Coding Agent
 
-**Version 1.0.0** - Production Ready 🎉
+**Version 2.0.0** - In Development 🔧
 
-An AI-powered assistant that helps developers understand, document, and generate code for API integrations using advanced multi-agent orchestration, hybrid search, and comprehensive CLI tools.
+An AI-powered coding assistant that generates, executes, validates, and delivers production-ready code through an iterative refinement loop with container-based execution.
 
 [![Tests](https://img.shields.io/badge/tests-831%20passing-success)](tests/)
 [![Python](https://img.shields.io/badge/python-3.11+-blue)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![Version](https://img.shields.io/badge/version-1.0.0-brightgreen)](CHANGELOG_V1.md)
+[![Version](https://img.shields.io/badge/version-2.0.0-yellow)](CHANGELOG_V2.md)
+
+## 🆕 What's New in v2.0.0
+
+This major version transforms the API Integration Assistant into an **Intelligent Coding Agent** with:
+
+### Core Capabilities
+- **Multi-language code generation** (Python, JS, TS, Java, Go, C#)
+- **Container-based code execution** with automated testing
+- **Self-validating loop** (5 retries with multi-signal validation)
+- **Artifact management** (uploads, generated files, downloadable outputs)
+
+### New Features (Phases 1-10)
+- **GitHub Integration** - OAuth, repository context, PR creation support
+- **Webhook Triggers** - CI/CD integration with Slack/Discord notifications
+- **Security Scanning** - Vulnerability detection with CWE/OWASP mapping
+- **Mock API Servers** - Auto-generate from OpenAPI specs
+- **Code Templates** - Pre-built templates for common patterns
+- **Quality Scoring** - Complexity metrics and code quality analysis
+- **Database Query Generation** - SQL/NoSQL from natural language
+- **Live Preview** - Temporary preview URLs for generated code
+- **Rate Limiting & Metrics** - Production-ready monitoring
+
+### Three Output Modes
+1. **Inline Snippets** - Code displayed directly in chat
+2. **ZIP Bundles** - Download multi-file projects
+3. **GitHub PRs** - Push directly to repositories
+
+---
 
 ## ✨ Key Features
 
