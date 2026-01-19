@@ -126,6 +126,32 @@ This file provides Claude with context about the Intelligent Coding Agent projec
 - GET /artifacts/{id}/download - Download artifact file
 - DELETE /artifacts/{id} - Delete artifact
 
+### Transformation Notes (Phase 4 Complete)
+**New Backend Services:**
+- Diff Service (`src/services/diff_service.py`) - Code comparison with unified/HTML diff
+- Sandbox Service (`src/services/sandbox_service.py`) - Playwright-based screenshots and UI testing
+- Preview Service (`src/services/preview_service.py`) - Live preview server management
+
+**New API Routers:**
+- Sandbox Router (`src/api/sandbox_router.py`) - /sandbox/* endpoints
+- Preview Router (`src/api/preview_router.py`) - /preview/* endpoints
+
+**New Frontend Features:**
+- DiffViewer component - Unified/split view code diff display
+- PreviewPanel component - Live preview with iframe embedding
+- Sandbox API client - Screenshot and UI test API calls
+- Preview API client - Preview session management
+
+**API Endpoints Added:**
+- POST /sandbox/screenshot - Take screenshot of URL
+- POST /sandbox/test-ui - Run UI tests on URL
+- POST /preview - Start preview server
+- GET /preview/{id} - Get preview status
+- DELETE /preview/{id} - Stop preview
+- GET /preview - List user previews
+- GET /preview/stats - Preview service stats
+- POST /preview/cleanup - Clean expired previews
+
 ---
 
 ## Tech Stack

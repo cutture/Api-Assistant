@@ -8,6 +8,9 @@ This package contains service modules for:
 - Code execution (local and Cloud Run)
 - Artifact storage and management
 - ZIP bundle generation
+- Code diff generation
+- Browser sandbox (screenshots, UI testing)
+- Live preview management
 """
 
 from src.services.web_search import WebSearchService, get_web_search_service
@@ -43,6 +46,24 @@ from src.services.cleanup_service import (
     get_cleanup_service,
     run_cleanup,
 )
+from src.services.diff_service import (
+    DiffService,
+    DiffResult,
+    DiffStats,
+    get_diff_service,
+)
+from src.services.sandbox_service import (
+    SandboxService,
+    ScreenshotResult,
+    UITestResult,
+    ViewportSize,
+    get_sandbox_service,
+)
+from src.services.preview_service import (
+    PreviewService,
+    PreviewSession,
+    get_preview_service,
+)
 
 __all__ = [
     "WebSearchService",
@@ -74,4 +95,19 @@ __all__ = [
     "CleanupService",
     "get_cleanup_service",
     "run_cleanup",
+    # Diff
+    "DiffService",
+    "DiffResult",
+    "DiffStats",
+    "get_diff_service",
+    # Sandbox
+    "SandboxService",
+    "ScreenshotResult",
+    "UITestResult",
+    "ViewportSize",
+    "get_sandbox_service",
+    # Preview
+    "PreviewService",
+    "PreviewSession",
+    "get_preview_service",
 ]
