@@ -19,6 +19,7 @@ from fastapi.responses import JSONResponse
 
 from src.api.auth import verify_api_key, get_current_user_optional, CurrentUser
 from src.api.auth_router import router as auth_router, init_auth_db
+from src.api.middleware import setup_middleware
 from src.api.execute_router import router as execute_router
 from src.api.artifact_router import router as artifact_router
 from src.api.sandbox_router import router as sandbox_router
@@ -98,8 +99,8 @@ def create_app(
     )
 
     # Add CORS middleware with secure configuration
+    settings = get_settings()
     if enable_cors:
-        settings = get_settings()
         cors_origins = settings.cors_origins
         logger.info(f"CORS enabled for origins: {cors_origins}")
 
@@ -110,6 +111,16 @@ def create_app(
             allow_methods=["*"],
             allow_headers=["*"],
         )
+
+    # Set up rate limiting, metrics, and error tracking middleware
+    setup_middleware(
+        app,
+        config={
+            "enable_rate_limiting": settings.enable_rate_limiting,
+            "enable_metrics": settings.enable_metrics,
+            "sentry_dsn": settings.sentry_dsn if settings.sentry_dsn else None,
+        }
+    )
 
     # Include authentication router
     app.include_router(auth_router)

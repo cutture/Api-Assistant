@@ -129,6 +129,22 @@ from src.services.github_service import (
     FileContent,
     get_github_service,
 )
+from src.services.rate_limiter import (
+    RateLimiter,
+    RateLimitConfig,
+    RateLimitResult,
+    get_rate_limiter,
+)
+from src.services.metrics_service import (
+    MetricsService,
+    MetricType,
+    ExecutionStatus as MetricExecutionStatus,
+    LLMCost,
+    ExecutionMetric,
+    UserMetrics,
+    DailyMetrics,
+    get_metrics_service,
+)
 
 __all__ = [
     "WebSearchService",
@@ -228,4 +244,18 @@ __all__ = [
     "RepositoryContext",
     "FileContent",
     "get_github_service",
+    # Rate Limiting
+    "RateLimiter",
+    "RateLimitConfig",
+    "RateLimitResult",
+    "get_rate_limiter",
+    # Metrics
+    "MetricsService",
+    "MetricType",
+    "MetricExecutionStatus",
+    "LLMCost",
+    "ExecutionMetric",
+    "UserMetrics",
+    "DailyMetrics",
+    "get_metrics_service",
 ]

@@ -127,6 +127,26 @@ class Settings(BaseSettings):
     cloud_run_project: str = Field(default="")
     cloud_run_region: str = Field(default="asia-east1")
 
+    # ----- GitHub OAuth -----
+    github_client_id: str = Field(default="")
+    github_client_secret: str = Field(default="")
+    github_callback_url: str = Field(default="")
+
+    # ----- Rate Limiting -----
+    enable_rate_limiting: bool = Field(default=True)
+    rate_limit_requests_per_minute: int = Field(default=60)
+    rate_limit_requests_per_hour: int = Field(default=1000)
+    rate_limit_requests_per_day: int = Field(default=10000)
+    rate_limit_executions_per_minute: int = Field(default=10)
+    rate_limit_executions_per_hour: int = Field(default=100)
+    rate_limit_executions_per_day: int = Field(default=500)
+
+    # ----- Metrics & Monitoring -----
+    enable_metrics: bool = Field(default=True)
+    cost_alert_threshold: float = Field(default=50.0)
+    cost_limit_monthly: float = Field(default=200.0)
+    sentry_dsn: str = Field(default="")
+
     @property
     def allowed_extensions_list(self) -> list[str]:
         """Get allowed extensions as a list."""
