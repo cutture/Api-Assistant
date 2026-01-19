@@ -11,6 +11,8 @@ This package contains service modules for:
 - Code diff generation
 - Browser sandbox (screenshots, UI testing)
 - Live preview management
+- Security scanning (vulnerability detection)
+- Mock API server management
 """
 
 from src.services.web_search import WebSearchService, get_web_search_service
@@ -64,6 +66,22 @@ from src.services.preview_service import (
     PreviewSession,
     get_preview_service,
 )
+from src.services.security_service import (
+    SecurityService,
+    SecurityScanResult,
+    Vulnerability,
+    Severity,
+    VulnerabilityType,
+    get_security_service,
+)
+from src.services.mock_service import (
+    MockService,
+    MockServer,
+    MockEndpoint,
+    MockStatus,
+    MockRequestLog,
+    get_mock_service,
+)
 
 __all__ = [
     "WebSearchService",
@@ -110,4 +128,18 @@ __all__ = [
     "PreviewService",
     "PreviewSession",
     "get_preview_service",
+    # Security
+    "SecurityService",
+    "SecurityScanResult",
+    "Vulnerability",
+    "Severity",
+    "VulnerabilityType",
+    "get_security_service",
+    # Mock
+    "MockService",
+    "MockServer",
+    "MockEndpoint",
+    "MockStatus",
+    "MockRequestLog",
+    "get_mock_service",
 ]

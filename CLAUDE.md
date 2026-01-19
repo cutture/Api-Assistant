@@ -152,6 +152,49 @@ This file provides Claude with context about the Intelligent Coding Agent projec
 - GET /preview/stats - Preview service stats
 - POST /preview/cleanup - Clean expired previews
 
+### Transformation Notes (Phase 5 Complete)
+**New Backend Services:**
+- Security Service (`src/services/security_service.py`) - Vulnerability scanning with pattern matching and Bandit
+- Mock Service (`src/services/mock_service.py`) - API mock server management
+
+**New API Routers:**
+- Security Router (`src/api/security_router.py`) - /security/* endpoints
+- Mock Router (`src/api/mock_router.py`) - /mocks/* endpoints
+
+**New Frontend Features:**
+- SecurityReport component - Vulnerability display with severity badges
+- MockServerManager component - Mock server creation and management UI
+- Security API client - Code and dependency scanning
+- Mocks API client - Mock server CRUD operations
+
+**Security Scanning Capabilities:**
+- Pattern-based static analysis for Python, JavaScript, TypeScript, Java, Go, C#
+- SQL injection, XSS, command injection, hardcoded secrets detection
+- CWE and OWASP category mapping
+- Bandit integration for Python (when available)
+- npm audit and pip-audit for dependency scanning
+
+**Mock Server Capabilities:**
+- Create mock endpoints with custom responses
+- Auto-generate CRUD endpoints from resource name
+- Generate mocks from OpenAPI specifications
+- Request logging and statistics
+- Automatic expiration and cleanup
+
+**API Endpoints Added:**
+- POST /security/scan - Scan code for vulnerabilities
+- POST /security/scan/dependencies - Scan package files
+- GET /security/supported-languages - List supported languages
+- POST /mocks - Create mock server
+- GET /mocks - List mock servers
+- GET /mocks/{id} - Get mock details
+- PATCH /mocks/{id} - Update mock endpoints
+- DELETE /mocks/{id} - Delete mock server
+- POST /mocks/{id}/stop - Stop mock server
+- GET /mocks/{id}/logs - Get request logs
+- POST /mocks/generate/crud - Generate CRUD endpoints
+- POST /mocks/generate/openapi - Generate from OpenAPI spec
+
 ---
 
 ## Tech Stack
@@ -187,52 +230,74 @@ Api-Assistant/
 │   │   ├── app.py           # Main app (entry point)
 │   │   ├── models.py        # Pydantic request/response models
 │   │   ├── auth.py          # JWT/API key authentication middleware
-│   │   └── auth_router.py   # Authentication endpoints (/auth/*)
+│   │   ├── auth_router.py   # Authentication endpoints (/auth/*)
+│   │   ├── artifact_router.py # Artifact management (/artifacts/*)
+│   │   ├── sandbox_router.py  # Browser sandbox (/sandbox/*)
+│   │   ├── preview_router.py  # Live preview (/preview/*)
+│   │   ├── security_router.py # Security scanning (/security/*)
+│   │   └── mock_router.py     # Mock servers (/mocks/*)
 │   ├── auth/                # Authentication services
 │   │   ├── password.py      # Password hashing (bcrypt)
 │   │   ├── jwt.py           # JWT token handling
 │   │   ├── user_service.py  # User CRUD operations
 │   │   └── oauth.py         # Google OAuth implementation
 │   ├── database/            # SQLAlchemy database
-│   │   ├── models.py        # User, OAuthAccount, Token models
+│   │   ├── models.py        # User, OAuthAccount, Token, Artifact, CodeExecution
 │   │   └── connection.py    # Database connection setup
 │   ├── agents/              # LangGraph multi-agent system
 │   │   ├── supervisor.py    # Agent orchestrator
 │   │   ├── query_analyzer.py
 │   │   ├── rag_agent.py
 │   │   ├── code_agent.py
-│   │   ├── doc_analyzer.py
+│   │   ├── code_generator.py # Enhanced code generation
+│   │   ├── test_generator.py # Auto test generation
+│   │   ├── validator.py     # Validation loop orchestrator
 │   │   └── state.py         # Shared agent state
 │   ├── core/                # Core services
 │   │   ├── vector_store.py  # ChromaDB wrapper
 │   │   ├── hybrid_search.py # BM25 + vector fusion
 │   │   ├── cross_encoder.py # Re-ranking
 │   │   ├── embeddings.py    # Sentence transformers
-│   │   └── llm_client.py    # LLM abstraction
-│   ├── parsers/             # Document parsers
-│   │   ├── openapi_parser.py
-│   │   ├── graphql_parser.py
-│   │   ├── postman_parser.py
-│   │   ├── pdf_parser.py
-│   │   └── format_handler.py # Auto-detection
-│   ├── diagrams/            # Mermaid diagram generation
+│   │   ├── llm_client.py    # LLM abstraction
+│   │   └── llm_router.py    # Cost-optimized LLM routing
+│   ├── parsers/             # Code parsers (minimal)
+│   │   └── code_parser.py   # Language detection
 │   ├── sessions/            # Session management
 │   ├── services/            # Supporting services
+│   │   ├── artifact_service.py   # Artifact storage (local/GCS)
+│   │   ├── zip_service.py        # ZIP bundle generation
+│   │   ├── cleanup_service.py    # Expired artifact cleanup
+│   │   ├── execution_service.py  # Code execution orchestration
+│   │   ├── diff_service.py       # Code diff comparison
+│   │   ├── sandbox_service.py    # Playwright screenshots/testing
+│   │   ├── preview_service.py    # Live preview server
+│   │   ├── security_service.py   # Vulnerability scanning
+│   │   └── mock_service.py       # API mock server management
 │   └── config.py            # Settings (Pydantic)
 ├── frontend/                # Next.js frontend
 │   ├── src/
-│   │   ├── app/            # Pages (chat, search, sessions, diagrams)
+│   │   ├── app/            # Pages (chat, sessions, artifacts, settings)
+│   │   │   ├── chat/       # Main chat page with code panel
+│   │   │   ├── sessions/   # Session management
+│   │   │   ├── artifacts/  # Artifact management
+│   │   │   ├── settings/   # User settings
 │   │   │   ├── login/      # Login page with OAuth
 │   │   │   ├── register/   # Registration page
 │   │   │   └── auth/callback/ # OAuth callback handler
 │   │   ├── components/     # React components
+│   │   │   ├── chat/       # ChatMessage, ChatInput
+│   │   │   ├── code/       # CodePanel, DiffViewer, PreviewPanel
+│   │   │   ├── artifacts/  # ArtifactList, ArtifactUpload
+│   │   │   ├── security/   # SecurityReport
+│   │   │   ├── mocks/      # MockServerManager
+│   │   │   └── ui/         # Radix UI primitives
 │   │   ├── hooks/          # React Query hooks
 │   │   ├── lib/
-│   │   │   ├── api/        # API clients with JWT
+│   │   │   ├── api/        # API clients (artifacts, sandbox, preview)
 │   │   │   └── contexts/   # AuthContext for auth state
 │   │   └── stores/         # Zustand stores
 │   └── e2e/                # Playwright tests
-├── tests/                   # Backend tests (831+ tests)
+├── tests/                   # Backend tests
 ├── data/                    # ChromaDB + SQLite storage
 ├── Dockerfile              # Multi-stage Docker build
 ├── cloudbuild.yaml         # Cloud Build CI/CD
@@ -249,13 +314,32 @@ Api-Assistant/
 | `src/api/app.py` | FastAPI app entry point, all routes |
 | `src/api/auth.py` | JWT and API key authentication middleware |
 | `src/api/auth_router.py` | Authentication API endpoints (/auth/*) |
+| `src/api/artifact_router.py` | Artifact management endpoints (/artifacts/*) |
+| `src/api/sandbox_router.py` | Browser sandbox endpoints (/sandbox/*) |
+| `src/api/preview_router.py` | Live preview endpoints (/preview/*) |
 | `src/config.py` | Environment configuration (Pydantic Settings) |
 | `src/agents/supervisor.py` | LangGraph agent orchestrator |
+| `src/agents/code_generator.py` | Enhanced code generation agent |
+| `src/agents/test_generator.py` | Auto test generation agent |
+| `src/agents/validator.py` | Validation loop orchestrator |
 | `src/core/vector_store.py` | ChromaDB vector store operations |
-| `src/database/models.py` | SQLAlchemy User and OAuth models |
+| `src/core/llm_router.py` | Cost-optimized LLM routing |
+| `src/database/models.py` | SQLAlchemy User, OAuth, Artifact, CodeExecution |
+| `src/services/artifact_service.py` | Artifact storage abstraction (local/GCS) |
+| `src/services/execution_service.py` | Code execution orchestration |
+| `src/services/diff_service.py` | Code diff comparison service |
+| `src/services/sandbox_service.py` | Playwright screenshots/UI testing |
+| `src/services/preview_service.py` | Live preview server management |
+| `src/services/security_service.py` | Vulnerability scanning service |
+| `src/services/mock_service.py` | Mock API server management |
 | `src/auth/user_service.py` | User CRUD and authentication logic |
 | `frontend/src/lib/api/client.ts` | Axios API client with JWT interceptors |
 | `frontend/src/lib/contexts/AuthContext.tsx` | React auth state management |
+| `frontend/src/components/code/CodePanel.tsx` | Side panel for viewing generated code |
+| `frontend/src/components/code/DiffViewer.tsx` | Code diff visualization |
+| `frontend/src/components/code/PreviewPanel.tsx` | Live preview iframe |
+| `frontend/src/components/security/SecurityReport.tsx` | Vulnerability report display |
+| `frontend/src/components/mocks/MockServerManager.tsx` | Mock server management UI |
 | `Dockerfile` | Production Docker image |
 | `cloudbuild.yaml` | Cloud Build CI/CD pipeline |
 | `env.example.yaml` | Environment variables template |
@@ -268,19 +352,11 @@ Api-Assistant/
 - `GET /health` - Health check
 - `GET /stats` - Collection statistics
 
-### Documents
-- `POST /documents/upload` - Upload files (multipart)
-- `POST /documents` - Add documents (JSON)
-- `GET /documents/{id}` - Get document
-- `DELETE /documents/{id}` - Delete document
-- `POST /documents/bulk-delete` - Bulk delete
+### Chat
+- `POST /chat` - AI chat with RAG, file uploads, code generation
 
 ### Search
-- `POST /search` - Hybrid search (modes: vector, hybrid, reranked)
-- `POST /search/faceted` - Faceted search with aggregations
-
-### Chat
-- `POST /chat` - AI chat with RAG, file uploads, URL scraping
+- `POST /search` - Hybrid search for code context (modes: vector, hybrid, reranked)
 
 ### Authentication
 - `POST /auth/register` - Create new user account
@@ -305,11 +381,43 @@ Api-Assistant/
 - `POST /sessions/{id}/messages` - Add message
 - `DELETE /sessions/{id}/messages` - Clear history
 
-### Diagrams
-- `POST /diagrams/sequence` - Sequence diagram
-- `POST /diagrams/auth-flow` - Auth flow diagram
-- `POST /diagrams/er` - ER diagram from GraphQL
-- `POST /diagrams/overview` - API overview diagram
+### Artifacts (Phase 3)
+- `POST /artifacts/upload` - Upload artifact files
+- `GET /artifacts` - List artifacts with filtering
+- `GET /artifacts/{id}` - Get artifact metadata
+- `GET /artifacts/{id}/download` - Download artifact file
+- `DELETE /artifacts/{id}` - Delete artifact
+
+### Sandbox (Phase 4)
+- `POST /sandbox/screenshot` - Take screenshot of URL
+- `POST /sandbox/test-ui` - Run UI tests on URL
+
+### Preview (Phase 4)
+- `POST /preview` - Start live preview server
+- `GET /preview/{id}` - Get preview status
+- `DELETE /preview/{id}` - Stop preview
+- `GET /preview` - List user previews
+- `GET /preview/stats` - Preview service stats
+- `POST /preview/cleanup` - Clean expired previews
+
+### Security (Phase 5)
+- `POST /security/scan` - Scan code for vulnerabilities
+- `POST /security/scan/dependencies` - Scan package files
+- `GET /security/scan/{execution_id}` - Get execution security scan
+- `GET /security/supported-languages` - List supported languages
+
+### Mocks (Phase 5)
+- `POST /mocks` - Create mock server
+- `GET /mocks` - List user mock servers
+- `GET /mocks/stats` - Get mock service stats
+- `GET /mocks/{id}` - Get mock server details
+- `PATCH /mocks/{id}` - Update mock endpoints
+- `DELETE /mocks/{id}` - Delete mock server
+- `POST /mocks/{id}/stop` - Stop mock server
+- `GET /mocks/{id}/logs` - Get request logs
+- `POST /mocks/generate/crud` - Generate CRUD endpoints
+- `POST /mocks/generate/openapi` - Generate from OpenAPI spec
+- `POST /mocks/cleanup` - Clean expired mocks
 
 ---
 

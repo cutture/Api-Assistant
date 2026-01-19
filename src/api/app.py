@@ -23,6 +23,8 @@ from src.api.execute_router import router as execute_router
 from src.api.artifact_router import router as artifact_router
 from src.api.sandbox_router import router as sandbox_router
 from src.api.preview_router import router as preview_router
+from src.api.security_router import router as security_router
+from src.api.mock_router import router as mock_router
 
 from src.api.models import (
     AddMessageRequest,
@@ -120,6 +122,12 @@ def create_app(
 
     # Include preview router for live previews
     app.include_router(preview_router)
+
+    # Include security router for vulnerability scanning
+    app.include_router(security_router)
+
+    # Include mock router for API mocking
+    app.include_router(mock_router)
 
     # Add startup event for database initialization
     @app.on_event("startup")
