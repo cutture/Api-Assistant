@@ -637,6 +637,261 @@ class GitHubOAuth:
 
             return response.json()
 
+    async def get_branch_ref(
+        self,
+        access_token: str,
+        owner: str,
+        repo: str,
+        branch: str,
+    ) -> dict:
+        """
+        Get branch reference (SHA).
+
+        Args:
+            access_token: OAuth access token
+            owner: Repository owner
+            repo: Repository name
+            branch: Branch name
+
+        Returns:
+            Branch reference data
+        """
+        async with httpx.AsyncClient() as client:
+            url = f"{self.API_BASE_URL}/repos/{owner}/{repo}/git/refs/heads/{branch}"
+            response = await client.get(
+                url,
+                headers={
+                    "Authorization": f"Bearer {access_token}",
+                    "Accept": "application/vnd.github+json",
+                    "X-GitHub-Api-Version": "2022-11-28",
+                },
+            )
+
+            if response.status_code != 200:
+                raise OAuthError(f"Failed to get branch ref: {response.text}", "github")
+
+            return response.json()
+
+    async def create_branch(
+        self,
+        access_token: str,
+        owner: str,
+        repo: str,
+        branch_name: str,
+        from_sha: str,
+    ) -> dict:
+        """
+        Create a new branch from a SHA.
+
+        Args:
+            access_token: OAuth access token
+            owner: Repository owner
+            repo: Repository name
+            branch_name: New branch name
+            from_sha: SHA to branch from
+
+        Returns:
+            Created branch reference
+        """
+        async with httpx.AsyncClient() as client:
+            url = f"{self.API_BASE_URL}/repos/{owner}/{repo}/git/refs"
+            response = await client.post(
+                url,
+                json={
+                    "ref": f"refs/heads/{branch_name}",
+                    "sha": from_sha,
+                },
+                headers={
+                    "Authorization": f"Bearer {access_token}",
+                    "Accept": "application/vnd.github+json",
+                    "X-GitHub-Api-Version": "2022-11-28",
+                },
+            )
+
+            if response.status_code not in (200, 201):
+                raise OAuthError(f"Failed to create branch: {response.text}", "github")
+
+            return response.json()
+
+    async def create_or_update_file(
+        self,
+        access_token: str,
+        owner: str,
+        repo: str,
+        path: str,
+        content: str,
+        message: str,
+        branch: str,
+        sha: Optional[str] = None,
+    ) -> dict:
+        """
+        Create or update a file in the repository.
+
+        Args:
+            access_token: OAuth access token
+            owner: Repository owner
+            repo: Repository name
+            path: File path
+            content: File content (will be base64 encoded)
+            message: Commit message
+            branch: Branch name
+            sha: Current file SHA (required for updates)
+
+        Returns:
+            Commit and content data
+        """
+        import base64
+
+        async with httpx.AsyncClient() as client:
+            url = f"{self.API_BASE_URL}/repos/{owner}/{repo}/contents/{path}"
+
+            data = {
+                "message": message,
+                "content": base64.b64encode(content.encode()).decode(),
+                "branch": branch,
+            }
+
+            if sha:
+                data["sha"] = sha
+
+            response = await client.put(
+                url,
+                json=data,
+                headers={
+                    "Authorization": f"Bearer {access_token}",
+                    "Accept": "application/vnd.github+json",
+                    "X-GitHub-Api-Version": "2022-11-28",
+                },
+            )
+
+            if response.status_code not in (200, 201):
+                raise OAuthError(f"Failed to create/update file: {response.text}", "github")
+
+            return response.json()
+
+    async def create_pull_request(
+        self,
+        access_token: str,
+        owner: str,
+        repo: str,
+        title: str,
+        body: str,
+        head: str,
+        base: str,
+        draft: bool = False,
+    ) -> dict:
+        """
+        Create a pull request.
+
+        Args:
+            access_token: OAuth access token
+            owner: Repository owner
+            repo: Repository name
+            title: PR title
+            body: PR description
+            head: Head branch (with changes)
+            base: Base branch (target)
+            draft: Create as draft PR
+
+        Returns:
+            Created pull request data
+        """
+        async with httpx.AsyncClient() as client:
+            url = f"{self.API_BASE_URL}/repos/{owner}/{repo}/pulls"
+            response = await client.post(
+                url,
+                json={
+                    "title": title,
+                    "body": body,
+                    "head": head,
+                    "base": base,
+                    "draft": draft,
+                },
+                headers={
+                    "Authorization": f"Bearer {access_token}",
+                    "Accept": "application/vnd.github+json",
+                    "X-GitHub-Api-Version": "2022-11-28",
+                },
+            )
+
+            if response.status_code not in (200, 201):
+                raise OAuthError(f"Failed to create PR: {response.text}", "github")
+
+            return response.json()
+
+    async def get_pull_request(
+        self,
+        access_token: str,
+        owner: str,
+        repo: str,
+        pull_number: int,
+    ) -> dict:
+        """
+        Get pull request details.
+
+        Args:
+            access_token: OAuth access token
+            owner: Repository owner
+            repo: Repository name
+            pull_number: PR number
+
+        Returns:
+            Pull request data
+        """
+        async with httpx.AsyncClient() as client:
+            url = f"{self.API_BASE_URL}/repos/{owner}/{repo}/pulls/{pull_number}"
+            response = await client.get(
+                url,
+                headers={
+                    "Authorization": f"Bearer {access_token}",
+                    "Accept": "application/vnd.github+json",
+                    "X-GitHub-Api-Version": "2022-11-28",
+                },
+            )
+
+            if response.status_code != 200:
+                raise OAuthError(f"Failed to get PR: {response.text}", "github")
+
+            return response.json()
+
+    async def list_pull_requests(
+        self,
+        access_token: str,
+        owner: str,
+        repo: str,
+        state: str = "open",
+        per_page: int = 30,
+    ) -> list[dict]:
+        """
+        List pull requests for a repository.
+
+        Args:
+            access_token: OAuth access token
+            owner: Repository owner
+            repo: Repository name
+            state: PR state (open, closed, all)
+            per_page: Results per page
+
+        Returns:
+            List of pull requests
+        """
+        async with httpx.AsyncClient() as client:
+            url = f"{self.API_BASE_URL}/repos/{owner}/{repo}/pulls"
+            response = await client.get(
+                url,
+                params={"state": state, "per_page": per_page},
+                headers={
+                    "Authorization": f"Bearer {access_token}",
+                    "Accept": "application/vnd.github+json",
+                    "X-GitHub-Api-Version": "2022-11-28",
+                },
+            )
+
+            if response.status_code != 200:
+                raise OAuthError(f"Failed to list PRs: {response.text}", "github")
+
+            return response.json()
+
 
 def get_oauth_provider(provider: str):
     """

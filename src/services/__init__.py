@@ -16,6 +16,7 @@ This package contains service modules for:
 - Code templates library
 - Code quality scoring
 - Database query generation
+- Webhook triggers for CI/CD integration
 """
 
 from src.services.web_search import WebSearchService, get_web_search_service
@@ -145,6 +146,15 @@ from src.services.metrics_service import (
     DailyMetrics,
     get_metrics_service,
 )
+from src.services.webhook_service import (
+    WebhookService,
+    Webhook,
+    WebhookEvent,
+    WebhookStatus,
+    WebhookProvider,
+    WebhookDelivery,
+    get_webhook_service,
+)
 
 __all__ = [
     "WebSearchService",
@@ -258,4 +268,12 @@ __all__ = [
     "UserMetrics",
     "DailyMetrics",
     "get_metrics_service",
+    # Webhooks
+    "WebhookService",
+    "Webhook",
+    "WebhookEvent",
+    "WebhookStatus",
+    "WebhookProvider",
+    "WebhookDelivery",
+    "get_webhook_service",
 ]

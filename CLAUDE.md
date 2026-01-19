@@ -352,6 +352,43 @@ This file provides Claude with context about the Intelligent Coding Agent projec
 - `X-RateLimit-Window` - Current limit window
 - `X-Response-Time-Ms` - Request duration
 
+### Transformation Notes (Phase 10 In Progress)
+**New Backend Services:**
+- Webhook Service (`src/services/webhook_service.py`) - CI/CD webhook triggers and notifications
+- Extended GitHubOAuth (`src/auth/oauth.py`) - PR creation methods for GitHub integration
+
+**New API Routers:**
+- Webhook Router (`src/api/webhook_router.py`) - /webhooks/* endpoints
+
+**Webhook Features:**
+- Event-driven webhook triggers (execution started/completed/failed, artifact created, security alerts)
+- Multiple provider support (Custom HTTP, Slack, Discord, GitHub, GitLab)
+- HMAC-SHA256 signature verification for security
+- Provider-specific payload formatting (Slack attachments, Discord embeds)
+- Webhook delivery tracking with retry logic (exponential backoff)
+- Automatic failure detection (marks webhook as failed after 10 consecutive failures)
+- Secret regeneration for security rotation
+
+**GitHub PR Creation Features (Extended):**
+- Branch creation from existing SHA
+- File creation/update with commit messages
+- Pull request creation with title, body, draft support
+- PR listing and status retrieval
+- Base64 encoding for file content
+
+**API Endpoints Added:**
+- POST /webhooks - Create webhook
+- GET /webhooks - List user webhooks
+- GET /webhooks/events - List available webhook events
+- GET /webhooks/providers - List supported providers
+- GET /webhooks/stats - Get webhook statistics
+- GET /webhooks/{id} - Get webhook details
+- PATCH /webhooks/{id} - Update webhook
+- DELETE /webhooks/{id} - Delete webhook
+- POST /webhooks/{id}/regenerate-secret - Regenerate webhook secret
+- POST /webhooks/{id}/test - Test webhook delivery
+- GET /webhooks/{id}/deliveries - Get delivery history
+
 ---
 
 ## Tech Stack
@@ -393,7 +430,8 @@ Api-Assistant/
 │   │   ├── preview_router.py  # Live preview (/preview/*)
 │   │   ├── security_router.py # Security scanning (/security/*)
 │   │   ├── mock_router.py     # Mock servers (/mocks/*)
-│   │   └── github_router.py   # GitHub integration (/github/*)
+│   │   ├── github_router.py   # GitHub integration (/github/*)
+│   │   └── webhook_router.py  # Webhook triggers (/webhooks/*)
 │   ├── auth/                # Authentication services
 │   │   ├── password.py      # Password hashing (bcrypt)
 │   │   ├── jwt.py           # JWT token handling
@@ -431,7 +469,8 @@ Api-Assistant/
 │   │   ├── preview_service.py    # Live preview server
 │   │   ├── security_service.py   # Vulnerability scanning
 │   │   ├── mock_service.py       # API mock server management
-│   │   └── github_service.py     # GitHub repository operations
+│   │   ├── github_service.py     # GitHub repository operations
+│   │   └── webhook_service.py    # Webhook triggers and notifications
 │   └── config.py            # Settings (Pydantic)
 ├── frontend/                # Next.js frontend
 │   ├── src/
@@ -510,6 +549,8 @@ Api-Assistant/
 | `src/api/middleware.py` | Rate limiting and metrics middleware |
 | `frontend/src/components/ui/loading.tsx` | Loading spinner and skeleton components |
 | `frontend/src/components/ui/error-boundary.tsx` | Error boundary components |
+| `src/services/webhook_service.py` | Webhook triggers and notifications |
+| `src/api/webhook_router.py` | Webhook API endpoints (/webhooks/*) |
 | `frontend/src/hooks/useKeyboardShortcuts.ts` | Keyboard shortcuts hook |
 | `Dockerfile` | Production Docker image |
 | `cloudbuild.yaml` | Cloud Build CI/CD pipeline |
@@ -599,6 +640,19 @@ Api-Assistant/
 - `POST /github/repos/{owner}/{repo}/analyze` - Analyze repository context
 - `GET /github/repos/{owner}/{repo}/context` - Get cached repository context
 - `GET /github/repos/{owner}/{repo}/file` - Get file content
+
+### Webhooks (Phase 10)
+- `POST /webhooks` - Create webhook
+- `GET /webhooks` - List user webhooks
+- `GET /webhooks/events` - List available webhook events
+- `GET /webhooks/providers` - List supported providers
+- `GET /webhooks/stats` - Get webhook statistics
+- `GET /webhooks/{id}` - Get webhook details
+- `PATCH /webhooks/{id}` - Update webhook
+- `DELETE /webhooks/{id}` - Delete webhook
+- `POST /webhooks/{id}/regenerate-secret` - Regenerate webhook secret
+- `POST /webhooks/{id}/test` - Test webhook delivery
+- `GET /webhooks/{id}/deliveries` - Get delivery history
 
 ---
 
