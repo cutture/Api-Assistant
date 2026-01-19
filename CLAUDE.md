@@ -278,6 +278,39 @@ This file provides Claude with context about the Intelligent Coding Agent projec
 - GET /database/types - Get supported database types
 - GET /database/risk-levels - Get risk level information
 
+### Transformation Notes (Phase 8 Complete)
+**New Backend Services:**
+- GitHub Service (`src/services/github_service.py`) - Repository operations, context analysis, framework detection
+- GitHub OAuth (`src/auth/oauth.py`) - Extended with GitHubOAuth class for GitHub OAuth flow
+
+**New API Routers:**
+- GitHub Router (`src/api/github_router.py`) - /github/* endpoints
+
+**New Frontend Features:**
+- ConnectionStatus component - GitHub connection status with connect/disconnect
+- RepoSelector component - Repository browsing with search and analysis
+- GitHub API client - OAuth flow, repository listing, file access
+
+**GitHub Integration Features:**
+- GitHub OAuth 2.0 flow with read:user, user:email, repo scopes
+- Repository listing with pagination and sorting
+- Repository context analysis (framework detection, structure analysis)
+- Framework detection for FastAPI, Django, Flask, React, Next.js, Vue, Angular, Express, Spring, ASP.NET
+- Package manager detection from configuration files
+- File content retrieval for code context
+- In-memory token storage (secure per-user)
+- CSRF protection with state parameter
+
+**API Endpoints Added:**
+- GET /github/connect - Initiate GitHub OAuth flow
+- GET /github/callback - OAuth callback handler
+- GET /github/status - Get connection status
+- DELETE /github/disconnect - Disconnect GitHub account
+- GET /github/repos - List user repositories
+- POST /github/repos/{owner}/{repo}/analyze - Analyze repository context
+- GET /github/repos/{owner}/{repo}/context - Get cached repository context
+- GET /github/repos/{owner}/{repo}/file - Get file content
+
 ---
 
 ## Tech Stack
@@ -318,12 +351,13 @@ Api-Assistant/
 │   │   ├── sandbox_router.py  # Browser sandbox (/sandbox/*)
 │   │   ├── preview_router.py  # Live preview (/preview/*)
 │   │   ├── security_router.py # Security scanning (/security/*)
-│   │   └── mock_router.py     # Mock servers (/mocks/*)
+│   │   ├── mock_router.py     # Mock servers (/mocks/*)
+│   │   └── github_router.py   # GitHub integration (/github/*)
 │   ├── auth/                # Authentication services
 │   │   ├── password.py      # Password hashing (bcrypt)
 │   │   ├── jwt.py           # JWT token handling
 │   │   ├── user_service.py  # User CRUD operations
-│   │   └── oauth.py         # Google OAuth implementation
+│   │   └── oauth.py         # Google & GitHub OAuth implementation
 │   ├── database/            # SQLAlchemy database
 │   │   ├── models.py        # User, OAuthAccount, Token, Artifact, CodeExecution
 │   │   └── connection.py    # Database connection setup
@@ -355,7 +389,8 @@ Api-Assistant/
 │   │   ├── sandbox_service.py    # Playwright screenshots/testing
 │   │   ├── preview_service.py    # Live preview server
 │   │   ├── security_service.py   # Vulnerability scanning
-│   │   └── mock_service.py       # API mock server management
+│   │   ├── mock_service.py       # API mock server management
+│   │   └── github_service.py     # GitHub repository operations
 │   └── config.py            # Settings (Pydantic)
 ├── frontend/                # Next.js frontend
 │   ├── src/
@@ -373,6 +408,7 @@ Api-Assistant/
 │   │   │   ├── artifacts/  # ArtifactList, ArtifactUpload
 │   │   │   ├── security/   # SecurityReport
 │   │   │   ├── mocks/      # MockServerManager
+│   │   │   ├── github/     # ConnectionStatus, RepoSelector
 │   │   │   └── ui/         # Radix UI primitives
 │   │   ├── hooks/          # React Query hooks
 │   │   ├── lib/
@@ -423,6 +459,11 @@ Api-Assistant/
 | `frontend/src/components/code/PreviewPanel.tsx` | Live preview iframe |
 | `frontend/src/components/security/SecurityReport.tsx` | Vulnerability report display |
 | `frontend/src/components/mocks/MockServerManager.tsx` | Mock server management UI |
+| `src/services/github_service.py` | GitHub repository operations |
+| `src/api/github_router.py` | GitHub API endpoints (/github/*) |
+| `frontend/src/lib/api/github.ts` | GitHub API client |
+| `frontend/src/components/github/ConnectionStatus.tsx` | GitHub connection status UI |
+| `frontend/src/components/github/RepoSelector.tsx` | Repository browser UI |
 | `Dockerfile` | Production Docker image |
 | `cloudbuild.yaml` | Cloud Build CI/CD pipeline |
 | `env.example.yaml` | Environment variables template |
@@ -502,6 +543,16 @@ Api-Assistant/
 - `POST /mocks/generate/openapi` - Generate from OpenAPI spec
 - `POST /mocks/cleanup` - Clean expired mocks
 
+### GitHub (Phase 8)
+- `GET /github/connect` - Initiate GitHub OAuth flow
+- `GET /github/callback` - OAuth callback handler
+- `GET /github/status` - Get connection status
+- `DELETE /github/disconnect` - Disconnect GitHub account
+- `GET /github/repos` - List user repositories
+- `POST /github/repos/{owner}/{repo}/analyze` - Analyze repository context
+- `GET /github/repos/{owner}/{repo}/context` - Get cached repository context
+- `GET /github/repos/{owner}/{repo}/file` - Get file content
+
 ---
 
 ## Environment Variables
@@ -533,6 +584,12 @@ EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
 ALLOWED_ORIGINS=https://your-frontend.vercel.app
 REQUIRE_AUTH=false
 API_KEYS=key1,key2               # Comma-separated
+```
+
+### GitHub OAuth (Phase 8)
+```bash
+GITHUB_CLIENT_ID=<github-oauth-client-id>
+GITHUB_CLIENT_SECRET=<github-oauth-client-secret>
 ```
 
 ### Frontend (Vercel)
@@ -634,6 +691,7 @@ User → Login Page → Email/Password OR Google OAuth
 |--------|----------|------------|
 | Email/Password | User registration & login | JWT (access + refresh) |
 | Google OAuth | Social login | JWT (access + refresh) |
+| GitHub OAuth | Repository access | In-memory token storage |
 | API Key | CLI/Programmatic access | X-API-Key header |
 | Guest | Anonymous access | JWT (guest token) |
 

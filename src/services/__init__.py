@@ -121,6 +121,14 @@ from src.services.language_service import (
     GeneratedTest,
     get_language_service,
 )
+from src.services.github_service import (
+    GitHubService,
+    GitHubConnection,
+    Repository,
+    RepositoryContext,
+    FileContent,
+    get_github_service,
+)
 
 __all__ = [
     "WebSearchService",
@@ -213,4 +221,11 @@ __all__ = [
     "LintRule",
     "GeneratedTest",
     "get_language_service",
+    # GitHub
+    "GitHubService",
+    "GitHubConnection",
+    "Repository",
+    "RepositoryContext",
+    "FileContent",
+    "get_github_service",
 ]

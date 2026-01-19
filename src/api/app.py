@@ -27,6 +27,7 @@ from src.api.security_router import router as security_router
 from src.api.mock_router import router as mock_router
 from src.api.template_router import router as template_router
 from src.api.database_router import router as database_router
+from src.api.github_router import router as github_router
 
 from src.api.models import (
     AddMessageRequest,
@@ -136,6 +137,9 @@ def create_app(
 
     # Include database router for query generation
     app.include_router(database_router)
+
+    # Include GitHub router for repository integration
+    app.include_router(github_router)
 
     # Add startup event for database initialization
     @app.on_event("startup")
