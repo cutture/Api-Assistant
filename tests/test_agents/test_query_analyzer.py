@@ -157,7 +157,7 @@ class TestQueryAnalyzer:
 
         intent = IntentAnalysis(**result["intent_analysis"])
         assert intent.primary_intent == QueryIntent.DOCUMENTATION_GAP
-        assert result.get("next_agent") == "doc_analyzer"
+        assert result.get("next_agent") == "rag_agent"  # Routes to RAG now
 
     def test_process_general_question_intent(self, analyzer, mock_llm_client):
         """Test classification of general question."""

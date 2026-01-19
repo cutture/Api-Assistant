@@ -379,51 +379,6 @@ class AddMessageRequest(BaseModel):
     metadata: Optional[Dict[str, Any]] = Field(None, description="Message metadata")
 
 
-# Diagram Models
-class DiagramType(str, Enum):
-    """Types of Mermaid diagrams."""
-
-    SEQUENCE = "sequence"
-    ER = "er"
-    FLOWCHART = "flowchart"
-    CLASS = "class"
-
-
-class GenerateSequenceDiagramRequest(BaseModel):
-    """Request to generate sequence diagram."""
-
-    endpoint_id: str = Field(..., description="Document ID of the endpoint")
-
-
-class GenerateAuthFlowRequest(BaseModel):
-    """Request to generate authentication flow diagram."""
-
-    auth_type: str = Field(..., description="Authentication type (bearer, oauth2, apikey, basic)")
-    endpoints: Optional[List[str]] = Field(None, description="Optional list of endpoints")
-
-
-class GenerateERDiagramRequest(BaseModel):
-    """Request to generate ER diagram from GraphQL schema."""
-
-    schema_content: str = Field(..., description="GraphQL schema content")
-    include_types: Optional[List[str]] = Field(None, description="Optional list of type names to include")
-
-
-class GenerateOverviewRequest(BaseModel):
-    """Request to generate API overview diagram."""
-
-    api_title: str = Field(..., description="API title")
-    endpoints: List[Dict[str, Any]] = Field(..., description="List of endpoint summaries with tags")
-
-
-class DiagramResponse(BaseModel):
-    """Diagram generation response."""
-
-    diagram_type: DiagramType = Field(..., description="Type of diagram")
-    mermaid_code: str = Field(..., description="Mermaid diagram code")
-    title: Optional[str] = Field(None, description="Diagram title")
-
-
 # Chat Models
 class ChatMessageRole(str, Enum):
     """Chat message roles."""

@@ -11,7 +11,6 @@ from unittest.mock import MagicMock, patch
 from src.agents import (
     AgentState,
     CodeGenerator,
-    DocumentationAnalyzer,
     QueryAnalyzer,
     QueryIntent,
     RAGAgent,
@@ -31,7 +30,6 @@ class TestSupervisorConstruction:
             "query_analyzer": MagicMock(spec=QueryAnalyzer),
             "rag_agent": MagicMock(spec=RAGAgent),
             "code_generator": MagicMock(spec=CodeGenerator),
-            "doc_analyzer": MagicMock(spec=DocumentationAnalyzer),
         }
 
     def test_supervisor_initialization(self, mock_agents):
@@ -40,13 +38,11 @@ class TestSupervisorConstruction:
             query_analyzer=mock_agents["query_analyzer"],
             rag_agent=mock_agents["rag_agent"],
             code_generator=mock_agents["code_generator"],
-            doc_analyzer=mock_agents["doc_analyzer"],
         )
 
         assert supervisor.query_analyzer is mock_agents["query_analyzer"]
         assert supervisor.rag_agent is mock_agents["rag_agent"]
         assert supervisor.code_generator is mock_agents["code_generator"]
-        assert supervisor.doc_analyzer is mock_agents["doc_analyzer"]
         assert supervisor.graph is not None
 
     def test_create_supervisor_factory(self):
@@ -60,7 +56,6 @@ class TestSupervisorConstruction:
         assert supervisor.query_analyzer is not None
         assert supervisor.rag_agent is not None
         assert supervisor.code_generator is not None
-        assert supervisor.doc_analyzer is not None
 
 
 class TestSupervisorRouting:
@@ -123,8 +118,8 @@ class TestSupervisorRouting:
         route = supervisor._route_after_analysis(state)
         assert route == "rag_to_code"
 
-    def test_route_documentation_gap_to_doc_analyzer(self, supervisor):
-        """Test that documentation gap queries route to doc analyzer."""
+    def test_route_documentation_gap_to_rag(self, supervisor):
+        """Test that documentation gap queries route to RAG agent."""
         state = create_initial_state("Find missing documentation")
         state["intent_analysis"] = {
             "primary_intent": QueryIntent.DOCUMENTATION_GAP.value,
@@ -132,11 +127,11 @@ class TestSupervisorRouting:
             "confidence_level": "high",
             "keywords": ["documentation", "missing"],
             "requires_code": False,
-            "requires_retrieval": False,
+            "requires_retrieval": True,
         }
 
         route = supervisor._route_after_analysis(state)
-        assert route == "doc_analyzer"
+        assert route == "rag_agent"
 
     def test_route_low_confidence_to_direct_response(self, supervisor):
         """Test that low confidence queries route to direct response."""
@@ -219,19 +214,10 @@ class TestSupervisorExecution:
             "current_agent": "code_generator",
         }
 
-        doc_analyzer = MagicMock(spec=DocumentationAnalyzer)
-        doc_analyzer.return_value = {
-            "query": "test",
-            "documentation_gaps": [{"type": "missing_description"}],
-            "processing_path": ["query_analyzer", "doc_analyzer"],
-            "current_agent": "doc_analyzer",
-        }
-
         return {
             "query_analyzer": query_analyzer,
             "rag_agent": rag_agent,
             "code_generator": code_generator,
-            "doc_analyzer": doc_analyzer,
         }
 
     @pytest.fixture
@@ -241,7 +227,6 @@ class TestSupervisorExecution:
             query_analyzer=mock_agents["query_analyzer"],
             rag_agent=mock_agents["rag_agent"],
             code_generator=mock_agents["code_generator"],
-            doc_analyzer=mock_agents["doc_analyzer"],
         )
 
     def test_run_query_analyzer(self, supervisor):
@@ -276,16 +261,6 @@ class TestSupervisorExecution:
 
         assert "code_snippets" in result
         supervisor.code_generator.assert_called_once()
-
-    def test_run_doc_analyzer(self, supervisor):
-        """Test documentation analyzer node execution."""
-        state = create_initial_state("test query")
-        state["retrieved_documents"] = [{"content": "Short"}]
-
-        result = supervisor._run_doc_analyzer(state)
-
-        assert "documentation_gaps" in result
-        supervisor.doc_analyzer.assert_called_once()
 
     def test_run_direct_response_greeting(self, supervisor):
         """Test direct response for greeting."""
@@ -334,7 +309,7 @@ class TestSupervisorChaining:
         return store
 
     def test_rag_to_code_chain(self, mock_llm_client, mock_vector_store):
-        """Test complete RAG → Gap Analysis → Code generation chain."""
+        """Test complete RAG → Code generation chain."""
         supervisor = create_supervisor(llm_client=mock_llm_client, vector_store=mock_vector_store)
 
         # Simulate code generation intent
@@ -359,8 +334,8 @@ class TestSupervisorChaining:
         ]
 
         route = supervisor._route_after_rag(state)
-        # With proactive intelligence, code generation goes through gap analysis first
-        assert route == "gap_analysis"
+        # Code generation goes directly to code generator
+        assert route == "code_generator"
 
     def test_rag_without_code_generation(self, mock_llm_client, mock_vector_store):
         """Test RAG ends workflow for non-code queries."""
@@ -407,13 +382,11 @@ class TestSupervisorErrorHandling:
         rag_agent.side_effect = Exception("RAG agent failed")
 
         code_generator = MagicMock(spec=CodeGenerator)
-        doc_analyzer = MagicMock(spec=DocumentationAnalyzer)
 
         return {
             "query_analyzer": query_analyzer,
             "rag_agent": rag_agent,
             "code_generator": code_generator,
-            "doc_analyzer": doc_analyzer,
         }
 
     def test_query_analyzer_error_handling(self, failing_agents):
@@ -422,7 +395,6 @@ class TestSupervisorErrorHandling:
             query_analyzer=failing_agents["query_analyzer"],
             rag_agent=failing_agents["rag_agent"],
             code_generator=failing_agents["code_generator"],
-            doc_analyzer=failing_agents["doc_analyzer"],
         )
 
         state = create_initial_state("test")
@@ -438,7 +410,6 @@ class TestSupervisorErrorHandling:
             query_analyzer=MagicMock(spec=QueryAnalyzer),
             rag_agent=failing_agents["rag_agent"],
             code_generator=failing_agents["code_generator"],
-            doc_analyzer=failing_agents["doc_analyzer"],
         )
 
         state = create_initial_state("test")
@@ -519,7 +490,6 @@ class TestSupervisorEndToEnd:
             query_analyzer=broken_analyzer,
             rag_agent=MagicMock(spec=RAGAgent),
             code_generator=MagicMock(spec=CodeGenerator),
-            doc_analyzer=MagicMock(spec=DocumentationAnalyzer),
         )
 
         # Process should not raise, should return error state
@@ -588,7 +558,7 @@ def test_supervisor_integration_summary():
     ✅ Routing Logic
        - General questions → RAG Agent
        - Code generation → RAG → Code Generator (chaining)
-       - Documentation gaps → Doc Analyzer
+       - Documentation gaps → RAG Agent
        - Low confidence → Direct Response
        - Endpoint lookup → RAG Agent
        - Authentication → RAG Agent
@@ -597,7 +567,6 @@ def test_supervisor_integration_summary():
        - Query analyzer execution
        - RAG agent execution
        - Code generator execution
-       - Doc analyzer execution
        - Direct response for greetings/help
 
     ✅ Agent Chaining
@@ -620,7 +589,7 @@ def test_supervisor_integration_summary():
        - Streaming state updates
        - Graph visualization
 
-    Total Test Cases: 35+
+    Total Test Cases: 30+
     Coverage: Routing, Execution, Chaining, Errors, E2E
     """
     assert True, "Supervisor agent tests complete"

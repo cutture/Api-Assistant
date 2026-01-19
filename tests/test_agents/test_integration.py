@@ -11,7 +11,6 @@ from unittest.mock import MagicMock, patch
 from src.agents import (
     AgentState,
     CodeGenerator,
-    DocumentationAnalyzer,
     QueryAnalyzer,
     QueryIntent,
     RAGAgent,
@@ -118,26 +117,6 @@ class TestWeek1Integration:
 
         # At least processing happened
         assert "code_generator" in result["processing_path"]
-
-    def test_doc_analyzer_basic_workflow(self, mock_llm_client):
-        """Test Documentation Analyzer detects gaps."""
-        doc_analyzer = DocumentationAnalyzer(llm_client=mock_llm_client)
-        state = create_initial_state("Find documentation gaps")
-        state["retrieved_documents"] = [
-            {
-                "content": "Short",  # Too short, will trigger gap
-                "metadata": {"endpoint": "/users", "method": "GET"},
-                "score": 0.9,
-                "doc_id": "doc1",
-            }
-        ]
-
-        result = doc_analyzer(state)
-
-        assert result["current_agent"] == "doc_analyzer"
-        assert "doc_analyzer" in result["processing_path"]
-        assert result["documentation_gaps"] is not None
-        assert len(result["documentation_gaps"]) > 0
 
     def test_query_analyzer_to_rag_workflow(self, mock_llm_client, mock_vector_store):
         """Test complete workflow: Query Analyzer → RAG Agent."""
@@ -371,7 +350,6 @@ def test_week1_integration_summary():
        - Query Analyzer processes and classifies queries
        - RAG Agent retrieves and synthesizes documents
        - Code Generator produces valid Python code
-       - Documentation Analyzer detects quality gaps
 
     ✅ Multi-Agent Chains
        - Query Analyzer → RAG Agent
@@ -389,6 +367,6 @@ def test_week1_integration_summary():
        - Metadata accumulation
        - Required field validation
 
-    Total Integration Scenarios: 15+
+    Total Integration Scenarios: 14+
     """
     assert True, "Week 1 integration tests complete"

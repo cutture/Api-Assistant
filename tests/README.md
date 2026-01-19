@@ -10,7 +10,6 @@ tests/
 │   ├── test_query_analyzer.py
 │   ├── test_rag_agent.py
 │   ├── test_code_agent.py
-│   ├── test_doc_analyzer.py
 │   ├── test_supervisor.py
 │   └── test_integration.py
 ├── test_core/            # Core functionality tests
@@ -20,7 +19,6 @@ tests/
 ├── test_api/             # REST API tests
 ├── test_cli/             # CLI command tests
 ├── test_parsers/         # API parser tests
-├── test_diagrams/        # Diagram generation tests
 └── test_sessions/        # Session management tests
 ```
 

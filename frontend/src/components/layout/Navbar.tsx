@@ -5,7 +5,7 @@
 "use client";
 
 import Link from "next/link";
-import { FileText, Search, MessageSquare, Settings, Users, Network, LogOut, UserCircle } from "lucide-react";
+import { Code, MessageSquare, Settings, Users, LogOut, UserCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -30,16 +30,6 @@ export function Navbar() {
 
   const navItems = [
     {
-      href: "/",
-      label: "Documents",
-      icon: FileText,
-    },
-    {
-      href: "/search",
-      label: "Search",
-      icon: Search,
-    },
-    {
       href: "/chat",
       label: "Chat",
       icon: MessageSquare,
@@ -48,11 +38,6 @@ export function Navbar() {
       href: "/sessions",
       label: "Sessions",
       icon: Users,
-    },
-    {
-      href: "/diagrams",
-      label: "Diagrams",
-      icon: Network,
     },
   ];
 
@@ -64,9 +49,9 @@ export function Navbar() {
           <div className="flex items-center space-x-4">
             <Link href="/" className="flex items-center space-x-2">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                <FileText className="h-5 w-5" />
+                <Code className="h-5 w-5" />
               </div>
-              <span className="text-xl font-bold">API Assistant</span>
+              <span className="text-xl font-bold">Coding Agent</span>
             </Link>
           </div>
 

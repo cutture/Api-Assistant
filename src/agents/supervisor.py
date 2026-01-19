@@ -6,11 +6,8 @@ the appropriate agent pipeline based on intent classification.
 
 Graph Structure:
     START → QueryAnalyzer → Router
-                              ├─→ RAGAgent → GapAnalysis → Router (if code gen)
-                              │                              ├─→ AskUser (missing info)
-                              │                              └─→ CodeGenerator (has info)
+                              ├─→ RAGAgent → CodeGenerator → END (code gen)
                               ├─→ RAGAgent → END (general questions)
-                              ├─→ DocumentationAnalyzer → END
                               └─→ DirectResponse → END
 """
 
@@ -21,8 +18,6 @@ from langgraph.graph import END, START, StateGraph
 
 from src.agents.base_agent import BaseAgent
 from src.agents.code_agent import CodeGenerator
-from src.agents.doc_analyzer import DocumentationAnalyzer
-from src.agents.gap_analysis_agent import GapAnalysisAgent
 from src.agents.query_analyzer import QueryAnalyzer
 from src.agents.rag_agent import RAGAgent
 from src.agents.state import AgentState, QueryIntent, create_initial_state
@@ -49,7 +44,6 @@ class SupervisorAgent:
         ...     query_analyzer=analyzer,
         ...     rag_agent=rag,
         ...     code_generator=code_gen,
-        ...     doc_analyzer=doc_analyzer
         ... )
         >>> result = supervisor.process("How do I authenticate?")
         >>> print(result["response"])
@@ -60,8 +54,6 @@ class SupervisorAgent:
         query_analyzer: QueryAnalyzer,
         rag_agent: RAGAgent,
         code_generator: CodeGenerator,
-        doc_analyzer: DocumentationAnalyzer,
-        gap_analysis_agent: Optional[GapAnalysisAgent] = None,
     ):
         """
         Initialize the supervisor with all required agents.
@@ -70,21 +62,17 @@ class SupervisorAgent:
             query_analyzer: Agent that classifies user intent
             rag_agent: Agent that retrieves and synthesizes documentation
             code_generator: Agent that generates integration code
-            doc_analyzer: Agent that identifies documentation gaps
-            gap_analysis_agent: Optional agent that detects missing information
         """
         self.query_analyzer = query_analyzer
         self.rag_agent = rag_agent
         self.code_generator = code_generator
-        self.doc_analyzer = doc_analyzer
-        self.gap_analysis_agent = gap_analysis_agent or GapAnalysisAgent()
 
         # Build the LangGraph StateGraph
         self.graph = self._build_graph()
 
         logger.info(
             "supervisor_initialized",
-            agents=["query_analyzer", "rag_agent", "code_generator", "doc_analyzer", "gap_analysis"],
+            agents=["query_analyzer", "rag_agent", "code_generator"],
         )
 
     def _build_graph(self) -> StateGraph:
@@ -100,10 +88,7 @@ class SupervisorAgent:
         # Add nodes for each agent
         workflow.add_node("query_analyzer", self._run_query_analyzer)
         workflow.add_node("rag_agent", self._run_rag_agent)
-        workflow.add_node("gap_analysis", self._run_gap_analysis)
-        workflow.add_node("ask_user", self._run_ask_user)
         workflow.add_node("code_generator", self._run_code_generator)
-        workflow.add_node("doc_analyzer", self._run_doc_analyzer)
         workflow.add_node("direct_response", self._run_direct_response)
 
         # Set entry point
@@ -116,36 +101,22 @@ class SupervisorAgent:
             {
                 "rag_agent": "rag_agent",
                 "rag_to_code": "rag_agent",
-                "doc_analyzer": "doc_analyzer",
                 "direct_response": "direct_response",
             },
         )
 
-        # RAG agent routing (might chain to gap analysis or code generator)
+        # RAG agent routing (might chain to code generator)
         workflow.add_conditional_edges(
             "rag_agent",
             self._route_after_rag,
             {
-                "gap_analysis": "gap_analysis",  # Check for missing info before code gen
-                "code_generator": "code_generator",  # Direct to code gen (legacy path)
+                "code_generator": "code_generator",
                 "end": END,
             },
         )
 
-        # Gap analysis routing (ask user or proceed to code generation)
-        workflow.add_conditional_edges(
-            "gap_analysis",
-            self._route_after_gap_analysis,
-            {
-                "ask_user": "ask_user",  # Missing info - ask user
-                "code_generator": "code_generator",  # Has sufficient info - generate code
-            },
-        )
-
         # Terminal nodes
-        workflow.add_edge("ask_user", END)
         workflow.add_edge("code_generator", END)
-        workflow.add_edge("doc_analyzer", END)
         workflow.add_edge("direct_response", END)
 
         # Compile the graph
@@ -243,34 +214,6 @@ class SupervisorAgent:
                 state["response"] = "I found relevant documentation but couldn't generate code. Here's what I found..."
             return state
 
-    def _run_doc_analyzer(self, state: AgentState) -> AgentState:
-        """
-        Execute the documentation analyzer agent.
-
-        Args:
-            state: Current agent state
-
-        Returns:
-            Updated state with documentation gaps
-        """
-        logger.info("executing_doc_analyzer")
-        try:
-            result = self.doc_analyzer(state)
-            logger.info(
-                "doc_analyzer_complete",
-                num_gaps=len(result.get("documentation_gaps", [])),
-            )
-            return result
-        except Exception as e:
-            logger.error("doc_analyzer_failed", error=str(e))
-            state["error"] = {
-                "agent": "doc_analyzer",
-                "message": str(e),
-                "recoverable": True,
-            }
-            state["response"] = "I couldn't complete the documentation analysis. Please try again."
-            return state
-
     def _run_direct_response(self, state: AgentState) -> AgentState:
         """
         Provide a direct response for simple queries.
@@ -319,7 +262,6 @@ What would you like to explore?"""
 
         Routing Logic:
             - code_generation → rag_to_code (RAG then Code)
-            - documentation_gap → doc_analyzer
             - general_question, endpoint_lookup, schema_explanation, authentication → rag_agent
             - Unknown/low confidence → direct_response
 
@@ -355,15 +297,12 @@ What would you like to explore?"""
             logger.info("routing_to_rag_to_code_chain")
             return "rag_to_code"
 
-        elif primary_intent == QueryIntent.DOCUMENTATION_GAP.value:
-            logger.info("routing_to_doc_analyzer")
-            return "doc_analyzer"
-
         elif primary_intent in [
             QueryIntent.GENERAL_QUESTION.value,
             QueryIntent.ENDPOINT_LOOKUP.value,
             QueryIntent.SCHEMA_EXPLANATION.value,
             QueryIntent.AUTHENTICATION.value,
+            QueryIntent.DOCUMENTATION_GAP.value,  # Route doc gaps to RAG now
         ]:
             logger.info("routing_to_rag_agent")
             return "rag_agent"
@@ -378,14 +317,13 @@ What would you like to explore?"""
         Route after RAG agent execution.
 
         If this was a code generation request (rag_to_code flow),
-        continue to gap analysis to check for missing information.
-        Otherwise, end the workflow.
+        continue to code generator. Otherwise, end the workflow.
 
         Args:
             state: Current agent state
 
         Returns:
-            Next node name ("gap_analysis", "code_generator", or "end")
+            Next node name ("code_generator" or "end")
         """
         intent_analysis = state.get("intent_analysis", {})
         primary_intent = intent_analysis.get("primary_intent")
@@ -395,8 +333,8 @@ What would you like to explore?"""
             # Check if RAG retrieved useful documents
             retrieved_docs = state.get("retrieved_documents", [])
             if retrieved_docs:
-                logger.info("chaining_to_gap_analysis", num_docs=len(retrieved_docs))
-                return "gap_analysis"  # Check for missing info before code gen
+                logger.info("chaining_to_code_generator", num_docs=len(retrieved_docs))
+                return "code_generator"
             else:
                 logger.warning("no_docs_for_code_generation", routing_to="end")
                 # Add a message to response
@@ -407,105 +345,6 @@ What would you like to explore?"""
         # All other intents end after RAG
         logger.info("rag_workflow_complete", routing_to="end")
         return "end"
-
-    def _run_gap_analysis(self, state: AgentState) -> AgentState:
-        """
-        Execute the gap analysis agent to detect missing information.
-
-        Args:
-            state: Current agent state
-
-        Returns:
-            Updated state with gap analysis results
-        """
-        logger.info("executing_gap_analysis")
-        try:
-            result = self.gap_analysis_agent(state)
-            logger.info(
-                "gap_analysis_complete",
-                has_sufficient_info=result.get("has_sufficient_info"),
-                num_questions=len(result.get("questions_for_user", [])),
-            )
-            return result
-        except Exception as e:
-            logger.error("gap_analysis_failed", error=str(e))
-            # Default to having sufficient info on error (don't block)
-            state["has_sufficient_info"] = True
-            state["missing_info"] = False
-            return state
-
-    def _route_after_gap_analysis(self, state: AgentState) -> str:
-        """
-        Route after gap analysis execution.
-
-        If sufficient information is available, proceed to code generation.
-        Otherwise, ask the user for clarification.
-
-        Args:
-            state: Current agent state
-
-        Returns:
-            Next node name ("ask_user" or "code_generator")
-        """
-        has_sufficient_info = state.get("has_sufficient_info", True)
-
-        if has_sufficient_info:
-            logger.info("sufficient_info_available", routing_to="code_generator")
-            return "code_generator"
-        else:
-            logger.info("missing_information_detected", routing_to="ask_user")
-            return "ask_user"
-
-    def _run_ask_user(self, state: AgentState) -> AgentState:
-        """
-        Ask the user for missing information.
-
-        This node generates a response with clarifying questions
-        based on the gap analysis results.
-
-        Args:
-            state: Current agent state
-
-        Returns:
-            Updated state with questions for user
-        """
-        logger.info("executing_ask_user")
-
-        questions_for_user = state.get("questions_for_user", [])
-        gap_analysis = state.get("gap_analysis", {})
-
-        if questions_for_user:
-            # Format questions into response
-            questions_text = "\n".join(f"{i+1}. {q}" for i, q in enumerate(questions_for_user))
-
-            response = f"""I need some additional information to generate the best code for you:
-
-{questions_text}
-
-Please provide these details so I can create accurate integration code."""
-
-            # Add gap analysis reasoning if available
-            if gap_analysis.get("reasoning"):
-                response += f"\n\n*Note: {gap_analysis['reasoning']}*"
-
-            state["response"] = response
-        else:
-            # Fallback if no specific questions
-            state["response"] = """I need more details to generate code for this request. Could you please provide:
-
-1. Which API endpoint you want to use?
-2. What HTTP method (GET, POST, PUT, DELETE)?
-3. Any specific parameters or request body structure?
-
-This will help me create accurate integration code for you."""
-
-        state["current_agent"] = "ask_user"
-        if "processing_path" not in state:
-            state["processing_path"] = []
-        state["processing_path"].append("ask_user")
-
-        logger.info("ask_user_complete", num_questions=len(questions_for_user))
-        return state
 
     def process(self, query: str) -> AgentState:
         """
@@ -633,7 +472,6 @@ def create_supervisor(
     - QueryAnalyzer: Uses reasoning model (DeepSeek R1)
     - RAGAgent: Uses general model (Llama 3.3 70B)
     - CodeGenerator: Uses code model (Llama 3.3 70B)
-    - DocumentationAnalyzer: Uses reasoning model (DeepSeek R1)
 
     When using Ollama:
     - All agents use the same configured Ollama model
@@ -662,16 +500,12 @@ def create_supervisor(
     query_analyzer = QueryAnalyzer(llm_client=create_reasoning_client())
     rag_agent = RAGAgent(vector_store=vector_store, llm_client=create_general_client())
     code_generator = CodeGenerator(llm_client=create_code_client())
-    doc_analyzer = DocumentationAnalyzer(llm_client=create_reasoning_client())
-    gap_analysis_agent = GapAnalysisAgent(llm_client=create_reasoning_client())
 
     # Create and return supervisor
     supervisor = SupervisorAgent(
         query_analyzer=query_analyzer,
         rag_agent=rag_agent,
         code_generator=code_generator,
-        doc_analyzer=doc_analyzer,
-        gap_analysis_agent=gap_analysis_agent,
     )
 
     logger.info("supervisor_factory_complete")

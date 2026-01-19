@@ -348,7 +348,7 @@ Respond ONLY with valid JSON, no other text."""
         # Map intents to agents
         routing = {
             QueryIntent.CODE_GENERATION: "code_generator",
-            QueryIntent.DOCUMENTATION_GAP: "doc_analyzer",
+            QueryIntent.DOCUMENTATION_GAP: "rag_agent",  # Route to RAG for doc gap queries
             QueryIntent.GENERAL_QUESTION: "rag_agent",
             QueryIntent.ENDPOINT_LOOKUP: "rag_agent",
             QueryIntent.SCHEMA_EXPLANATION: "rag_agent",

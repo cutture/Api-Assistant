@@ -1,11 +1,10 @@
 """
-FastAPI REST API Application for API Assistant.
+FastAPI REST API Application for Intelligent Coding Agent.
 
 Provides REST endpoints for:
-- Document management (add, delete, get)
 - Search (vector, hybrid, re-ranked)
-- Advanced features (query expansion, diversification)
-- Faceted search
+- Session management
+- AI Chat with code generation
 - Health and statistics
 
 Author: API Assistant Team
@@ -14,7 +13,7 @@ Date: 2025-12-27
 
 import structlog
 from typing import List, Optional
-from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile, status
+from fastapi import Depends, FastAPI, File, HTTPException, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
@@ -22,11 +21,7 @@ from src.api.auth import verify_api_key, get_current_user_optional, CurrentUser
 from src.api.auth_router import router as auth_router, init_auth_db
 
 from src.api.models import (
-    AddDocumentsRequest,
-    AddDocumentsResponse,
     AddMessageRequest,
-    BulkDeleteRequest,
-    BulkDeleteResponse,
     ChatMessage,
     ChatRequest,
     ChatResponse,
@@ -35,22 +30,9 @@ from src.api.models import (
     ConversationMessage,
     CreateSessionRequest,
     CreateSessionResponse,
-    DeleteDocumentResponse,
-    DiagramResponse,
-    DiagramType,
-    Document,
-    DocumentResponse,
     ErrorResponse,
-    FacetedSearchRequest,
-    FacetedSearchResponse,
-    FacetResult,
-    FacetValue,
     FilterOperatorEnum,
     FilterSpec,
-    GenerateAuthFlowRequest,
-    GenerateERDiagramRequest,
-    GenerateOverviewRequest,
-    GenerateSequenceDiagramRequest,
     HealthResponse,
     SearchMode,
     SearchRequest,
@@ -72,11 +54,9 @@ from src.core import (
     FilterOperator,
     MetadataFilter,
     QueryExpander,
-    ResultDiversifier,
     VectorStore,
 )
 from src.sessions import get_session_manager
-from src.diagrams import MermaidGenerator
 
 logger = structlog.get_logger(__name__)
 
@@ -139,9 +119,7 @@ def create_app(
         enable_reranker=enable_reranker,
     )
     query_expander = QueryExpander()
-    result_diversifier = ResultDiversifier()
     session_manager = get_session_manager()
-    mermaid_generator = MermaidGenerator()
 
     # Helper functions
     def convert_filter_spec_to_filter(filter_spec: FilterSpec):
@@ -238,8 +216,6 @@ def create_app(
                 "hybrid_search": enable_hybrid,
                 "reranking": enable_reranker,
                 "query_expansion": True,
-                "diversification": True,
-                "faceted_search": True,
                 "filtering": True,
             },
         )
@@ -264,8 +240,6 @@ def create_app(
                     "hybrid_search": enable_hybrid,
                     "reranking": enable_reranker,
                     "query_expansion": True,
-                    "diversification": True,
-                    "faceted_search": True,
                     "filtering": True,
                 },
             )
@@ -274,346 +248,6 @@ def create_app(
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Error getting statistics: {str(e)}",
-            )
-
-    # Document Management Endpoints
-    @app.post(
-        "/documents/upload",
-        response_model=AddDocumentsResponse,
-        status_code=status.HTTP_201_CREATED,
-        tags=["Documents"],
-    )
-    async def upload_files(
-        files: List[UploadFile] = File(...),
-        format: Optional[str] = None,
-        document_mode: Optional[str] = None,  # "api_spec" or "general_document"
-        api_key: str = Depends(verify_api_key),
-    ):
-        """
-        Upload and parse documents.
-
-        Supports:
-        - API specifications: OpenAPI, GraphQL, Postman
-        - General documents: PDF, TXT, MD, JSON
-
-        Auto-detects document type if not specified.
-        """
-        try:
-            from src.parsers.format_handler import UnifiedFormatHandler, APIFormat, DocumentType
-
-            handler = UnifiedFormatHandler()
-            all_document_ids = []
-            total_new_count = 0
-            total_skipped_count = 0
-            stats = []
-
-            for file in files:
-                # Read file content
-                content = await file.read()
-
-                # Try to decode as UTF-8, fall back to latin-1
-                try:
-                    content_str = content.decode('utf-8')
-                except UnicodeDecodeError:
-                    try:
-                        content_str = content.decode('latin-1')
-                    except:
-                        # For binary files like PDF, keep as-is
-                        content_str = content
-
-                # Determine parsing mode
-                auto_detect = document_mode is None
-                use_general_parser = document_mode == "general_document"
-
-                # Parse the file
-                try:
-                    # Auto-detect document type for general documents
-                    if auto_detect or use_general_parser:
-                        from src.parsers.format_handler import FormatDetector
-                        detector = FormatDetector()
-                        detected_type = detector.detect_document_type(
-                            content_str if isinstance(content_str, str) else content_str.decode('latin-1'),
-                            filename=file.filename or ""
-                        )
-
-                        # If it's an API spec type, use API parser
-                        if detected_type in [DocumentType.OPENAPI, DocumentType.GRAPHQL, DocumentType.POSTMAN]:
-                            result = handler.parse(
-                                content_str,
-                                source_file=file.filename or "unknown",
-                            )
-                        else:
-                            # Use general document parser
-                            result = handler.parse_document(
-                                content_str,
-                                filename=file.filename or "unknown",
-                            )
-                    else:
-                        # Explicit API spec mode
-                        format_hint = None
-                        if format:
-                            format_map = {
-                                "openapi": APIFormat.OPENAPI,
-                                "graphql": APIFormat.GRAPHQL,
-                                "postman": APIFormat.POSTMAN,
-                            }
-                            format_hint = format_map.get(format.lower())
-
-                        result = handler.parse(
-                            content_str,
-                            format_hint=format_hint,
-                            source_file=file.filename or "unknown",
-                        )
-
-                    # Add documents to vector store
-                    docs = [
-                        {
-                            "content": doc["content"],
-                            "metadata": doc.get("metadata", {}),
-                        }
-                        for doc in result["documents"]
-                    ]
-
-                    add_result = vector_store.add_documents(docs)
-                    all_document_ids.extend(add_result["document_ids"])
-                    total_new_count += add_result["new_count"]
-                    total_skipped_count += add_result["skipped_count"]
-
-                    # Track stats (handle both API specs and general documents)
-                    doc_type = result.get("format") or result.get("document_type", "unknown")
-
-                    stats.append({
-                        "filename": file.filename,
-                        "type": doc_type,
-                        "documents_added": add_result["new_count"],
-                        "documents_skipped": add_result["skipped_count"],
-                        "stats": result.get("stats", {}),
-                    })
-
-                    logger.info(
-                        "File uploaded and indexed",
-                        filename=file.filename,
-                        document_type=doc_type,
-                        new_documents=add_result["new_count"],
-                        skipped_documents=add_result["skipped_count"],
-                    )
-
-                except ValueError as e:
-                    logger.error(
-                        "Failed to parse file",
-                        filename=file.filename,
-                        error=str(e),
-                    )
-                    raise HTTPException(
-                        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                        detail=f"Failed to parse {file.filename}: {str(e)}",
-                    )
-
-            return AddDocumentsResponse(
-                document_ids=all_document_ids,
-                count=len(all_document_ids),
-                new_count=total_new_count,
-                skipped_count=total_skipped_count,
-            )
-
-        except HTTPException:
-            raise
-        except Exception as e:
-            logger.error("Error uploading files", exc_info=e)
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Error uploading files: {str(e)}",
-            )
-
-    @app.post(
-        "/documents",
-        response_model=AddDocumentsResponse,
-        status_code=status.HTTP_201_CREATED,
-        tags=["Documents"],
-    )
-    async def add_documents(
-        request: AddDocumentsRequest,
-        api_key: str = Depends(verify_api_key),
-    ):
-        """
-        Add documents to the collection.
-
-        Adds one or more documents with content and metadata.
-        """
-        try:
-            docs = [
-                {
-                    "content": doc.content,
-                    "metadata": doc.metadata,
-                    "id": doc.id,
-                }
-                for doc in request.documents
-            ]
-
-            add_result = vector_store.add_documents(docs)
-
-            logger.info(
-                "Documents added",
-                total=len(add_result["document_ids"]),
-                new=add_result["new_count"],
-                skipped=add_result["skipped_count"],
-            )
-
-            return AddDocumentsResponse(
-                document_ids=add_result["document_ids"],
-                count=len(add_result["document_ids"]),
-                new_count=add_result["new_count"],
-                skipped_count=add_result["skipped_count"],
-            )
-        except Exception as e:
-            logger.error("Error adding documents", exc_info=e)
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Error adding documents: {str(e)}",
-            )
-
-    @app.get(
-        "/documents/{document_id}",
-        response_model=DocumentResponse,
-        tags=["Documents"],
-    )
-    async def get_document(document_id: str):
-        """
-        Get a document by ID.
-
-        Returns document content and metadata.
-        """
-        try:
-            doc = vector_store.get_document(document_id)
-
-            if not doc:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail=f"Document not found: {document_id}",
-                )
-
-            return DocumentResponse(
-                id=doc["id"],
-                content=doc["content"],
-                metadata=doc["metadata"],
-            )
-        except HTTPException:
-            raise
-        except Exception as e:
-            logger.error("Error getting document", document_id=document_id, exc_info=e)
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Error getting document: {str(e)}",
-            )
-
-    @app.get(
-        "/export/documents",
-        response_model=List[DocumentResponse],
-        tags=["Documents"],
-    )
-    async def export_documents(limit: Optional[int] = None):
-        """
-        Export documents from the collection.
-
-        Returns list of all documents with optional limit.
-        """
-        try:
-            documents = vector_store.get_all_documents(limit=limit)
-
-            return [
-                DocumentResponse(
-                    id=doc["id"],
-                    content=doc["content"],
-                    metadata=doc["metadata"],
-                )
-                for doc in documents
-            ]
-        except Exception as e:
-            logger.error("Error exporting documents", exc_info=e)
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Error exporting documents: {str(e)}",
-            )
-
-    @app.delete(
-        "/documents/{document_id}",
-        response_model=DeleteDocumentResponse,
-        tags=["Documents"],
-    )
-    async def delete_document(
-        document_id: str,
-        api_key: str = Depends(verify_api_key),
-    ):
-        """
-        Delete a document by ID.
-
-        Returns success status and message.
-        """
-        try:
-            success = vector_store.delete_document(document_id)
-
-            if not success:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail=f"Document not found: {document_id}",
-                )
-
-            logger.info("Document deleted", document_id=document_id)
-
-            return DeleteDocumentResponse(
-                success=True,
-                message=f"Document {document_id} deleted successfully",
-            )
-        except HTTPException:
-            raise
-        except Exception as e:
-            logger.error("Error deleting document", document_id=document_id, exc_info=e)
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Error deleting document: {str(e)}",
-            )
-
-    @app.post(
-        "/documents/bulk-delete",
-        response_model=BulkDeleteResponse,
-        tags=["Documents"],
-    )
-    async def bulk_delete_documents(
-        request: BulkDeleteRequest,
-        api_key: str = Depends(verify_api_key),
-    ):
-        """
-        Delete multiple documents by IDs.
-
-        Returns count of deleted and not found documents.
-        """
-        try:
-            deleted_ids = []
-            not_found_count = 0
-
-            for doc_id in request.document_ids:
-                success = vector_store.delete_document(doc_id)
-                if success:
-                    deleted_ids.append(doc_id)
-                else:
-                    not_found_count += 1
-
-            logger.info(
-                "Bulk delete completed",
-                deleted=len(deleted_ids),
-                not_found=not_found_count,
-            )
-
-            return BulkDeleteResponse(
-                deleted_count=len(deleted_ids),
-                not_found_count=not_found_count,
-                document_ids=deleted_ids,
-            )
-        except Exception as e:
-            logger.error("Error in bulk delete", exc_info=e)
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Error in bulk delete: {str(e)}",
             )
 
     # Search Endpoints
@@ -632,7 +266,6 @@ def create_app(
 
         Optional features:
         - Query expansion
-        - Result diversification
         - Filtering
         """
         try:
@@ -667,15 +300,6 @@ def create_app(
                 min_score=request.min_score,
             )
 
-            # Apply diversification if requested
-            if request.use_diversification and len(results) > 1:
-                diversifier = ResultDiversifier(
-                    lambda_param=request.diversification_lambda,
-                    embedding_service=vector_store.embedding_service,
-                )
-                results = diversifier.diversify(results, top_k=request.n_results)
-                logger.debug("Results diversified", count=len(results))
-
             # Convert to response format
             search_results = [
                 SearchResult(
@@ -709,86 +333,6 @@ def create_app(
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Error in search: {str(e)}",
-            )
-
-    @app.post(
-        "/search/faceted",
-        response_model=FacetedSearchResponse,
-        tags=["Search"],
-    )
-    async def faceted_search(request: FacetedSearchRequest):
-        """
-        Faceted search for documents.
-
-        Performs search and computes facet aggregations for specified fields.
-        Useful for building filter UIs with category counts.
-        """
-        try:
-            # Convert filter if provided
-            filter_obj = None
-            if request.filter:
-                filter_obj = convert_filter_spec_to_filter(request.filter)
-
-            # Perform faceted search
-            results, facets = vector_store.search_with_facets(
-                query=request.query,
-                facet_fields=request.facet_fields,
-                n_results=request.n_results,
-                where=filter_obj,
-                use_hybrid=True,
-            )
-
-            # Convert results to response format
-            search_results = [
-                SearchResult(
-                    id=r["id"],
-                    content=r["content"],
-                    metadata=r["metadata"],
-                    score=r["score"],
-                    method=r.get("method"),
-                )
-                for r in results
-            ]
-
-            # Convert facets to response format
-            facet_results = {}
-            for field, facet in facets.items():
-                top_values = facet.get_top_values(request.top_facet_values)
-                facet_values = [
-                    FacetValue(
-                        value=value,
-                        count=count,
-                        percentage=facet.get_percentage(value),
-                    )
-                    for value, count in top_values
-                ]
-
-                facet_results[field] = FacetResult(
-                    field=field,
-                    values=facet_values,
-                    total_docs=facet.total_docs,
-                )
-
-            logger.info(
-                "Faceted search completed",
-                query=request.query,
-                results=len(search_results),
-                facets=list(facet_results.keys()),
-            )
-
-            return FacetedSearchResponse(
-                results=search_results,
-                facets=facet_results,
-                total=len(search_results),
-                query=request.query,
-            )
-        except HTTPException:
-            raise
-        except Exception as e:
-            logger.error("Error in faceted search", exc_info=e)
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Error in faceted search: {str(e)}",
             )
 
     # Session Management Endpoints
@@ -1371,216 +915,6 @@ def create_app(
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Chat generation failed: {str(e)}",
-            )
-
-    # Diagram Generation Endpoints
-    @app.post(
-        "/diagrams/sequence",
-        response_model=DiagramResponse,
-        tags=["Diagrams"],
-    )
-    async def generate_sequence_diagram(request: GenerateSequenceDiagramRequest):
-        """
-        Generate a sequence diagram from an API endpoint.
-
-        Creates a Mermaid sequence diagram showing the request/response flow.
-        """
-        try:
-            # Get the endpoint document
-            doc = vector_store.get_document(request.endpoint_id)
-
-            if not doc:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail=f"Endpoint document not found: {request.endpoint_id}",
-                )
-
-            # Parse endpoint to create diagram
-            # Note: This is a simplified version - full implementation would parse the document
-            from src.diagrams.mermaid_generator import SequenceDiagram
-
-            diagram = SequenceDiagram(
-                title=doc["metadata"].get("endpoint", "API Endpoint"),
-                participants=["Client", "API", "Backend"],
-            )
-
-            # Build basic sequence
-            diagram.interactions.append({
-                "from": "Client",
-                "to": "API",
-                "arrow": "->>",
-                "message": f"{doc['metadata'].get('method', 'GET')} {doc['metadata'].get('endpoint', '/')}",
-            })
-
-            diagram.interactions.append({
-                "from": "API",
-                "to": "Backend",
-                "arrow": "->>",
-                "message": "Process request",
-            })
-
-            diagram.interactions.append({
-                "from": "Backend",
-                "to": "API",
-                "arrow": "-->>",
-                "message": "200 OK",
-            })
-
-            diagram.interactions.append({
-                "from": "API",
-                "to": "Client",
-                "arrow": "-->>",
-                "message": "Response",
-            })
-
-            mermaid_code = diagram.to_mermaid()
-
-            logger.info("Sequence diagram generated", endpoint_id=request.endpoint_id)
-
-            return DiagramResponse(
-                diagram_type=DiagramType.SEQUENCE,
-                mermaid_code=mermaid_code,
-                title=diagram.title,
-            )
-        except HTTPException:
-            raise
-        except Exception as e:
-            logger.error("Error generating sequence diagram", exc_info=e)
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Error generating diagram: {str(e)}",
-            )
-
-    @app.post(
-        "/diagrams/auth-flow",
-        response_model=DiagramResponse,
-        tags=["Diagrams"],
-    )
-    async def generate_auth_flow_diagram(request: GenerateAuthFlowRequest):
-        """
-        Generate an authentication flow diagram.
-
-        Creates a flowchart showing the authentication process.
-        """
-        try:
-            diagram = mermaid_generator.generate_auth_flow(
-                auth_type=request.auth_type,
-                endpoints=request.endpoints,
-            )
-
-            mermaid_code = diagram.to_mermaid()
-
-            logger.info("Auth flow diagram generated", auth_type=request.auth_type)
-
-            return DiagramResponse(
-                diagram_type=DiagramType.FLOWCHART,
-                mermaid_code=mermaid_code,
-                title=diagram.title,
-            )
-        except Exception as e:
-            logger.error("Error generating auth flow diagram", exc_info=e)
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Error generating diagram: {str(e)}",
-            )
-
-    @app.post(
-        "/diagrams/er",
-        response_model=DiagramResponse,
-        tags=["Diagrams"],
-    )
-    async def generate_er_diagram(request: GenerateERDiagramRequest):
-        """
-        Generate an Entity-Relationship diagram from GraphQL schema.
-
-        Creates a Mermaid ER diagram showing entities and relationships.
-        """
-        try:
-            from src.parsers import GraphQLParser
-
-            # Parse GraphQL schema
-            parser = GraphQLParser()
-            schema = parser.parse(request.schema_content)
-
-            # Generate ER diagram
-            include_set = set(request.include_types) if request.include_types else None
-            diagram = mermaid_generator.generate_er_diagram_from_graphql(
-                schema=schema,
-                include_types=include_set,
-            )
-
-            mermaid_code = diagram.to_mermaid()
-
-            logger.info("ER diagram generated", type_count=len(diagram.entities))
-
-            return DiagramResponse(
-                diagram_type=DiagramType.ER,
-                mermaid_code=mermaid_code,
-                title=diagram.title,
-            )
-        except Exception as e:
-            logger.error("Error generating ER diagram", exc_info=e)
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Error generating diagram: {str(e)}",
-            )
-
-    @app.post(
-        "/diagrams/overview",
-        response_model=DiagramResponse,
-        tags=["Diagrams"],
-    )
-    async def generate_overview_diagram(request: GenerateOverviewRequest):
-        """
-        Generate an API overview diagram.
-
-        Creates a flowchart showing API structure and endpoint groupings.
-        """
-        try:
-            from src.parsers import ParsedDocument, ParsedEndpoint
-
-            # Create a ParsedDocument from the request data
-            endpoints = []
-            for ep_data in request.endpoints:
-                endpoint = ParsedEndpoint(
-                    path=ep_data.get("path", "/"),
-                    method=ep_data.get("method", "GET"),
-                    summary=ep_data.get("summary", ""),
-                    description=ep_data.get("description", ""),
-                    tags=ep_data.get("tags", []),
-                    operation_id=ep_data.get("operation_id"),
-                    parameters=[],
-                    request_body=None,
-                    responses=[],
-                    security=None,
-                )
-                endpoints.append(endpoint)
-
-            parsed_doc = ParsedDocument(
-                title=request.api_title,
-                version="1.0.0",
-                description="",
-                base_url="",
-                endpoints=endpoints,
-            )
-
-            # Generate overview diagram
-            diagram = mermaid_generator.generate_api_overview_flow(parsed_doc)
-
-            mermaid_code = diagram.to_mermaid()
-
-            logger.info("Overview diagram generated", endpoint_count=len(endpoints))
-
-            return DiagramResponse(
-                diagram_type=DiagramType.FLOWCHART,
-                mermaid_code=mermaid_code,
-                title=diagram.title,
-            )
-        except Exception as e:
-            logger.error("Error generating overview diagram", exc_info=e)
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Error generating diagram: {str(e)}",
             )
 
     return app

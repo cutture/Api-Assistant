@@ -46,9 +46,8 @@ class AgentType(str, Enum):
     QUERY_ANALYZER = "query_analyzer"
     RAG_AGENT = "rag_agent"
     CODE_GENERATOR = "code_generator"
-    DOC_ANALYZER = "doc_analyzer"
     SUPERVISOR = "supervisor"
-    CUSTOM = "custom"  # For custom agents like gap analysis
+    CUSTOM = "custom"  # For custom agents
 
 
 class ConfidenceLevel(str, Enum):

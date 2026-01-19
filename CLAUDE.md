@@ -18,6 +18,12 @@ This file provides Claude with context about the Intelligent Coding Agent projec
 
 6. **No Speculation:** Never speculate about code you have not opened. If a specific file is referenced, you MUST read it before answering. Investigate and read relevant files BEFORE answering questions about the codebase. Never make claims about code without investigating first - provide grounded, hallucination-free answers.
 
+7. **Update Documentation During Implementation:** After each implementation step, update CLAUDE.md to reflect the current state. Also verify and update these documents as needed:
+   - `docs/planning/02-implementation-plan.md` - Mark completed phases/tasks
+   - `README.md` - Update if user-facing features change
+   - `GOOGLE_CLOUD_RUN_DEPLOYMENT.md` - Update if deployment changes
+   - `env.example.yaml` - Update if new environment variables added
+
 ---
 
 ## Project Overview
@@ -38,15 +44,41 @@ This file provides Claude with context about the Intelligent Coding Agent projec
 - Three output modes: inline snippets, ZIP bundles, GitHub PRs
 - Persistent chat sessions with execution history
 
-### Transformation Notes
-**Removed Features:**
-- Document upload/listing pages (replaced by artifacts)
-- Mermaid diagram generation
-- OpenAPI/GraphQL parsing (minimal kept for context)
+### Transformation Notes (Phase 1 Complete)
+**Removed Backend Features:**
+- Mermaid diagram generation (`src/diagrams/` module removed)
+- Document analyzer agent (`doc_analyzer.py` removed)
+- Gap analysis agent (`gap_analysis_agent.py` removed)
+- Result diversification module (`result_diversification.py` removed)
+- Document management endpoints (upload, CRUD, bulk-delete)
+- Faceted search endpoint
+
+**Removed Frontend Features:**
+- Diagrams page and components (`/diagrams` route)
+- Search page and components (`/search` route)
+- Document management page (`/` was documents, now redirects to chat)
+- Document components (uploader, list, stats)
+- Search-related stores and hooks
+- Diagram-related stores and hooks
+
+**Backend Features Kept:**
+- Basic search endpoint (for RAG agent)
+- Session management endpoints
+- Chat endpoint with file upload support
+- Authentication endpoints
+- Parsers (minimal, for chat file uploads)
+- Advanced filtering (for vector store search)
+
+**Frontend Features Kept:**
+- Chat page (now the main landing page)
+- Sessions page
+- Settings page
+- Login/Register/Auth pages
+- Navigation updated to "Coding Agent" branding
 
 **Repurposed:**
-- ChromaDB: Now stores artifacts and code context
-- Sessions: Now include execution history
+- ChromaDB: Now stores code context (artifacts coming in Phase 2)
+- Sessions: Will include execution history in Phase 2
 - RAG Agent: Now retrieves code context
 
 ---
