@@ -30,6 +30,9 @@ from src.api.template_router import router as template_router
 from src.api.database_router import router as database_router
 from src.api.github_router import router as github_router
 from src.api.webhook_router import router as webhook_router
+from src.api.collaboration_router import router as collaboration_router
+from src.api.git_provider_router import router as git_provider_router
+from src.api.scheduler_router import router as scheduler_router
 
 from src.api.models import (
     AddMessageRequest,
@@ -155,6 +158,15 @@ def create_app(
 
     # Include webhook router for CI/CD integration
     app.include_router(webhook_router)
+
+    # Include collaboration router for team workspaces
+    app.include_router(collaboration_router)
+
+    # Include git provider router for GitLab/Bitbucket
+    app.include_router(git_provider_router)
+
+    # Include scheduler router for scheduled executions
+    app.include_router(scheduler_router)
 
     # Add startup event for database initialization
     @app.on_event("startup")

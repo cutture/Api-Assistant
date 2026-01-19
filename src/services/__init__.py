@@ -155,6 +155,37 @@ from src.services.webhook_service import (
     WebhookDelivery,
     get_webhook_service,
 )
+from src.services.collaboration_service import (
+    CollaborationService,
+    Permission,
+    CollaborationEvent,
+    Team,
+    TeamMember,
+    SharedSession,
+    get_collaboration_service,
+)
+from src.services.git_provider import (
+    GitProvider,
+    GitProviderType,
+    GitUser,
+    GitRepository,
+    GitBranch,
+    GitFile,
+    GitPullRequest,
+    GitConflict,
+    GitLabProvider,
+    BitbucketProvider,
+    get_git_provider,
+)
+from src.services.scheduler_service import (
+    SchedulerService,
+    ScheduleType,
+    TaskType,
+    TaskStatus,
+    ScheduledTask,
+    TaskExecution,
+    get_scheduler_service,
+)
 
 __all__ = [
     "WebSearchService",
@@ -276,4 +307,32 @@ __all__ = [
     "WebhookProvider",
     "WebhookDelivery",
     "get_webhook_service",
+    # Collaboration
+    "CollaborationService",
+    "Permission",
+    "CollaborationEvent",
+    "Team",
+    "TeamMember",
+    "SharedSession",
+    "get_collaboration_service",
+    # Git Providers
+    "GitProvider",
+    "GitProviderType",
+    "GitUser",
+    "GitRepository",
+    "GitBranch",
+    "GitFile",
+    "GitPullRequest",
+    "GitConflict",
+    "GitLabProvider",
+    "BitbucketProvider",
+    "get_git_provider",
+    # Scheduler
+    "SchedulerService",
+    "ScheduleType",
+    "TaskType",
+    "TaskStatus",
+    "ScheduledTask",
+    "TaskExecution",
+    "get_scheduler_service",
 ]

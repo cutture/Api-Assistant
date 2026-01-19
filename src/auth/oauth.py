@@ -892,6 +892,172 @@ class GitHubOAuth:
 
             return response.json()
 
+    async def check_merge_conflicts(
+        self,
+        access_token: str,
+        owner: str,
+        repo: str,
+        base: str,
+        head: str,
+    ) -> dict:
+        """
+        Check for merge conflicts between two branches.
+
+        Uses the GitHub compare API to detect potential conflicts.
+
+        Args:
+            access_token: OAuth access token
+            owner: Repository owner
+            repo: Repository name
+            base: Base branch
+            head: Head branch
+
+        Returns:
+            Dict with conflict info:
+            - mergeable: bool indicating if branches can be merged
+            - conflicts: list of conflicting files
+            - ahead_by: commits head is ahead of base
+            - behind_by: commits head is behind base
+        """
+        async with httpx.AsyncClient() as client:
+            # Compare branches
+            url = f"{self.API_BASE_URL}/repos/{owner}/{repo}/compare/{base}...{head}"
+            response = await client.get(
+                url,
+                headers={
+                    "Authorization": f"Bearer {access_token}",
+                    "Accept": "application/vnd.github+json",
+                    "X-GitHub-Api-Version": "2022-11-28",
+                },
+            )
+
+            if response.status_code != 200:
+                raise OAuthError(f"Failed to compare branches: {response.text}", "github")
+
+            data = response.json()
+
+            # Get list of modified files
+            modified_files = [f["filename"] for f in data.get("files", [])]
+
+            # Check if there are commits on base that aren't on head
+            behind_by = data.get("behind_by", 0)
+
+            # If behind, there might be conflicts
+            potential_conflicts = []
+            if behind_by > 0:
+                # Get files changed on base branch
+                base_url = f"{self.API_BASE_URL}/repos/{owner}/{repo}/compare/{head}...{base}"
+                base_response = await client.get(
+                    base_url,
+                    headers={
+                        "Authorization": f"Bearer {access_token}",
+                        "Accept": "application/vnd.github+json",
+                        "X-GitHub-Api-Version": "2022-11-28",
+                    },
+                )
+
+                if base_response.status_code == 200:
+                    base_data = base_response.json()
+                    base_files = set(f["filename"] for f in base_data.get("files", []))
+                    head_files = set(modified_files)
+
+                    # Files modified in both branches may have conflicts
+                    potential_conflicts = list(base_files.intersection(head_files))
+
+            return {
+                "mergeable": len(potential_conflicts) == 0 and behind_by == 0,
+                "conflicts": potential_conflicts,
+                "ahead_by": data.get("ahead_by", 0),
+                "behind_by": behind_by,
+                "total_commits": data.get("total_commits", 0),
+                "modified_files": modified_files,
+                "status": data.get("status", "unknown"),  # ahead, behind, diverged, identical
+            }
+
+    async def get_merge_status(
+        self,
+        access_token: str,
+        owner: str,
+        repo: str,
+        pull_number: int,
+    ) -> dict:
+        """
+        Get merge status of a pull request.
+
+        Args:
+            access_token: OAuth access token
+            owner: Repository owner
+            repo: Repository name
+            pull_number: PR number
+
+        Returns:
+            Dict with merge status info
+        """
+        pr_data = await self.get_pull_request(access_token, owner, repo, pull_number)
+
+        return {
+            "mergeable": pr_data.get("mergeable"),
+            "mergeable_state": pr_data.get("mergeable_state"),
+            "rebaseable": pr_data.get("rebaseable"),
+            "merge_commit_sha": pr_data.get("merge_commit_sha"),
+            "head_sha": pr_data.get("head", {}).get("sha"),
+            "base_sha": pr_data.get("base", {}).get("sha"),
+            "draft": pr_data.get("draft", False),
+            "state": pr_data.get("state"),
+        }
+
+    async def list_conflict_files(
+        self,
+        access_token: str,
+        owner: str,
+        repo: str,
+        pull_number: int,
+    ) -> list[dict]:
+        """
+        List files with potential conflicts in a PR.
+
+        Args:
+            access_token: OAuth access token
+            owner: Repository owner
+            repo: Repository name
+            pull_number: PR number
+
+        Returns:
+            List of file info dicts for files with conflicts
+        """
+        async with httpx.AsyncClient() as client:
+            # Get PR files
+            url = f"{self.API_BASE_URL}/repos/{owner}/{repo}/pulls/{pull_number}/files"
+            response = await client.get(
+                url,
+                headers={
+                    "Authorization": f"Bearer {access_token}",
+                    "Accept": "application/vnd.github+json",
+                    "X-GitHub-Api-Version": "2022-11-28",
+                },
+            )
+
+            if response.status_code != 200:
+                raise OAuthError(f"Failed to get PR files: {response.text}", "github")
+
+            files = response.json()
+
+            # Filter for files that might have conflicts
+            conflict_files = []
+            for f in files:
+                # Files with changes in both branches or deleted/renamed files
+                if f.get("status") in ("modified", "renamed", "removed"):
+                    conflict_files.append({
+                        "filename": f["filename"],
+                        "status": f["status"],
+                        "additions": f.get("additions", 0),
+                        "deletions": f.get("deletions", 0),
+                        "changes": f.get("changes", 0),
+                        "patch": f.get("patch", "")[:500] if f.get("patch") else None,
+                    })
+
+            return conflict_files
+
 
 def get_oauth_provider(provider: str):
     """
