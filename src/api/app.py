@@ -44,6 +44,7 @@ from src.api.models import (
     ConversationMessage,
     CreateSessionRequest,
     CreateSessionResponse,
+    DeleteDocumentResponse,
     ErrorResponse,
     FilterOperatorEnum,
     FilterSpec,
