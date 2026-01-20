@@ -45,6 +45,7 @@ pydantic-settings>=2.0.0
 # Utilities
 tenacity>=8.2.0
 structlog>=23.1.0
+croniter>=2.0.0  # Cron expression parsing for scheduled tasks
 
 # Dataset Import (Optional)
 # kaggle>=1.6.0  # Uncomment to enable Kaggle dataset import
